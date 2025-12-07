@@ -59,7 +59,8 @@ interface AuraContextType {
   toggleReminder: (id: string) => void;
   deleteReminder: (id: string) => void;
   chatMessages: ChatMessage[];
-  addChatMessage: (message: Omit<ChatMessage, 'id' | 'timestamp'>) => void;
+  addChatMessage: (message: Omit<ChatMessage, 'id' | 'timestamp'>) => string;
+  updateChatMessage: (id: string, content: string) => void;
   clearChatHistory: () => void;
   clearAllMemories: () => void;
 }
@@ -176,8 +177,16 @@ export const AuraProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setReminders(prev => prev.filter(r => r.id !== id));
   };
 
-  const addChatMessage = (message: Omit<ChatMessage, 'id' | 'timestamp'>) => {
-    setChatMessages(prev => [...prev, { ...message, id: Date.now().toString(), timestamp: new Date() }]);
+  const addChatMessage = (message: Omit<ChatMessage, 'id' | 'timestamp'>): string => {
+    const id = Date.now().toString();
+    setChatMessages(prev => [...prev, { ...message, id, timestamp: new Date() }]);
+    return id;
+  };
+
+  const updateChatMessage = (id: string, content: string) => {
+    setChatMessages(prev => prev.map(msg => 
+      msg.id === id ? { ...msg, content } : msg
+    ));
   };
 
   const clearChatHistory = () => setChatMessages([]);
@@ -203,6 +212,7 @@ export const AuraProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       deleteReminder,
       chatMessages,
       addChatMessage,
+      updateChatMessage,
       clearChatHistory,
       clearAllMemories,
     }}>
