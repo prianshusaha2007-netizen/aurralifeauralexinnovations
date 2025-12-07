@@ -7,13 +7,13 @@ import { ChatBubble } from '@/components/ChatBubble';
 import { VoiceModal } from '@/components/VoiceModal';
 import { AutomationModal } from '@/components/AutomationModal';
 import { useAura } from '@/contexts/AuraContext';
-import { generateAuraResponse } from '@/utils/auraResponses';
+import { useAuraChat } from '@/hooks/useAuraChat';
 import { cn } from '@/lib/utils';
 
 export const ChatScreen: React.FC = () => {
   const { chatMessages, addChatMessage, userProfile } = useAura();
+  const { sendMessage, isThinking } = useAuraChat();
   const [inputValue, setInputValue] = useState('');
-  const [isThinking, setIsThinking] = useState(false);
   const [voiceModal, setVoiceModal] = useState<'speak' | 'listen' | null>(null);
   const [showAutomation, setShowAutomation] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -35,20 +35,11 @@ export const ChatScreen: React.FC = () => {
   }, [userProfile.onboardingComplete]);
 
   const handleSend = async () => {
-    if (!inputValue.trim()) return;
+    if (!inputValue.trim() || isThinking) return;
 
     const userMessage = inputValue.trim();
     setInputValue('');
-    
-    addChatMessage({ content: userMessage, sender: 'user' });
-    setIsThinking(true);
-
-    // Simulate AI thinking
-    await new Promise(resolve => setTimeout(resolve, 1500 + Math.random() * 1000));
-
-    const auraResponse = generateAuraResponse(userMessage, userProfile.name || 'friend');
-    addChatMessage({ content: auraResponse, sender: 'aura' });
-    setIsThinking(false);
+    await sendMessage(userMessage);
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -81,7 +72,7 @@ export const ChatScreen: React.FC = () => {
           />
         ))}
         
-        {isThinking && (
+        {isThinking && chatMessages[chatMessages.length - 1]?.sender === 'user' && (
           <div className="flex justify-start">
             <div className="bg-aura-bubble-ai px-4 py-3 rounded-2xl rounded-bl-md">
               <div className="flex gap-1">
@@ -115,6 +106,7 @@ export const ChatScreen: React.FC = () => {
               onKeyPress={handleKeyPress}
               placeholder="Talk to AURA..."
               className="rounded-full pr-12 bg-muted/50 border-border/50 focus:border-primary/50"
+              disabled={isThinking}
             />
             <Button
               variant="ghost"
@@ -125,7 +117,7 @@ export const ChatScreen: React.FC = () => {
                 inputValue.trim() && 'text-primary'
               )}
               onClick={handleSend}
-              disabled={!inputValue.trim()}
+              disabled={!inputValue.trim() || isThinking}
             >
               <Send className="w-4 h-4" />
             </Button>
