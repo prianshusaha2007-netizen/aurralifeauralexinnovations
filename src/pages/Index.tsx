@@ -8,6 +8,7 @@ import { MemoriesScreen } from '@/screens/MemoriesScreen';
 import { RoutineScreen } from '@/screens/RoutineScreen';
 import { SettingsScreen } from '@/screens/SettingsScreen';
 import { OnboardingScreen } from '@/screens/OnboardingScreen';
+import { PlayLearnScreen } from '@/screens/PlayLearnScreen';
 import { AuraOrb } from '@/components/AuraOrb';
 
 const AppContent: React.FC = () => {
@@ -31,6 +32,8 @@ const AppContent: React.FC = () => {
     switch (activeTab) {
       case 'chat':
         return <ChatScreen />;
+      case 'play':
+        return <PlayLearnScreen />;
       case 'memories':
         return <MemoriesScreen />;
       case 'routine':

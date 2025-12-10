@@ -6,9 +6,12 @@ import { AuraOrb } from '@/components/AuraOrb';
 import { ChatBubble } from '@/components/ChatBubble';
 import { VoiceModal } from '@/components/VoiceModal';
 import { AutomationModal } from '@/components/AutomationModal';
+import { ActionsBar } from '@/components/ActionsBar';
+import { USPTiles } from '@/components/USPTiles';
 import { useAura } from '@/contexts/AuraContext';
 import { useAuraChat } from '@/hooks/useAuraChat';
 import { cn } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
 
 export const ChatScreen: React.FC = () => {
   const { chatMessages, addChatMessage, userProfile } = useAura();
@@ -17,6 +20,7 @@ export const ChatScreen: React.FC = () => {
   const [voiceModal, setVoiceModal] = useState<'speak' | 'listen' | null>(null);
   const [showAutomation, setShowAutomation] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const { toast } = useToast();
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -29,7 +33,13 @@ export const ChatScreen: React.FC = () => {
   // Send initial greeting if no messages
   useEffect(() => {
     if (chatMessages.length === 0 && userProfile.onboardingComplete) {
-      const greeting = `Hey ${userProfile.name}! 💫 I'm so happy to see you. How are you feeling today? Share anything with me—I'm here to listen, help, and keep you company.`;
+      const professionGreeting = userProfile.profession === 'Student' 
+        ? "Need help with studies, notes, or just wanna chill?"
+        : userProfile.profession === 'Employee'
+        ? "Work stuff, emails, or just need a break? I'm here!"
+        : "What are we working on today? I'm ready to help!";
+      
+      const greeting = `Hey ${userProfile.name}! 💫 What's up? ${professionGreeting}`;
       addChatMessage({ content: greeting, sender: 'aura' });
     }
   }, [userProfile.onboardingComplete]);
@@ -49,17 +59,31 @@ export const ChatScreen: React.FC = () => {
     }
   };
 
+  const handleActionSelect = (actionId: string, message: string) => {
+    toast({
+      title: "AURA says...",
+      description: message,
+    });
+  };
+
   return (
     <div className="flex flex-col h-full">
       {/* Header with Orb */}
-      <div className="flex flex-col items-center pt-6 pb-4 relative">
-        <div className="absolute inset-0 bg-gradient-to-b from-primary/5 to-transparent" />
+      <div className="flex flex-col items-center pt-6 pb-2 relative">
+        <div className="absolute inset-0 bg-gradient-to-b from-accent/10 via-primary/5 to-transparent" />
         <AuraOrb size="md" isThinking={isThinking} className="animate-float" />
-        <h1 className="mt-4 text-lg font-semibold aura-gradient-text">AURA</h1>
+        <h1 className="mt-3 text-lg font-bold aura-gradient-text">AURA</h1>
         <p className="text-xs text-muted-foreground">
-          {isThinking ? 'Thinking...' : 'Your AI Companion'}
+          {isThinking ? 'Thinking...' : 'Your AI Bestfriend & Life Assistant'}
         </p>
       </div>
+
+      {/* USP Tiles - show when chat is empty or has few messages */}
+      {chatMessages.length <= 1 && (
+        <div className="px-4 py-2">
+          <USPTiles />
+        </div>
+      )}
 
       {/* Messages Area */}
       <div className="flex-1 overflow-y-auto px-4 py-2 space-y-4">
@@ -88,7 +112,12 @@ export const ChatScreen: React.FC = () => {
       </div>
 
       {/* Input Area */}
-      <div className="p-4 pb-24 bg-gradient-to-t from-background via-background to-transparent">
+      <div className="p-4 pb-24 bg-gradient-to-t from-background via-background to-transparent space-y-3">
+        {/* Actions Bar */}
+        <div className="max-w-lg mx-auto">
+          <ActionsBar onActionSelect={handleActionSelect} />
+        </div>
+        
         <div className="flex items-center gap-2 max-w-lg mx-auto">
           <Button
             variant="ghost"
@@ -104,7 +133,7 @@ export const ChatScreen: React.FC = () => {
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               onKeyPress={handleKeyPress}
-              placeholder="Talk to AURA..."
+              placeholder="Hey AURA, what's up..."
               className="rounded-full pr-12 bg-muted/50 border-border/50 focus:border-primary/50"
               disabled={isThinking}
             />

@@ -1,5 +1,5 @@
 import React from 'react';
-import { MessageCircle, Brain, Calendar, Settings } from 'lucide-react';
+import { MessageCircle, Brain, Calendar, Settings, Gamepad2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface NavigationBarProps {
@@ -9,8 +9,9 @@ interface NavigationBarProps {
 
 const tabs = [
   { id: 'chat', icon: MessageCircle, label: 'Chat' },
-  { id: 'memories', icon: Brain, label: 'Memories' },
+  { id: 'play', icon: Gamepad2, label: 'Play' },
   { id: 'routine', icon: Calendar, label: 'Routine' },
+  { id: 'memories', icon: Brain, label: 'Memory' },
   { id: 'settings', icon: Settings, label: 'Settings' },
 ];
 

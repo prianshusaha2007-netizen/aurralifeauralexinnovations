@@ -6,97 +6,97 @@
 
 @layer base {
   :root {
-    --background: 210 40% 98%;
-    --foreground: 222 47% 11%;
+    --background: 270 30% 98%;
+    --foreground: 270 50% 10%;
 
     --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
+    --card-foreground: 270 50% 10%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
+    --popover-foreground: 270 50% 10%;
 
-    --primary: 174 72% 45%;
+    --primary: 270 60% 55%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 270 50% 95%;
+    --secondary: 270 40% 95%;
     --secondary-foreground: 270 50% 30%;
 
-    --muted: 210 30% 95%;
-    --muted-foreground: 215 16% 47%;
+    --muted: 270 20% 95%;
+    --muted-foreground: 270 20% 45%;
 
-    --accent: 270 60% 70%;
-    --accent-foreground: 270 60% 20%;
+    --accent: 174 72% 45%;
+    --accent-foreground: 174 72% 15%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 214 32% 91%;
-    --input: 214 32% 91%;
-    --ring: 174 72% 45%;
+    --border: 270 25% 90%;
+    --input: 270 25% 90%;
+    --ring: 270 60% 55%;
 
     --radius: 1rem;
 
-    /* AURA Custom Tokens */
-    --aura-glow: 174 72% 55%;
-    --aura-glow-secondary: 270 60% 65%;
-    --aura-surface: 210 40% 99%;
+    /* AURA Custom Tokens - Purple/Violet Theme */
+    --aura-glow: 270 70% 60%;
+    --aura-glow-secondary: 174 72% 50%;
+    --aura-surface: 270 30% 99%;
     --aura-surface-elevated: 0 0% 100%;
-    --aura-gradient-start: 174 72% 45%;
-    --aura-gradient-end: 270 60% 60%;
-    --aura-text-soft: 215 20% 55%;
-    --aura-bubble-user: 174 72% 45%;
-    --aura-bubble-ai: 270 40% 96%;
-    --aura-bubble-ai-text: 222 47% 20%;
-    --aura-orb-inner: 174 80% 60%;
-    --aura-orb-outer: 270 70% 65%;
-    --aura-nav-active: 174 72% 45%;
-    --aura-nav-inactive: 215 16% 65%;
+    --aura-gradient-start: 270 60% 55%;
+    --aura-gradient-end: 174 72% 45%;
+    --aura-text-soft: 270 20% 55%;
+    --aura-bubble-user: 270 60% 55%;
+    --aura-bubble-ai: 270 30% 96%;
+    --aura-bubble-ai-text: 270 50% 15%;
+    --aura-orb-inner: 270 80% 65%;
+    --aura-orb-outer: 174 70% 55%;
+    --aura-nav-active: 270 60% 55%;
+    --aura-nav-inactive: 270 20% 60%;
   }
 
   .dark {
-    --background: 230 25% 8%;
-    --foreground: 210 40% 98%;
+    --background: 270 25% 6%;
+    --foreground: 270 20% 98%;
 
-    --card: 230 25% 12%;
-    --card-foreground: 210 40% 98%;
+    --card: 270 25% 10%;
+    --card-foreground: 270 20% 98%;
 
-    --popover: 230 25% 10%;
-    --popover-foreground: 210 40% 98%;
+    --popover: 270 25% 8%;
+    --popover-foreground: 270 20% 98%;
 
-    --primary: 174 72% 50%;
-    --primary-foreground: 230 25% 8%;
+    --primary: 270 70% 60%;
+    --primary-foreground: 270 25% 6%;
 
-    --secondary: 270 40% 20%;
+    --secondary: 270 40% 18%;
     --secondary-foreground: 270 40% 90%;
 
-    --muted: 230 20% 15%;
-    --muted-foreground: 215 20% 65%;
+    --muted: 270 20% 14%;
+    --muted-foreground: 270 20% 60%;
 
-    --accent: 270 60% 55%;
+    --accent: 174 72% 50%;
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 62% 50%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 230 20% 20%;
-    --input: 230 20% 18%;
-    --ring: 174 72% 50%;
+    --border: 270 20% 18%;
+    --input: 270 20% 16%;
+    --ring: 270 70% 60%;
 
-    /* AURA Custom Tokens - Dark */
-    --aura-glow: 174 80% 55%;
-    --aura-glow-secondary: 270 70% 60%;
-    --aura-surface: 230 25% 10%;
-    --aura-surface-elevated: 230 25% 14%;
-    --aura-gradient-start: 174 72% 50%;
-    --aura-gradient-end: 270 60% 55%;
-    --aura-text-soft: 215 20% 60%;
-    --aura-bubble-user: 174 72% 45%;
-    --aura-bubble-ai: 230 25% 18%;
-    --aura-bubble-ai-text: 210 40% 95%;
-    --aura-orb-inner: 174 85% 60%;
-    --aura-orb-outer: 270 75% 60%;
-    --aura-nav-active: 174 72% 55%;
-    --aura-nav-inactive: 215 20% 50%;
+    /* AURA Custom Tokens - Dark Purple Theme */
+    --aura-glow: 270 80% 60%;
+    --aura-glow-secondary: 174 80% 55%;
+    --aura-surface: 270 25% 8%;
+    --aura-surface-elevated: 270 25% 12%;
+    --aura-gradient-start: 270 70% 60%;
+    --aura-gradient-end: 174 72% 50%;
+    --aura-text-soft: 270 20% 60%;
+    --aura-bubble-user: 270 60% 50%;
+    --aura-bubble-ai: 270 25% 16%;
+    --aura-bubble-ai-text: 270 20% 95%;
+    --aura-orb-inner: 270 85% 65%;
+    --aura-orb-outer: 174 80% 55%;
+    --aura-nav-active: 270 70% 65%;
+    --aura-nav-inactive: 270 20% 50%;
   }
 }
 
