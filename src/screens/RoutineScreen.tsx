@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Plus, 
   Trash2, 
@@ -11,7 +11,8 @@ import {
   Dumbbell,
   UtensilsCrossed,
   Sparkles,
-  Bell
+  Bell,
+  Droplets
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -21,6 +22,7 @@ import { Switch } from '@/components/ui/switch';
 import { useAura } from '@/contexts/AuraContext';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import { WaterTracker } from '@/components/WaterTracker';
 
 const blockTypes = [
   { id: 'study', label: 'Study', icon: BookOpen, color: 'text-blue-500 bg-blue-500/10' },
@@ -29,6 +31,7 @@ const blockTypes = [
   { id: 'sleep', label: 'Sleep', icon: Moon, color: 'text-purple-500 bg-purple-500/10' },
   { id: 'exercise', label: 'Exercise', icon: Dumbbell, color: 'text-red-500 bg-red-500/10' },
   { id: 'meal', label: 'Meal', icon: UtensilsCrossed, color: 'text-yellow-500 bg-yellow-500/10' },
+  { id: 'water', label: 'Water', icon: Droplets, color: 'text-cyan-500 bg-cyan-500/10' },
 ];
 
 const sampleSchedule = [
@@ -43,6 +46,9 @@ const sampleSchedule = [
   { time: '20:00', title: 'Relaxation', type: 'rest' as const },
   { time: '23:00', title: 'Sleep', type: 'sleep' as const },
 ];
+
+const WATER_STORAGE_KEY = 'aura_water_intake';
+const WATER_DATE_KEY = 'aura_water_date';
 
 export const RoutineScreen: React.FC = () => {
   const { 
@@ -61,6 +67,73 @@ export const RoutineScreen: React.FC = () => {
   const [isReminderDialogOpen, setIsReminderDialogOpen] = useState(false);
   const [newBlock, setNewBlock] = useState({ title: '', time: '', type: 'work' as const });
   const [newReminder, setNewReminder] = useState({ text: '', time: '' });
+  
+  // Water tracking state
+  const [waterGlasses, setWaterGlasses] = useState(0);
+  const waterGoal = 8;
+
+  // Load water data from localStorage and reset daily
+  useEffect(() => {
+    const today = new Date().toDateString();
+    const savedDate = localStorage.getItem(WATER_DATE_KEY);
+    
+    if (savedDate === today) {
+      const savedWater = localStorage.getItem(WATER_STORAGE_KEY);
+      if (savedWater) {
+        setWaterGlasses(parseInt(savedWater, 10));
+      }
+    } else {
+      // New day, reset counter
+      localStorage.setItem(WATER_DATE_KEY, today);
+      localStorage.setItem(WATER_STORAGE_KEY, '0');
+      setWaterGlasses(0);
+    }
+  }, []);
+
+  // Save water data to localStorage
+  useEffect(() => {
+    localStorage.setItem(WATER_STORAGE_KEY, waterGlasses.toString());
+  }, [waterGlasses]);
+
+  const handleAddWater = () => {
+    if (waterGlasses < waterGoal) {
+      setWaterGlasses(prev => prev + 1);
+      if (waterGlasses + 1 === waterGoal) {
+        toast({
+          title: "Hydration Goal Complete! 🎉",
+          description: "Amazing! You've reached your daily water intake goal!",
+        });
+      }
+    } else {
+      setWaterGlasses(prev => prev + 1);
+      toast({
+        title: "Extra hydration! 💧",
+        description: "Going above and beyond - great job!",
+      });
+    }
+  };
+
+  const handleRemoveWater = () => {
+    if (waterGlasses > 0) {
+      setWaterGlasses(prev => prev - 1);
+    }
+  };
+
+  const handleResetWater = () => {
+    setWaterGlasses(0);
+    toast({
+      title: "Water tracker reset",
+      description: "Starting fresh! Remember to stay hydrated.",
+    });
+  };
+
+  const handleAddHydrationReminder = () => {
+    addReminder({ text: 'Drink water! Stay hydrated 💧', time: '', active: true });
+    toast({
+      title: "Hydration Reminder Added",
+      description: "AURA will remind you to drink water regularly!",
+    });
+  };
 
   const handleAddBlock = () => {
     if (!newBlock.title.trim() || !newBlock.time) return;
@@ -97,13 +170,33 @@ export const RoutineScreen: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-full p-4 pb-24">
+    <div className="flex flex-col h-full p-4 pb-24 overflow-y-auto">
       {/* Header */}
-      <div className="mb-6">
+      <div className="mb-4">
         <h1 className="text-2xl font-bold aura-gradient-text">Routine</h1>
         <p className="text-sm text-muted-foreground mt-1">
-          Your daily schedule & reminders
+          Your daily schedule & hydration
         </p>
+      </div>
+
+      {/* Water Tracker */}
+      <div className="mb-4">
+        <WaterTracker
+          glasses={waterGlasses}
+          goal={waterGoal}
+          onAdd={handleAddWater}
+          onRemove={handleRemoveWater}
+          onReset={handleResetWater}
+        />
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={handleAddHydrationReminder}
+          className="mt-2 text-xs text-cyan-500 hover:text-cyan-600"
+        >
+          <Bell className="w-3 h-3 mr-1" />
+          Add hydration reminder
+        </Button>
       </div>
 
       {/* Quick Actions */}
