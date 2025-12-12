@@ -3,6 +3,15 @@ import { Sparkles, Gamepad2, Brain, BookOpen, Zap, Smile, Lightbulb, Heart } fro
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
+import { MiniGame } from '@/components/MiniGames';
+
+type GameType = 'word-chain' | 'would-you-rather' | '20-questions' | null;
+
+const gameNameToType: Record<string, 'word-chain' | 'would-you-rather' | '20-questions'> = {
+  'Word Chain': 'word-chain',
+  'Would You Rather': 'would-you-rather',
+  '20 Questions': '20-questions',
+};
 
 const funFacts = [
   "Your brain generates enough electricity to power a small light bulb!",
@@ -66,8 +75,11 @@ export const PlayLearnScreen: React.FC = () => {
     });
   };
 
-  const handleGameClick = (game: GameType) => {
-    setActiveGame(game);
+  const handleGameClick = (gameName: string) => {
+    const gameType = gameNameToType[gameName];
+    if (gameType) {
+      setActiveGame(gameType);
+    }
   };
 
   const handleTestClick = (test: string) => {
