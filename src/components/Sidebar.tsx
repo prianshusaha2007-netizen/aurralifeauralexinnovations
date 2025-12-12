@@ -10,7 +10,8 @@ import {
   Settings,
   X,
   Plus,
-  Sparkles
+  Sparkles,
+  Shield
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -33,6 +34,7 @@ const menuItems = [
   { id: 'routine', icon: Calendar, label: 'Routine Manager' },
   { id: 'personality', icon: User, label: 'Personality Profile' },
   { id: 'smart-search', icon: Search, label: 'Smart Search' },
+  { id: 'permissions', icon: Shield, label: 'Permissions' },
   { id: 'settings', icon: Settings, label: 'Settings' },
 ];
 
