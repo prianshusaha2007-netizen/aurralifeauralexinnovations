@@ -18,6 +18,7 @@ import { SmartSearchScreen } from '@/screens/SmartSearchScreen';
 import { ChatHistoryScreen } from '@/screens/ChatHistoryScreen';
 import { PermissionsScreen } from '@/screens/PermissionsScreen';
 import { AuraOrb } from '@/components/AuraOrb';
+import { DailyMoodPopup } from '@/components/DailyMoodPopup';
 
 const AppContent: React.FC = () => {
   const { userProfile, isLoading, clearChatHistory } = useAura();
@@ -60,6 +61,9 @@ const AppContent: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
+      {/* Daily Mood Check-in Popup */}
+      <DailyMoodPopup userName={userProfile.name} />
+
       {/* Header with Menu */}
       <header className="flex items-center justify-between px-4 py-3 border-b border-border/50 bg-card/50 backdrop-blur-sm">
         <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(true)} className="rounded-full">
