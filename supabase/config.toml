@@ -17,3 +17,12 @@ verify_jwt = true
 
 [functions.save-mood]
 verify_jwt = true
+
+[functions.web-search]
+verify_jwt = false
+
+[functions.realtime-session]
+verify_jwt = false
+
+[functions.send-notification]
+verify_jwt = false
