@@ -16,6 +16,7 @@ import { MoodCheckInScreen } from '@/screens/MoodCheckInScreen';
 import { PersonalityProfileScreen } from '@/screens/PersonalityProfileScreen';
 import { SmartSearchScreen } from '@/screens/SmartSearchScreen';
 import { ChatHistoryScreen } from '@/screens/ChatHistoryScreen';
+import { PermissionsScreen } from '@/screens/PermissionsScreen';
 import { AuraOrb } from '@/components/AuraOrb';
 
 const AppContent: React.FC = () => {
@@ -52,6 +53,7 @@ const AppContent: React.FC = () => {
       case 'personality': return <PersonalityProfileScreen />;
       case 'smart-search': return <SmartSearchScreen />;
       case 'chat-history': return <ChatHistoryScreen />;
+      case 'permissions': return <PermissionsScreen />;
       default: return <ChatScreen />;
     }
   };
