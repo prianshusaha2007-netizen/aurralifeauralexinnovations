@@ -17,6 +17,7 @@ import { useAura } from '@/contexts/AuraContext';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import { WeeklyEmailSettings } from '@/components/WeeklyEmailSettings';
 
 export const SettingsScreen: React.FC = () => {
   const navigate = useNavigate();
@@ -74,6 +75,10 @@ export const SettingsScreen: React.FC = () => {
           ),
         },
       ],
+    },
+    {
+      title: 'NOTIFICATIONS',
+      customComponent: <WeeklyEmailSettings />,
     },
     {
       title: 'PROFILE',
@@ -174,41 +179,45 @@ export const SettingsScreen: React.FC = () => {
             <h2 className="text-xs font-semibold text-muted-foreground mb-3">
               {section.title}
             </h2>
-            <div className="bg-card rounded-2xl border border-border/50 overflow-hidden">
-              {section.items.map((item, index) => {
-                const Icon = item.icon;
-                return (
-                  <button
-                    key={item.label}
-                    onClick={item.onClick}
-                    className={cn(
-                      'flex items-center gap-4 w-full p-4 text-left',
-                      'hover:bg-muted/50 transition-colors',
-                      index !== section.items.length - 1 && 'border-b border-border/50'
-                    )}
-                    disabled={!item.onClick}
-                  >
-                    <div className={cn(
-                      'p-2 rounded-lg',
-                      item.destructive ? 'bg-destructive/10 text-destructive' : 'bg-muted text-foreground'
-                    )}>
-                      <Icon className="w-4 h-4" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className={cn(
-                        'text-sm font-medium',
-                        item.destructive && 'text-destructive'
+            <div className="bg-card rounded-2xl border border-border/50 overflow-hidden p-4">
+              {'customComponent' in section && section.customComponent ? (
+                section.customComponent
+              ) : (
+                'items' in section && section.items?.map((item, index) => {
+                  const Icon = item.icon;
+                  return (
+                    <button
+                      key={item.label}
+                      onClick={item.onClick}
+                      className={cn(
+                        'flex items-center gap-4 w-full p-4 text-left -mx-4',
+                        'hover:bg-muted/50 transition-colors',
+                        index !== (section.items?.length ?? 0) - 1 && 'border-b border-border/50'
+                      )}
+                      disabled={!item.onClick}
+                    >
+                      <div className={cn(
+                        'p-2 rounded-lg',
+                        item.destructive ? 'bg-destructive/10 text-destructive' : 'bg-muted text-foreground'
                       )}>
-                        {item.label}
-                      </p>
-                      <p className="text-xs text-muted-foreground truncate">
-                        {item.description}
-                      </p>
-                    </div>
-                    {item.action}
-                  </button>
-                );
-              })}
+                        <Icon className="w-4 h-4" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className={cn(
+                          'text-sm font-medium',
+                          item.destructive && 'text-destructive'
+                        )}>
+                          {item.label}
+                        </p>
+                        <p className="text-xs text-muted-foreground truncate">
+                          {item.description}
+                        </p>
+                      </div>
+                      {item.action}
+                    </button>
+                  );
+                })
+              )}
             </div>
           </div>
         ))}
