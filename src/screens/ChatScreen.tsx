@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Sparkles, Menu, Volume2 } from 'lucide-react';
+import { Send, Sparkles, Menu, Volume2, Mic } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { AuraOrb } from '@/components/AuraOrb';
@@ -17,9 +17,10 @@ import { supabase } from '@/integrations/supabase/client';
 
 interface ChatScreenProps {
   onMenuClick?: () => void;
+  onVoiceModeClick?: () => void;
 }
 
-export const ChatScreen: React.FC<ChatScreenProps> = ({ onMenuClick }) => {
+export const ChatScreen: React.FC<ChatScreenProps> = ({ onMenuClick, onVoiceModeClick }) => {
   const { chatMessages, addChatMessage, userProfile } = useAura();
   const { sendMessage, isThinking } = useAuraChat();
   const [inputValue, setInputValue] = useState('');
@@ -130,8 +131,17 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ onMenuClick }) => {
           <Menu className="w-5 h-5" />
         </Button>
         
-        {/* Model Selector */}
-        <div className="absolute top-2 right-4 z-10">
+        {/* Voice Mode & Model Selector */}
+        <div className="absolute top-2 right-4 z-10 flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="rounded-full text-muted-foreground hover:text-primary hover:bg-primary/10"
+            onClick={onVoiceModeClick}
+            title="Continuous Voice Mode"
+          >
+            <Mic className="w-5 h-5" />
+          </Button>
           <ModelSelector value={selectedModel} onChange={setSelectedModel} />
         </div>
         
