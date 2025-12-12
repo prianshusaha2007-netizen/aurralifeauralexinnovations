@@ -13,16 +13,16 @@ export const useAuraChat = () => {
   const { chatMessages, addChatMessage, updateChatMessage, userProfile } = useAura();
   const [isThinking, setIsThinking] = useState(false);
 
-  const sendMessage = useCallback(async (userMessage: string) => {
+  const sendMessage = useCallback(async (userMessage: string, preferredModel?: string) => {
     if (!userMessage.trim()) return;
 
     // Add user message
     addChatMessage({ content: userMessage, sender: 'user' });
     setIsThinking(true);
 
-    // Build conversation history for context
+    // Build conversation history for context - now including more messages
     const conversationHistory: Message[] = chatMessages
-      .slice(-10) // Last 10 messages for context
+      .slice(-20) // Last 20 messages for better context
       .map((msg: ChatMessage) => ({
         role: msg.sender === 'user' ? 'user' : 'assistant' as const,
         content: msg.content,
@@ -43,10 +43,13 @@ export const useAuraChat = () => {
         },
         body: JSON.stringify({
           messages: conversationHistory,
+          preferredModel: preferredModel || 'gemini-flash',
           userProfile: {
             name: userProfile.name,
             age: userProfile.age,
             profession: userProfile.profession,
+            professions: userProfile.professions,
+            goals: userProfile.goals,
             languages: userProfile.languages,
             tonePreference: userProfile.tonePreference,
             wakeTime: userProfile.wakeTime,

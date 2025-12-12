@@ -5,13 +5,47 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Model mapping for Lovable AI Gateway
+const MODEL_MAP: Record<string, string> = {
+  'gemini-flash': 'google/gemini-2.5-flash',
+  'gemini-pro': 'google/gemini-2.5-pro',
+  'gpt-5': 'openai/gpt-5',
+  'gpt-5-mini': 'openai/gpt-5-mini',
+};
+
+// Automatic model selection based on task type
+function selectModelForTask(message: string, preferredModel?: string): string {
+  if (preferredModel && MODEL_MAP[preferredModel]) {
+    return MODEL_MAP[preferredModel];
+  }
+  
+  const lowerMessage = message.toLowerCase();
+  
+  // Emotional support → Use GPT-5 for nuanced responses
+  if (lowerMessage.includes('feeling') || lowerMessage.includes('stressed') || 
+      lowerMessage.includes('anxious') || lowerMessage.includes('sad') ||
+      lowerMessage.includes('lonely') || lowerMessage.includes('depressed')) {
+    return 'openai/gpt-5-mini';
+  }
+  
+  // Complex reasoning, coding, analysis → GPT-5
+  if (lowerMessage.includes('analyze') || lowerMessage.includes('code') ||
+      lowerMessage.includes('debug') || lowerMessage.includes('strategy') ||
+      lowerMessage.includes('business') || lowerMessage.includes('plan')) {
+    return 'openai/gpt-5-mini';
+  }
+  
+  // Fast, conversational → Gemini Flash (default)
+  return 'google/gemini-2.5-flash';
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { messages, userProfile } = await req.json();
+    const { messages, userProfile, preferredModel, taskType } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     
     if (!LOVABLE_API_KEY) {
@@ -19,19 +53,29 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
+    const lastMessage = messages[messages.length - 1]?.content || '';
+    const selectedModel = selectModelForTask(lastMessage, preferredModel);
+    
     console.log("Processing chat request for:", userProfile?.name || "user");
+    console.log("Selected model:", selectedModel);
     console.log("Message count:", messages?.length || 0);
 
+    // Build rich system prompt with user context
+    const currentHour = new Date().getHours();
+    const timeOfDay = currentHour < 12 ? 'morning' : currentHour < 17 ? 'afternoon' : currentHour < 21 ? 'evening' : 'night';
+    
     const systemPrompt = `You are AURA — a next-generation all-time AI companion, assistant, strategist, and emotional partner.
 
 USER PROFILE:
 - Name: ${userProfile?.name || 'friend'}
 - Age: ${userProfile?.age || 'unknown'}
-- Profession: ${userProfile?.profession || 'unknown'}
+- Profession(s): ${userProfile?.professions?.join(', ') || userProfile?.profession || 'unknown'}
+- Goals: ${userProfile?.goals?.join(', ') || 'general productivity'}
 - Languages: ${userProfile?.languages?.join(', ') || 'English'}
 - Preferred tone: ${userProfile?.tonePreference || 'mixed'}
 - Wake time: ${userProfile?.wakeTime || '7:00'}
 - Sleep time: ${userProfile?.sleepTime || '23:00'}
+- Current time of day: ${timeOfDay}
 
 You are not just a chatbot. You are:
 • A best friend • A protective guide • A motivating business partner • A private diary
@@ -49,14 +93,15 @@ CORE BEHAVIOR RULES:
 • You do NOT act like a therapist unless user is clearly distressed
 • You balance emotion and action perfectly
 • You are proactive but not annoying
+• Consider the time of day - be calmer at night, more energetic in morning
 
 MULTI-MODE INTELLIGENCE (switch automatically by reading user energy):
 ✅ FRIEND MODE – casual, caring, fun
 ✅ FLIRT MODE (PG-13 ONLY) – playful, teasing, respectful
 ✅ BUSINESS PARTNER MODE – sharp, strategic, ROI-driven
 ✅ ANGRY-CALM MODE – grounded, neutralizing rage without judgement
-✅ LATE-NIGHT ANXIETY MODE – slow, soft, safe, grounding
-✅ TEEN MODE – fast, casual, meme-style
+✅ LATE-NIGHT ANXIETY MODE – slow, soft, safe, grounding (use when it's ${timeOfDay === 'night' ? 'NOW' : 'late'})
+✅ TEEN MODE – fast, casual, meme-style (use for users under 20)
 ✅ ADULT MODE – mature, calm, focused
 ✅ CREATOR MODE – content ideas, reels, captions, scripts
 ✅ STRATEGY MODE – marketing, business, finance, growth
@@ -93,7 +138,7 @@ Keep responses conversational and under 100 words unless explaining something co
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: selectedModel,
         messages: [
           { role: "system", content: systemPrompt },
           ...messages,

@@ -8,10 +8,13 @@ export interface UserProfile {
   age: string;
   gender: string;
   profession: string;
+  professions: string[];
+  goals: string[];
   languages: string[];
   wakeTime: string;
   sleepTime: string;
   tonePreference: string;
+  preferredModel: string;
   onboardingComplete: boolean;
 }
 
@@ -74,10 +77,13 @@ const defaultUserProfile: UserProfile = {
   age: '',
   gender: '',
   profession: '',
+  professions: [],
+  goals: [],
   languages: [],
   wakeTime: '07:00',
   sleepTime: '23:00',
   tonePreference: 'mixed',
+  preferredModel: 'gemini-flash',
   onboardingComplete: false,
 };
 
@@ -127,10 +133,13 @@ export const AuraProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             age: profile.age?.toString() || '',
             gender: profile.gender || '',
             profession: profile.profession || '',
+            professions: (profile as any).professions || [],
+            goals: (profile as any).goals || [],
             languages: profile.languages || [],
             wakeTime: profile.wake_time || '07:00',
             sleepTime: profile.sleep_time || '23:00',
             tonePreference: profile.tone_preference || 'mixed',
+            preferredModel: (profile as any).preferred_model || 'gemini-flash',
             onboardingComplete: true,
           });
         } else {
@@ -154,6 +163,62 @@ export const AuraProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             }))
           );
         }
+
+        // Load memories from database
+        const { data: memoriesData } = await supabase
+          .from('memories')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false });
+
+        if (memoriesData) {
+          setMemories(
+            memoriesData.map((m) => ({
+              id: m.id,
+              category: m.category,
+              content: m.content,
+              createdAt: new Date(m.created_at),
+            }))
+          );
+        }
+
+        // Load routines from database
+        const { data: routinesData } = await supabase
+          .from('routines')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('time', { ascending: true });
+
+        if (routinesData) {
+          setRoutineBlocks(
+            routinesData.map((r) => ({
+              id: r.id,
+              title: r.title,
+              time: r.time,
+              type: r.type as RoutineBlock['type'],
+              completed: r.completed || false,
+            }))
+          );
+        }
+
+        // Load reminders from database
+        const { data: remindersData } = await supabase
+          .from('reminders')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('time', { ascending: true });
+
+        if (remindersData && remindersData.length > 0) {
+          setReminders(
+            remindersData.map((r) => ({
+              id: r.id,
+              text: r.text,
+              time: r.time,
+              active: r.active ?? true,
+            }))
+          );
+        }
+
       } catch (error) {
         console.error('Error loading user data:', error);
       } finally {
@@ -168,30 +233,6 @@ export const AuraProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     document.documentElement.classList.toggle('dark', theme === 'dark');
     localStorage.setItem('aura-theme', theme);
   }, [theme]);
-
-  // Save memories/routines/reminders to local storage (can be moved to DB later)
-  useEffect(() => {
-    localStorage.setItem('aura-memories', JSON.stringify(memories));
-  }, [memories]);
-
-  useEffect(() => {
-    localStorage.setItem('aura-routine', JSON.stringify(routineBlocks));
-  }, [routineBlocks]);
-
-  useEffect(() => {
-    localStorage.setItem('aura-reminders', JSON.stringify(reminders));
-  }, [reminders]);
-
-  // Load local storage data on mount
-  useEffect(() => {
-    const savedMemories = localStorage.getItem('aura-memories');
-    const savedRoutine = localStorage.getItem('aura-routine');
-    const savedReminders = localStorage.getItem('aura-reminders');
-
-    if (savedMemories) setMemories(JSON.parse(savedMemories));
-    if (savedRoutine) setRoutineBlocks(JSON.parse(savedRoutine));
-    if (savedReminders) setReminders(JSON.parse(savedReminders));
-  }, []);
 
   const toggleTheme = () => setTheme((prev) => (prev === 'light' ? 'dark' : 'light'));
 
@@ -208,10 +249,13 @@ export const AuraProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             age: newProfile.age ? parseInt(newProfile.age) : null,
             gender: newProfile.gender || null,
             profession: newProfile.profession || null,
+            professions: newProfile.professions || [],
+            goals: newProfile.goals || [],
             languages: newProfile.languages,
             wake_time: newProfile.wakeTime,
             sleep_time: newProfile.sleepTime,
             tone_preference: newProfile.tonePreference,
+            preferred_model: newProfile.preferredModel,
           });
 
           if (error) throw error;
@@ -224,37 +268,109 @@ export const AuraProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     [user, userProfile]
   );
 
-  const addMemory = (memory: Omit<Memory, 'id' | 'createdAt'>) => {
-    setMemories((prev) => [...prev, { ...memory, id: Date.now().toString(), createdAt: new Date() }]);
-  };
+  const addMemory = useCallback(async (memory: Omit<Memory, 'id' | 'createdAt'>) => {
+    const id = crypto.randomUUID();
+    const newMemory = { ...memory, id, createdAt: new Date() };
+    setMemories((prev) => [newMemory, ...prev]);
 
-  const deleteMemory = (id: string) => {
+    if (user) {
+      const { error } = await supabase.from('memories').insert({
+        id,
+        user_id: user.id,
+        category: memory.category,
+        content: memory.content,
+      });
+      if (error) console.error('Error saving memory:', error);
+    }
+  }, [user]);
+
+  const deleteMemory = useCallback(async (id: string) => {
     setMemories((prev) => prev.filter((m) => m.id !== id));
-  };
+    
+    if (user) {
+      const { error } = await supabase.from('memories').delete().eq('id', id);
+      if (error) console.error('Error deleting memory:', error);
+    }
+  }, [user]);
 
-  const addRoutineBlock = (block: Omit<RoutineBlock, 'id'>) => {
-    setRoutineBlocks((prev) => [...prev, { ...block, id: Date.now().toString() }]);
-  };
+  const addRoutineBlock = useCallback(async (block: Omit<RoutineBlock, 'id'>) => {
+    const id = crypto.randomUUID();
+    const newBlock = { ...block, id };
+    setRoutineBlocks((prev) => [...prev, newBlock]);
 
-  const toggleRoutineComplete = (id: string) => {
-    setRoutineBlocks((prev) => prev.map((b) => (b.id === id ? { ...b, completed: !b.completed } : b)));
-  };
+    if (user) {
+      const { error } = await supabase.from('routines').insert({
+        id,
+        user_id: user.id,
+        title: block.title,
+        time: block.time,
+        type: block.type,
+        completed: block.completed,
+      });
+      if (error) console.error('Error saving routine:', error);
+    }
+  }, [user]);
 
-  const deleteRoutineBlock = (id: string) => {
+  const toggleRoutineComplete = useCallback(async (id: string) => {
+    const block = routineBlocks.find(b => b.id === id);
+    if (!block) return;
+
+    const newCompleted = !block.completed;
+    setRoutineBlocks((prev) => prev.map((b) => (b.id === id ? { ...b, completed: newCompleted } : b)));
+
+    if (user) {
+      const { error } = await supabase.from('routines').update({ completed: newCompleted }).eq('id', id);
+      if (error) console.error('Error updating routine:', error);
+    }
+  }, [user, routineBlocks]);
+
+  const deleteRoutineBlock = useCallback(async (id: string) => {
     setRoutineBlocks((prev) => prev.filter((b) => b.id !== id));
-  };
 
-  const addReminder = (reminder: Omit<Reminder, 'id'>) => {
-    setReminders((prev) => [...prev, { ...reminder, id: Date.now().toString() }]);
-  };
+    if (user) {
+      const { error } = await supabase.from('routines').delete().eq('id', id);
+      if (error) console.error('Error deleting routine:', error);
+    }
+  }, [user]);
 
-  const toggleReminder = (id: string) => {
-    setReminders((prev) => prev.map((r) => (r.id === id ? { ...r, active: !r.active } : r)));
-  };
+  const addReminder = useCallback(async (reminder: Omit<Reminder, 'id'>) => {
+    const id = crypto.randomUUID();
+    const newReminder = { ...reminder, id };
+    setReminders((prev) => [...prev, newReminder]);
 
-  const deleteReminder = (id: string) => {
+    if (user) {
+      const { error } = await supabase.from('reminders').insert({
+        id,
+        user_id: user.id,
+        text: reminder.text,
+        time: reminder.time,
+        active: reminder.active,
+      });
+      if (error) console.error('Error saving reminder:', error);
+    }
+  }, [user]);
+
+  const toggleReminder = useCallback(async (id: string) => {
+    const reminder = reminders.find(r => r.id === id);
+    if (!reminder) return;
+
+    const newActive = !reminder.active;
+    setReminders((prev) => prev.map((r) => (r.id === id ? { ...r, active: newActive } : r)));
+
+    if (user) {
+      const { error } = await supabase.from('reminders').update({ active: newActive }).eq('id', id);
+      if (error) console.error('Error updating reminder:', error);
+    }
+  }, [user, reminders]);
+
+  const deleteReminder = useCallback(async (id: string) => {
     setReminders((prev) => prev.filter((r) => r.id !== id));
-  };
+
+    if (user) {
+      const { error } = await supabase.from('reminders').delete().eq('id', id);
+      if (error) console.error('Error deleting reminder:', error);
+    }
+  }, [user]);
 
   const addChatMessage = useCallback(
     (message: Omit<ChatMessage, 'id' | 'timestamp'>): string => {
@@ -309,7 +425,13 @@ export const AuraProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   }, [user]);
 
-  const clearAllMemories = () => setMemories([]);
+  const clearAllMemories = useCallback(async () => {
+    setMemories([]);
+    if (user) {
+      const { error } = await supabase.from('memories').delete().eq('user_id', user.id);
+      if (error) console.error('Error clearing memories:', error);
+    }
+  }, [user]);
 
   return (
     <AuraContext.Provider

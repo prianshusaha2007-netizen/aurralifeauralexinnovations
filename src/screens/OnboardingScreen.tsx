@@ -10,7 +10,7 @@ const steps = [
   {
     id: 'welcome',
     title: "Hi, I'm AURA",
-    subtitle: "Can we get to know each other?",
+    subtitle: "Your all-time AI companion. Let's get to know each other!",
     type: 'intro',
   },
   {
@@ -24,7 +24,7 @@ const steps = [
   {
     id: 'age',
     title: "How old are you?",
-    subtitle: "This helps me understand you better",
+    subtitle: "This helps me adapt my tone and style",
     type: 'text',
     field: 'age',
     placeholder: "Your age",
@@ -39,17 +39,27 @@ const steps = [
     options: ['Male', 'Female', 'Non-binary', 'Prefer not to say'],
   },
   {
-    id: 'profession',
+    id: 'professions',
     title: "What do you do?",
-    subtitle: "Your daily life context helps me assist you",
-    type: 'options',
-    field: 'profession',
-    options: ['Student', 'Working Professional', 'Business Owner', 'Homemaker', 'Other'],
+    subtitle: "Select up to 3 professions",
+    type: 'multiSelect',
+    field: 'professions',
+    options: ['Student', 'Working Professional', 'Business Owner', 'Freelancer', 'Content Creator', 'Homemaker', 'Other'],
+    maxSelect: 3,
+  },
+  {
+    id: 'goals',
+    title: "What are your daily goals?",
+    subtitle: "What do you want to focus on?",
+    type: 'multiSelect',
+    field: 'goals',
+    options: ['Study & Learning', 'Work & Productivity', 'Fitness & Health', 'Creativity & Content', 'Mental Wellness', 'Business Growth'],
+    maxSelect: 4,
   },
   {
     id: 'languages',
     title: "What languages do you speak?",
-    subtitle: "I can talk in multiple languages",
+    subtitle: "I can talk in multiple languages fluently",
     type: 'multiSelect',
     field: 'languages',
     options: ['English', 'Hindi', 'Bengali', 'Hinglish'],
@@ -85,7 +95,9 @@ export const OnboardingScreen: React.FC = () => {
     name: '',
     age: '',
     gender: '',
-    profession: '',
+    profession: '', // Keep for backward compatibility
+    professions: [] as string[],
+    goals: [] as string[],
     languages: [] as string[],
     wakeTime: '07:00',
     sleepTime: '23:00',
@@ -98,7 +110,13 @@ export const OnboardingScreen: React.FC = () => {
 
   const handleNext = () => {
     if (isLastStep) {
-      updateUserProfile({ ...formData, onboardingComplete: true });
+      // Map first profession for backward compatibility
+      const profession = formData.professions[0] || '';
+      updateUserProfile({ 
+        ...formData, 
+        profession,
+        onboardingComplete: true 
+      });
     } else {
       setCurrentStep(prev => prev + 1);
     }
@@ -112,11 +130,15 @@ export const OnboardingScreen: React.FC = () => {
 
   const handleOptionSelect = (option: string) => {
     if (step.type === 'multiSelect') {
-      const current = formData[step.field as keyof typeof formData] as string[];
-      const updated = current.includes(option)
-        ? current.filter(o => o !== option)
-        : [...current, option];
-      setFormData({ ...formData, [step.field!]: updated });
+      const fieldKey = step.field as keyof typeof formData;
+      const current = formData[fieldKey] as string[];
+      const maxSelect = (step as any).maxSelect;
+      
+      if (current.includes(option)) {
+        setFormData({ ...formData, [step.field!]: current.filter(o => o !== option) });
+      } else if (!maxSelect || current.length < maxSelect) {
+        setFormData({ ...formData, [step.field!]: [...current, option] });
+      }
     } else {
       setFormData({ ...formData, [step.field!]: option });
     }
@@ -129,6 +151,16 @@ export const OnboardingScreen: React.FC = () => {
       return (formData[step.field as keyof typeof formData] as string[]).length > 0;
     }
     return !!formData[step.field as keyof typeof formData];
+  };
+
+  const getMultiSelectHint = () => {
+    if (step.type !== 'multiSelect') return null;
+    const current = (formData[step.field as keyof typeof formData] as string[]).length;
+    const max = (step as any).maxSelect;
+    if (max) {
+      return `${current}/${max} selected`;
+    }
+    return null;
   };
 
   return (
@@ -149,21 +181,24 @@ export const OnboardingScreen: React.FC = () => {
       </div>
 
       {/* Content */}
-      <div className="flex-1 flex flex-col items-center justify-center p-6">
+      <div className="flex-1 flex flex-col items-center justify-center p-6 overflow-y-auto">
         <div className="w-full max-w-md animate-fade-in" key={currentStep}>
           {/* Orb */}
-          <div className="flex justify-center mb-8">
+          <div className="flex justify-center mb-6">
             <AuraOrb size={step.type === 'intro' ? 'xl' : 'lg'} />
           </div>
 
           {/* Text */}
-          <div className="text-center mb-8">
+          <div className="text-center mb-6">
             <h1 className="text-2xl font-bold mb-2 aura-gradient-text">{step.title}</h1>
             <p className="text-muted-foreground">{step.subtitle}</p>
+            {getMultiSelectHint() && (
+              <p className="text-xs text-primary mt-1">{getMultiSelectHint()}</p>
+            )}
           </div>
 
           {/* Input Area */}
-          <div className="space-y-4">
+          <div className="space-y-3">
             {step.type === 'text' && (
               <Input
                 value={formData[step.field as keyof typeof formData] as string}
@@ -184,7 +219,7 @@ export const OnboardingScreen: React.FC = () => {
             )}
 
             {(step.type === 'options' || step.type === 'multiSelect') && (
-              <div className="grid gap-3">
+              <div className="grid gap-2 max-h-[40vh] overflow-y-auto pr-1">
                 {step.options?.map((option) => {
                   const isSelected = step.type === 'multiSelect'
                     ? (formData[step.field as keyof typeof formData] as string[]).includes(option)
@@ -195,15 +230,15 @@ export const OnboardingScreen: React.FC = () => {
                       key={option}
                       onClick={() => handleOptionSelect(option)}
                       className={cn(
-                        'p-4 rounded-xl border-2 transition-all duration-200 text-left',
+                        'p-3 rounded-xl border-2 transition-all duration-200 text-left',
                         isSelected
                           ? 'border-primary bg-primary/10'
                           : 'border-border hover:border-primary/50'
                       )}
                     >
                       <div className="flex items-center justify-between">
-                        <span className="font-medium">{option}</span>
-                        {isSelected && <Check className="w-5 h-5 text-primary" />}
+                        <span className="font-medium text-sm">{option}</span>
+                        {isSelected && <Check className="w-4 h-4 text-primary" />}
                       </div>
                     </button>
                   );

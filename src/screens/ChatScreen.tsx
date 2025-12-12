@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Mic, Volume2, Sparkles } from 'lucide-react';
+import { Send, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { AuraOrb } from '@/components/AuraOrb';
@@ -8,6 +8,8 @@ import { VoiceModal } from '@/components/VoiceModal';
 import { AutomationModal } from '@/components/AutomationModal';
 import { ActionsBar } from '@/components/ActionsBar';
 import { USPTiles } from '@/components/USPTiles';
+import { ModelSelector } from '@/components/ModelSelector';
+import { VoiceButton } from '@/components/VoiceButton';
 import { useAura } from '@/contexts/AuraContext';
 import { useAuraChat } from '@/hooks/useAuraChat';
 import { cn } from '@/lib/utils';
@@ -19,6 +21,7 @@ export const ChatScreen: React.FC = () => {
   const [inputValue, setInputValue] = useState('');
   const [voiceModal, setVoiceModal] = useState<'speak' | 'listen' | null>(null);
   const [showAutomation, setShowAutomation] = useState(false);
+  const [selectedModel, setSelectedModel] = useState('gemini-flash');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
@@ -35,7 +38,7 @@ export const ChatScreen: React.FC = () => {
     if (chatMessages.length === 0 && userProfile.onboardingComplete) {
       const professionGreeting = userProfile.profession === 'Student' 
         ? "Need help with studies, notes, or just wanna chill?"
-        : userProfile.profession === 'Employee'
+        : userProfile.profession === 'Working Professional'
         ? "Work stuff, emails, or just need a break? I'm here!"
         : "What are we working on today? I'm ready to help!";
       
@@ -49,13 +52,19 @@ export const ChatScreen: React.FC = () => {
 
     const userMessage = inputValue.trim();
     setInputValue('');
-    await sendMessage(userMessage);
+    await sendMessage(userMessage, selectedModel);
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSend();
+    }
+  };
+
+  const handleVoiceTranscription = (text: string) => {
+    if (text) {
+      setInputValue(text);
     }
   };
 
@@ -68,11 +77,17 @@ export const ChatScreen: React.FC = () => {
 
   return (
     <div className="flex flex-col h-full">
-      {/* Header with Orb */}
-      <div className="flex flex-col items-center pt-6 pb-2 relative">
+      {/* Header with Orb and Model Selector */}
+      <div className="flex flex-col items-center pt-4 pb-2 relative">
         <div className="absolute inset-0 bg-gradient-to-b from-accent/10 via-primary/5 to-transparent" />
+        
+        {/* Model Selector */}
+        <div className="absolute top-2 right-4 z-10">
+          <ModelSelector value={selectedModel} onChange={setSelectedModel} />
+        </div>
+        
         <AuraOrb size="md" isThinking={isThinking} className="animate-float" />
-        <h1 className="mt-3 text-lg font-bold aura-gradient-text">AURA</h1>
+        <h1 className="mt-2 text-lg font-bold aura-gradient-text">AURA</h1>
         <p className="text-xs text-muted-foreground">
           {isThinking ? 'Thinking...' : 'Your AI Bestfriend & Life Assistant'}
         </p>
@@ -119,14 +134,10 @@ export const ChatScreen: React.FC = () => {
         </div>
         
         <div className="flex items-center gap-2 max-w-lg mx-auto">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="rounded-full shrink-0 text-muted-foreground hover:text-primary"
-            onClick={() => setVoiceModal('speak')}
-          >
-            <Mic className="w-5 h-5" />
-          </Button>
+          <VoiceButton 
+            onTranscription={handleVoiceTranscription}
+            isProcessing={isThinking}
+          />
           
           <div className="flex-1 relative">
             <Input
@@ -151,15 +162,6 @@ export const ChatScreen: React.FC = () => {
               <Send className="w-4 h-4" />
             </Button>
           </div>
-          
-          <Button
-            variant="ghost"
-            size="icon"
-            className="rounded-full shrink-0 text-muted-foreground hover:text-primary"
-            onClick={() => setVoiceModal('listen')}
-          >
-            <Volume2 className="w-5 h-5" />
-          </Button>
           
           <Button
             variant="ghost"

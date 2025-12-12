@@ -38,16 +38,74 @@ export type Database = {
         }
         Relationships: []
       }
+      memories: {
+        Row: {
+          category: string
+          content: string
+          created_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          category: string
+          content: string
+          created_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          category?: string
+          content?: string
+          created_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      mood_checkins: {
+        Row: {
+          created_at: string
+          energy: string
+          id: string
+          mood: string
+          notes: string | null
+          stress: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          energy: string
+          id?: string
+          mood: string
+          notes?: string | null
+          stress: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          energy?: string
+          id?: string
+          mood?: string
+          notes?: string | null
+          stress?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           age: number | null
           created_at: string
           gender: string | null
+          goals: string[] | null
           id: string
           languages: string[] | null
           name: string
+          preferred_model: string | null
           profession: string | null
+          professions: string[] | null
           sleep_time: string | null
+          stress_level: string | null
           tone_preference: string | null
           updated_at: string
           wake_time: string | null
@@ -56,11 +114,15 @@ export type Database = {
           age?: number | null
           created_at?: string
           gender?: string | null
+          goals?: string[] | null
           id: string
           languages?: string[] | null
           name: string
+          preferred_model?: string | null
           profession?: string | null
+          professions?: string[] | null
           sleep_time?: string | null
+          stress_level?: string | null
           tone_preference?: string | null
           updated_at?: string
           wake_time?: string | null
@@ -69,14 +131,75 @@ export type Database = {
           age?: number | null
           created_at?: string
           gender?: string | null
+          goals?: string[] | null
           id?: string
           languages?: string[] | null
           name?: string
+          preferred_model?: string | null
           profession?: string | null
+          professions?: string[] | null
           sleep_time?: string | null
+          stress_level?: string | null
           tone_preference?: string | null
           updated_at?: string
           wake_time?: string | null
+        }
+        Relationships: []
+      }
+      reminders: {
+        Row: {
+          active: boolean | null
+          created_at: string
+          id: string
+          text: string
+          time: string
+          user_id: string
+        }
+        Insert: {
+          active?: boolean | null
+          created_at?: string
+          id?: string
+          text: string
+          time: string
+          user_id: string
+        }
+        Update: {
+          active?: boolean | null
+          created_at?: string
+          id?: string
+          text?: string
+          time?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      routines: {
+        Row: {
+          completed: boolean | null
+          created_at: string
+          id: string
+          time: string
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          completed?: boolean | null
+          created_at?: string
+          id?: string
+          time: string
+          title: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          completed?: boolean | null
+          created_at?: string
+          id?: string
+          time?: string
+          title?: string
+          type?: string
+          user_id?: string
         }
         Relationships: []
       }

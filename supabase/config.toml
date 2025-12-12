@@ -2,3 +2,18 @@ project_id = "cdhrhwxctdtvkmlvedgb"
 
 [functions.aura-chat]
 verify_jwt = false
+
+[functions.voice-to-text]
+verify_jwt = false
+
+[functions.text-to-voice]
+verify_jwt = false
+
+[functions.save-memory]
+verify_jwt = true
+
+[functions.get-memories]
+verify_jwt = true
+
+[functions.save-mood]
+verify_jwt = true
