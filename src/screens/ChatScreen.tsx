@@ -1,5 +1,5 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Send, Sparkles, Menu, Volume2, Mic } from 'lucide-react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { Send, Sparkles, Menu, Volume2, Mic, Radio } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { AuraOrb } from '@/components/AuraOrb';
@@ -12,6 +12,8 @@ import { VoiceButton } from '@/components/VoiceButton';
 import { useAura } from '@/contexts/AuraContext';
 import { useAuraChat } from '@/hooks/useAuraChat';
 import { useVoiceCommands } from '@/hooks/useVoiceCommands';
+import { useVoiceFeedback } from '@/hooks/useVoiceFeedback';
+import { useWakeWord } from '@/hooks/useWakeWord';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -25,12 +27,32 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ onMenuClick, onVoiceMode
   const { chatMessages, addChatMessage, userProfile } = useAura();
   const { sendMessage, isThinking } = useAuraChat();
   const { processCommand } = useVoiceCommands();
+  const { speak, isSpeaking: isVoiceFeedbackSpeaking } = useVoiceFeedback();
   const [inputValue, setInputValue] = useState('');
   const [showAutomation, setShowAutomation] = useState(false);
   const [selectedModel, setSelectedModel] = useState('gemini-flash');
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [wakeWordEnabled, setWakeWordEnabled] = useState(false);
+  const [showVoiceInput, setShowVoiceInput] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const voiceButtonRef = useRef<HTMLButtonElement>(null);
+
+  // Wake word detection
+  const handleWakeWord = useCallback(() => {
+    toast.success('Hey! I heard you! 👋', { duration: 2000 });
+    setShowVoiceInput(true);
+    // Trigger voice input after wake word
+    setTimeout(() => {
+      voiceButtonRef.current?.click();
+    }, 500);
+  }, []);
+
+  const { isListening: isWakeWordListening, isSupported: isWakeWordSupported } = useWakeWord({
+    wakePhrase: 'hey aura',
+    onWakeWord: handleWakeWord,
+    enabled: wakeWordEnabled,
+  });
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -71,6 +93,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ onMenuClick, onVoiceMode
 
   const handleVoiceTranscription = async (text: string) => {
     if (!text) return;
+    setShowVoiceInput(false);
     
     // Check for voice commands first
     const commandResult = await processCommand(text);
@@ -80,6 +103,11 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ onMenuClick, onVoiceMode
       addChatMessage({ content: text, sender: 'user' });
       // Add AURA's response for handled commands
       addChatMessage({ content: commandResult.response, sender: 'aura' });
+      
+      // Speak the response if it's a voice command
+      if (commandResult.speakResponse) {
+        await speak(commandResult.response);
+      }
     } else if (commandResult.type === 'general') {
       // Not a command, send as regular message
       addChatMessage({ content: text, sender: 'user' });
@@ -88,10 +116,28 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ onMenuClick, onVoiceMode
       // Partially handled (acknowledged but not executed)
       addChatMessage({ content: text, sender: 'user' });
       addChatMessage({ content: commandResult.response, sender: 'aura' });
+      
+      // Speak the response
+      if (commandResult.speakResponse) {
+        await speak(commandResult.response);
+      }
     } else {
       // Fallback: just set as input
       setInputValue(text);
     }
+  };
+
+  const toggleWakeWord = () => {
+    if (!isWakeWordSupported) {
+      toast.error('Wake word detection not supported in this browser');
+      return;
+    }
+    setWakeWordEnabled(!wakeWordEnabled);
+    toast.success(
+      !wakeWordEnabled 
+        ? 'Wake word enabled! Say "Hey AURA" to start talking.' 
+        : 'Wake word disabled.'
+    );
   };
 
   const handleSpeakMessage = async (text: string) => {
@@ -166,10 +212,10 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ onMenuClick, onVoiceMode
           <ModelSelector value={selectedModel} onChange={setSelectedModel} />
         </div>
         
-        <AuraOrb size="md" isThinking={isThinking} className="animate-float" />
+        <AuraOrb size="md" isThinking={isThinking || isVoiceFeedbackSpeaking} className="animate-float" />
         <h1 className="mt-2 text-lg font-bold aura-gradient-text">AURA</h1>
         <p className="text-xs text-muted-foreground">
-          {isThinking ? 'Thinking...' : 'Your AI Bestfriend & Life Assistant'}
+          {isVoiceFeedbackSpeaking ? 'Speaking...' : isThinking ? 'Thinking...' : isWakeWordListening ? '🎤 Listening for "Hey AURA"...' : 'Your AI Bestfriend & Life Assistant'}
         </p>
       </div>
 
@@ -214,7 +260,22 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ onMenuClick, onVoiceMode
         </div>
         
         <div className="flex items-center gap-2 max-w-lg mx-auto">
+          {/* Wake Word Toggle */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className={cn(
+              'rounded-full shrink-0',
+              wakeWordEnabled ? 'text-primary bg-primary/10' : 'text-muted-foreground hover:text-primary'
+            )}
+            onClick={toggleWakeWord}
+            title={wakeWordEnabled ? 'Disable wake word' : 'Enable "Hey AURA" wake word'}
+          >
+            <Radio className={cn('w-5 h-5', wakeWordEnabled && 'animate-pulse')} />
+          </Button>
+          
           <VoiceButton 
+            ref={voiceButtonRef}
             onTranscription={handleVoiceTranscription}
             isProcessing={isThinking}
           />
