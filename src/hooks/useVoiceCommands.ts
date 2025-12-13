@@ -4,15 +4,49 @@ import { supabase } from '@/integrations/supabase/client';
 import { useNotifications } from './useNotifications';
 
 interface VoiceCommandResult {
-  type: 'reminder' | 'mood_query' | 'schedule' | 'search' | 'play' | 'call' | 'message' | 'weather' | 'time' | 'general';
+  type: 'reminder' | 'mood_query' | 'schedule' | 'search' | 'play' | 'call' | 'message' | 'weather' | 'time' | 'greeting' | 'restaurants' | 'traffic' | 'general';
   handled: boolean;
   response?: string;
   speakResponse?: boolean;
   data?: any;
 }
 
-export const useVoiceCommands = () => {
+interface UserProfile {
+  name?: string;
+  wakeTime?: string;
+  sleepTime?: string;
+}
+
+export const useVoiceCommands = (userProfile?: UserProfile) => {
   const { scheduleNotification, requestPermission } = useNotifications();
+
+  // Helper to get weather info
+  const getWeatherInfo = async (): Promise<string> => {
+    try {
+      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+        if (!navigator.geolocation) {
+          reject(new Error('Geolocation not supported'));
+          return;
+        }
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          enableHighAccuracy: false,
+          timeout: 10000,
+          maximumAge: 300000,
+        });
+      });
+
+      const { latitude, longitude } = position.coords;
+      const response = await supabase.functions.invoke('get-weather', {
+        body: { latitude, longitude }
+      });
+
+      if (response.error) throw response.error;
+      const weather = response.data;
+      return `${weather.temperature}°C, ${weather.description.toLowerCase()} ${weather.emoji}`;
+    } catch {
+      return '';
+    }
+  };
 
   const parseTimeFromText = (text: string): number | null => {
     const timePatterns = [
@@ -44,6 +78,218 @@ export const useVoiceCommands = () => {
   const processCommand = useCallback(async (text: string): Promise<VoiceCommandResult> => {
     const lowerText = text.toLowerCase();
     const cleanedText = lowerText.replace(/^(hey\s+)?aura[,\s]*/i, '').trim();
+    const userName = userProfile?.name || 'friend';
+
+    // Morning greeting with weather
+    if (cleanedText.includes('good morning') || 
+        (cleanedText.includes('morning') && (cleanedText.includes('hey') || cleanedText.includes('hi')))) {
+      const weatherInfo = await getWeatherInfo();
+      const hour = new Date().getHours();
+      
+      let greeting = '';
+      if (hour < 6) {
+        greeting = `You're up early, ${userName}! `;
+      } else if (hour < 9) {
+        greeting = `Good morning, ${userName}! `;
+      } else if (hour < 12) {
+        greeting = `Late morning vibes, ${userName}! `;
+      } else {
+        greeting = `Hey ${userName}, it's actually afternoon now! `;
+      }
+
+      let response = greeting;
+      if (weatherInfo) {
+        response += `It's ${weatherInfo} outside. `;
+      }
+
+      // Add schedule info
+      try {
+        const { data: routines } = await supabase
+          .from('routines')
+          .select('*')
+          .order('time', { ascending: true });
+
+        const now = new Date();
+        const currentTime = now.toTimeString().slice(0, 5);
+        const todaysTasks = routines?.filter((r: any) => r.time >= currentTime && !r.completed) || [];
+
+        if (todaysTasks.length > 0) {
+          const firstTask = todaysTasks[0];
+          response += `You've got ${todaysTasks.length} tasks today. First up: ${firstTask.title} at ${firstTask.time}. `;
+        } else {
+          response += `Your schedule looks clear today! `;
+        }
+      } catch {
+        // Ignore schedule errors
+      }
+
+      // Add mood-based suggestion
+      try {
+        const { data: moodData } = await supabase
+          .from('mood_checkins')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .limit(1);
+
+        if (moodData && moodData.length > 0) {
+          const lastMood = moodData[0].mood;
+          if (lastMood === 'stressed' || lastMood === 'anxious') {
+            response += `Yesterday seemed a bit tough. Take it easy today, okay? 💙`;
+          } else if (lastMood === 'happy' || lastMood === 'excited') {
+            response += `You were feeling great yesterday — let's keep that energy going! ✨`;
+          }
+        }
+      } catch {
+        // Ignore mood errors
+      }
+
+      response += ` What would you like to tackle first?`;
+
+      return {
+        type: 'greeting',
+        handled: true,
+        speakResponse: true,
+        response,
+      };
+    }
+
+    // Good night greeting
+    if (cleanedText.includes('good night') || cleanedText.includes('goodnight')) {
+      const responses = [
+        `Sweet dreams, ${userName}! 🌙 I'll be here when you wake up.`,
+        `Night night, ${userName}! Rest well — you've earned it. 💤`,
+        `Sleep tight, ${userName}. Tomorrow's a new day! 🌟`,
+      ];
+      return {
+        type: 'greeting',
+        handled: true,
+        speakResponse: true,
+        response: responses[Math.floor(Math.random() * responses.length)],
+      };
+    }
+
+    // Casual greetings
+    if (cleanedText === 'hey' || cleanedText === 'hi' || cleanedText === 'hello' || 
+        cleanedText.includes('what\'s up') || cleanedText.includes('whats up') ||
+        cleanedText.includes('how are you')) {
+      const hour = new Date().getHours();
+      let timeGreeting = '';
+      if (hour < 12) timeGreeting = 'this morning';
+      else if (hour < 17) timeGreeting = 'this afternoon';
+      else if (hour < 21) timeGreeting = 'this evening';
+      else timeGreeting = 'tonight';
+
+      const responses = [
+        `Hey ${userName}! What's going on ${timeGreeting}?`,
+        `What's up, ${userName}? How can I help?`,
+        `Hey! Good to see you ${timeGreeting}. What's on your mind?`,
+        `${userName}! What are we working on ${timeGreeting}?`,
+      ];
+      return {
+        type: 'greeting',
+        handled: true,
+        speakResponse: true,
+        response: responses[Math.floor(Math.random() * responses.length)],
+      };
+    }
+
+    // Restaurant recommendations
+    if (cleanedText.includes('restaurant') || cleanedText.includes('food nearby') || 
+        cleanedText.includes('where to eat') || cleanedText.includes('hungry') ||
+        cleanedText.includes('recommend food') || cleanedText.includes('places to eat')) {
+      try {
+        const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+          if (!navigator.geolocation) {
+            reject(new Error('Geolocation not supported'));
+            return;
+          }
+          navigator.geolocation.getCurrentPosition(resolve, reject, {
+            enableHighAccuracy: false,
+            timeout: 10000,
+            maximumAge: 300000,
+          });
+        });
+
+        const { latitude, longitude } = position.coords;
+        const response = await supabase.functions.invoke('get-location-info', {
+          body: { latitude, longitude, type: 'restaurants' }
+        });
+
+        if (response.error) throw response.error;
+        
+        const restaurants = response.data.restaurants;
+        if (restaurants.length === 0) {
+          return {
+            type: 'restaurants',
+            handled: true,
+            speakResponse: true,
+            response: "I couldn't find nearby restaurants right now. Try searching on Google Maps! 🍽️",
+          };
+        }
+
+        const list = restaurants.slice(0, 3).map((r: any) => 
+          `${r.name} (${r.cuisine || r.type})`
+        ).join(', ');
+
+        return {
+          type: 'restaurants',
+          handled: true,
+          speakResponse: true,
+          response: `Here are some nearby options: ${list}. Want me to search for more details? 🍽️`,
+          data: { restaurants },
+        };
+      } catch (error) {
+        return {
+          type: 'restaurants',
+          handled: true,
+          speakResponse: true,
+          response: "I need location access to find nearby restaurants. Enable location and try again! 📍",
+        };
+      }
+    }
+
+    // Traffic updates
+    if (cleanedText.includes('traffic') || cleanedText.includes('commute') || 
+        cleanedText.includes('road conditions')) {
+      try {
+        const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+          if (!navigator.geolocation) {
+            reject(new Error('Geolocation not supported'));
+            return;
+          }
+          navigator.geolocation.getCurrentPosition(resolve, reject);
+        });
+
+        const { latitude, longitude } = position.coords;
+        const response = await supabase.functions.invoke('get-location-info', {
+          body: { latitude, longitude, type: 'traffic' }
+        });
+
+        if (response.error) throw response.error;
+        
+        const traffic = response.data;
+        const emojis: Record<string, string> = {
+          'light': '🟢',
+          'moderate': '🟡', 
+          'heavy': '🔴',
+        };
+
+        return {
+          type: 'traffic',
+          handled: true,
+          speakResponse: true,
+          response: `Traffic is ${traffic.trafficLevel} ${emojis[traffic.trafficLevel] || ''}. ${traffic.eta} ${traffic.suggestion}`,
+          data: traffic,
+        };
+      } catch {
+        return {
+          type: 'traffic',
+          handled: true,
+          speakResponse: true,
+          response: "I couldn't check traffic conditions right now. Try Google Maps for real-time updates! 🚗",
+        };
+      }
+    }
 
     // Time/Date queries
     if (cleanedText.includes('what time') || cleanedText.includes('current time')) {

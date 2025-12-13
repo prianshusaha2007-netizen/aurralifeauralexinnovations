@@ -14,6 +14,7 @@ import { useAuraChat } from '@/hooks/useAuraChat';
 import { useVoiceCommands } from '@/hooks/useVoiceCommands';
 import { useVoiceFeedback } from '@/hooks/useVoiceFeedback';
 import { useWakeWord } from '@/hooks/useWakeWord';
+import { useHotkeys } from '@/hooks/useHotkeys';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -26,7 +27,11 @@ interface ChatScreenProps {
 export const ChatScreen: React.FC<ChatScreenProps> = ({ onMenuClick, onVoiceModeClick }) => {
   const { chatMessages, addChatMessage, userProfile } = useAura();
   const { sendMessage, isThinking } = useAuraChat();
-  const { processCommand } = useVoiceCommands();
+  const { processCommand } = useVoiceCommands({
+    name: userProfile.name,
+    wakeTime: userProfile.wakeTime,
+    sleepTime: userProfile.sleepTime,
+  });
   const { speak, isSpeaking: isVoiceFeedbackSpeaking } = useVoiceFeedback();
   const [inputValue, setInputValue] = useState('');
   const [showAutomation, setShowAutomation] = useState(false);
@@ -53,6 +58,19 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ onMenuClick, onVoiceMode
     onWakeWord: handleWakeWord,
     enabled: wakeWordEnabled,
   });
+
+  // Hotkey: Ctrl+Space for voice input
+  useHotkeys([
+    {
+      key: 'Space',
+      ctrl: true,
+      callback: () => {
+        toast.success('Voice input activated! 🎤', { duration: 1500 });
+        voiceButtonRef.current?.click();
+      },
+      description: 'Trigger voice input',
+    },
+  ]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });

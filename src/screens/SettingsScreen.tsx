@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Sun, 
@@ -10,7 +10,8 @@ import {
   Trash2,
   ChevronRight,
   Sparkles,
-  LogOut
+  LogOut,
+  Volume2
 } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { useAura } from '@/contexts/AuraContext';
@@ -18,6 +19,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { WeeklyEmailSettings } from '@/components/WeeklyEmailSettings';
+import { VoiceSettingsPanel } from '@/components/VoiceSettingsPanel';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 
 export const SettingsScreen: React.FC = () => {
   const navigate = useNavigate();
@@ -30,6 +33,13 @@ export const SettingsScreen: React.FC = () => {
     clearAllMemories 
   } = useAura();
   const { toast } = useToast();
+  
+  // Voice settings state
+  const [voiceSettings, setVoiceSettings] = useState({
+    voice: 'nova',
+    speed: 1.0,
+    pitch: 0,
+  });
 
   const handleSignOut = async () => {
     await signOut();
@@ -73,6 +83,18 @@ export const SettingsScreen: React.FC = () => {
               onCheckedChange={toggleTheme}
             />
           ),
+        },
+      ],
+    },
+    {
+      title: 'VOICE',
+      items: [
+        {
+          icon: Volume2,
+          label: 'Voice Settings',
+          description: `Voice: ${voiceSettings.voice}, Speed: ${voiceSettings.speed}x`,
+          isVoiceSettings: true,
+          action: <ChevronRight className="w-5 h-5 text-muted-foreground" />,
         },
       ],
     },
@@ -183,8 +205,44 @@ export const SettingsScreen: React.FC = () => {
               {'customComponent' in section && section.customComponent ? (
                 section.customComponent
               ) : (
-                'items' in section && section.items?.map((item, index) => {
+                'items' in section && section.items?.map((item: any, index: number) => {
                   const Icon = item.icon;
+                  
+                  // Voice settings with dialog
+                  if (item.isVoiceSettings) {
+                    return (
+                      <Dialog key={item.label}>
+                        <DialogTrigger asChild>
+                          <button
+                            className={cn(
+                              'flex items-center gap-4 w-full p-4 text-left -mx-4',
+                              'hover:bg-muted/50 transition-colors',
+                              index !== (section.items?.length ?? 0) - 1 && 'border-b border-border/50'
+                            )}
+                          >
+                            <div className="p-2 rounded-lg bg-muted text-foreground">
+                              <Icon className="w-4 h-4" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium">{item.label}</p>
+                              <p className="text-xs text-muted-foreground truncate">{item.description}</p>
+                            </div>
+                            {item.action}
+                          </button>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-md">
+                          <DialogHeader>
+                            <DialogTitle>Voice Settings</DialogTitle>
+                          </DialogHeader>
+                          <VoiceSettingsPanel 
+                            settings={voiceSettings} 
+                            onChange={setVoiceSettings} 
+                          />
+                        </DialogContent>
+                      </Dialog>
+                    );
+                  }
+                  
                   return (
                     <button
                       key={item.label}

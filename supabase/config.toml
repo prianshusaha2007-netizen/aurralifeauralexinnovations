@@ -32,3 +32,6 @@ verify_jwt = true
 
 [functions.get-weather]
 verify_jwt = false
+
+[functions.get-location-info]
+verify_jwt = false
