@@ -77,6 +77,8 @@ export type Database = {
           icon: string | null
           id: string
           name: string
+          reminder_enabled: boolean | null
+          reminder_time: string | null
           target_count: number | null
           user_id: string
         }
@@ -86,6 +88,8 @@ export type Database = {
           icon?: string | null
           id?: string
           name: string
+          reminder_enabled?: boolean | null
+          reminder_time?: string | null
           target_count?: number | null
           user_id: string
         }
@@ -95,6 +99,8 @@ export type Database = {
           icon?: string | null
           id?: string
           name?: string
+          reminder_enabled?: boolean | null
+          reminder_time?: string | null
           target_count?: number | null
           user_id?: string
         }
@@ -205,6 +211,33 @@ export type Database = {
           tone_preference?: string | null
           updated_at?: string
           wake_time?: string | null
+        }
+        Relationships: []
+      }
+      push_subscriptions: {
+        Row: {
+          auth: string
+          created_at: string
+          endpoint: string
+          id: string
+          p256dh: string
+          user_id: string
+        }
+        Insert: {
+          auth: string
+          created_at?: string
+          endpoint: string
+          id?: string
+          p256dh: string
+          user_id: string
+        }
+        Update: {
+          auth?: string
+          created_at?: string
+          endpoint?: string
+          id?: string
+          p256dh?: string
+          user_id?: string
         }
         Relationships: []
       }

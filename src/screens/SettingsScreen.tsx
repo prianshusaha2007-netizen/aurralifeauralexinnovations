@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Sun, 
@@ -11,7 +11,9 @@ import {
   ChevronRight,
   Sparkles,
   LogOut,
-  Volume2
+  Volume2,
+  Bell,
+  BellRing
 } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { useAura } from '@/contexts/AuraContext';
@@ -21,6 +23,8 @@ import { useToast } from '@/hooks/use-toast';
 import { WeeklyEmailSettings } from '@/components/WeeklyEmailSettings';
 import { VoiceSettingsPanel } from '@/components/VoiceSettingsPanel';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { usePushNotifications } from '@/hooks/usePushNotifications';
+import { useMorningBriefing } from '@/hooks/useMorningBriefing';
 
 export const SettingsScreen: React.FC = () => {
   const navigate = useNavigate();
@@ -33,6 +37,8 @@ export const SettingsScreen: React.FC = () => {
     clearAllMemories 
   } = useAura();
   const { toast } = useToast();
+  const { subscribeToPush, unsubscribeFromPush, checkSubscription, isSupported } = usePushNotifications();
+  const { showBriefingNotification } = useMorningBriefing();
   
   // Voice settings state
   const [voiceSettings, setVoiceSettings] = useState({
@@ -40,6 +46,31 @@ export const SettingsScreen: React.FC = () => {
     speed: 1.0,
     pitch: 0,
   });
+
+  // Push notification state
+  const [pushEnabled, setPushEnabled] = useState(false);
+
+  useEffect(() => {
+    checkSubscription().then(setPushEnabled);
+  }, [checkSubscription]);
+
+  const handlePushToggle = async (enabled: boolean) => {
+    if (enabled) {
+      const success = await subscribeToPush();
+      setPushEnabled(success);
+    } else {
+      await unsubscribeFromPush();
+      setPushEnabled(false);
+    }
+  };
+
+  const handleTestBriefing = async () => {
+    await showBriefingNotification();
+    toast({
+      title: "Morning Briefing Sent! ☀️",
+      description: "Check your notification",
+    });
+  };
 
   const handleSignOut = async () => {
     await signOut();
@@ -100,6 +131,30 @@ export const SettingsScreen: React.FC = () => {
     },
     {
       title: 'NOTIFICATIONS',
+      items: [
+        {
+          icon: BellRing,
+          label: 'Push Notifications',
+          description: pushEnabled ? 'Enabled' : 'Disabled',
+          action: (
+            <Switch 
+              checked={pushEnabled} 
+              onCheckedChange={handlePushToggle}
+              disabled={!isSupported}
+            />
+          ),
+        },
+        {
+          icon: Bell,
+          label: 'Test Morning Briefing',
+          description: 'Get your personalized morning update now',
+          onClick: handleTestBriefing,
+          action: <ChevronRight className="w-5 h-5 text-muted-foreground" />,
+        },
+      ],
+    },
+    {
+      title: 'EMAIL',
       customComponent: <WeeklyEmailSettings />,
     },
     {
