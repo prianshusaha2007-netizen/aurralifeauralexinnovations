@@ -11,7 +11,8 @@ import {
   Gamepad2,
   Shield,
   Plus,
-  X
+  X,
+  Target
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -23,6 +24,7 @@ export type TabId =
   | 'history' 
   | 'memories' 
   | 'routine' 
+  | 'habits'
   | 'mood' 
   | 'profile' 
   | 'search' 
@@ -42,6 +44,7 @@ const menuItems: MenuItem[] = [
   { id: 'history', icon: History, label: 'Chat History' },
   { id: 'memories', icon: Brain, label: 'Memories' },
   { id: 'routine', icon: Calendar, label: 'Routine & Reminders' },
+  { id: 'habits', icon: Target, label: 'Habit Tracker' },
   { id: 'mood', icon: Smile, label: 'Mood Check-in' },
   { id: 'profile', icon: User, label: 'Personality Profile' },
   { id: 'search', icon: Search, label: 'Smart Search' },

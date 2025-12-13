@@ -35,3 +35,6 @@ verify_jwt = false
 
 [functions.get-location-info]
 verify_jwt = false
+
+[functions.morning-briefing]
+verify_jwt = false

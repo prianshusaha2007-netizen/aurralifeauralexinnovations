@@ -38,6 +38,68 @@ export type Database = {
         }
         Relationships: []
       }
+      habit_completions: {
+        Row: {
+          completed_at: string
+          count: number | null
+          habit_id: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string
+          count?: number | null
+          habit_id: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string
+          count?: number | null
+          habit_id?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "habit_completions_habit_id_fkey"
+            columns: ["habit_id"]
+            isOneToOne: false
+            referencedRelation: "habits"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      habits: {
+        Row: {
+          created_at: string
+          frequency: string
+          icon: string | null
+          id: string
+          name: string
+          target_count: number | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          frequency?: string
+          icon?: string | null
+          id?: string
+          name: string
+          target_count?: number | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          frequency?: string
+          icon?: string | null
+          id?: string
+          name?: string
+          target_count?: number | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       memories: {
         Row: {
           category: string

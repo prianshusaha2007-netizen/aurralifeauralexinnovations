@@ -15,17 +15,23 @@ import { PersonalityProfileScreen } from '@/screens/PersonalityProfileScreen';
 import { SmartSearchScreen } from '@/screens/SmartSearchScreen';
 import { ChatHistoryScreen } from '@/screens/ChatHistoryScreen';
 import { PermissionsScreen } from '@/screens/PermissionsScreen';
+import { HabitTrackerScreen } from '@/screens/HabitTrackerScreen';
 import { AuraOrb } from '@/components/AuraOrb';
 import { DailyMoodPopup } from '@/components/DailyMoodPopup';
 import { SplashScreen } from '@/components/SplashScreen';
 import { PageTransition } from '@/components/PageTransition';
 import { ContinuousVoiceMode } from '@/components/ContinuousVoiceMode';
 
+import { useMorningBriefing } from '@/hooks/useMorningBriefing';
+
 const AppContent: React.FC = () => {
   const { userProfile, isLoading, clearChatHistory } = useAura();
   const [activeTab, setActiveTab] = useState<TabId>('chat');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [voiceModeOpen, setVoiceModeOpen] = useState(false);
+  
+  // Initialize morning briefing (will auto-show if appropriate time)
+  useMorningBriefing();
 
   if (isLoading) {
     return (
@@ -51,6 +57,7 @@ const AppContent: React.FC = () => {
       case 'games': return <PlayLearnScreen />;
       case 'memories': return <MemoriesScreen />;
       case 'routine': return <RoutineScreen />;
+      case 'habits': return <HabitTrackerScreen />;
       case 'settings': return <SettingsScreen />;
       case 'mood': return <MoodCheckInScreen />;
       case 'profile': return <PersonalityProfileScreen />;
