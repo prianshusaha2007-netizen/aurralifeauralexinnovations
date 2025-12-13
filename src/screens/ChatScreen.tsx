@@ -11,6 +11,7 @@ import { ModelSelector } from '@/components/ModelSelector';
 import { VoiceButton } from '@/components/VoiceButton';
 import { useAura } from '@/contexts/AuraContext';
 import { useAuraChat } from '@/hooks/useAuraChat';
+import { useVoiceCommands } from '@/hooks/useVoiceCommands';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -23,6 +24,7 @@ interface ChatScreenProps {
 export const ChatScreen: React.FC<ChatScreenProps> = ({ onMenuClick, onVoiceModeClick }) => {
   const { chatMessages, addChatMessage, userProfile } = useAura();
   const { sendMessage, isThinking } = useAuraChat();
+  const { processCommand } = useVoiceCommands();
   const [inputValue, setInputValue] = useState('');
   const [showAutomation, setShowAutomation] = useState(false);
   const [selectedModel, setSelectedModel] = useState('gemini-flash');
@@ -67,8 +69,27 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ onMenuClick, onVoiceMode
     }
   };
 
-  const handleVoiceTranscription = (text: string) => {
-    if (text) {
+  const handleVoiceTranscription = async (text: string) => {
+    if (!text) return;
+    
+    // Check for voice commands first
+    const commandResult = await processCommand(text);
+    
+    if (commandResult.handled && commandResult.response) {
+      // Add user message
+      addChatMessage({ content: text, sender: 'user' });
+      // Add AURA's response for handled commands
+      addChatMessage({ content: commandResult.response, sender: 'aura' });
+    } else if (commandResult.type === 'general') {
+      // Not a command, send as regular message
+      addChatMessage({ content: text, sender: 'user' });
+      await sendMessage(text, selectedModel);
+    } else if (commandResult.response) {
+      // Partially handled (acknowledged but not executed)
+      addChatMessage({ content: text, sender: 'user' });
+      addChatMessage({ content: commandResult.response, sender: 'aura' });
+    } else {
+      // Fallback: just set as input
       setInputValue(text);
     }
   };
