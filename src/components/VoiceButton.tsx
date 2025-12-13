@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, forwardRef } from 'react';
 import { Mic, MicOff, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -11,11 +11,11 @@ interface VoiceButtonProps {
   className?: string;
 }
 
-export const VoiceButton: React.FC<VoiceButtonProps> = ({
+export const VoiceButton = forwardRef<HTMLButtonElement, VoiceButtonProps>(({
   onTranscription,
   isProcessing = false,
   className,
-}) => {
+}, ref) => {
   const [isRecording, setIsRecording] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -112,6 +112,7 @@ export const VoiceButton: React.FC<VoiceButtonProps> = ({
 
   return (
     <Button
+      ref={ref}
       variant="ghost"
       size="icon"
       className={cn(
@@ -134,4 +135,6 @@ export const VoiceButton: React.FC<VoiceButtonProps> = ({
       )}
     </Button>
   );
-};
+});
+
+VoiceButton.displayName = 'VoiceButton';
