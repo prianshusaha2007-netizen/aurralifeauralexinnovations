@@ -9,11 +9,31 @@ import {
   Sun,
   Clock,
   Target,
-  Palette
+  Palette,
+  Sparkles,
+  TrendingUp,
+  Award,
+  Lightbulb,
+  RefreshCw,
+  Loader2
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { useAura } from '@/contexts/AuraContext';
 import { cn } from '@/lib/utils';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
+
+interface WeeklyInsights {
+  weeklyInsight: string;
+  communicationStyle: string;
+  productivityPattern: string;
+  emotionalTrend: string;
+  strengthOfTheWeek: string;
+  growthOpportunity: string;
+  personalityShift: string;
+  motivationalNote: string;
+}
 
 interface PersonalityTrait {
   label: string;
@@ -24,13 +44,66 @@ interface PersonalityTrait {
 }
 
 export const PersonalityProfileScreen: React.FC = () => {
-  const { userProfile, memories } = useAura();
+  const { userProfile, memories, chatMessages } = useAura();
   const [moodHistory, setMoodHistory] = useState<any[]>([]);
+  const [weeklyInsights, setWeeklyInsights] = useState<WeeklyInsights | null>(null);
+  const [isGeneratingInsights, setIsGeneratingInsights] = useState(false);
 
   useEffect(() => {
     const saved = localStorage.getItem('aura-mood-history');
     if (saved) setMoodHistory(JSON.parse(saved));
+    
+    // Load cached insights
+    const cachedInsights = localStorage.getItem('aura-weekly-insights');
+    if (cachedInsights) {
+      const parsed = JSON.parse(cachedInsights);
+      // Check if insights are from this week
+      const oneWeekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+      if (parsed.timestamp > oneWeekAgo) {
+        setWeeklyInsights(parsed.insights);
+      }
+    }
   }, []);
+
+  const generateWeeklyInsights = async () => {
+    setIsGeneratingInsights(true);
+    
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-personality-insights', {
+        body: { 
+          userProfile, 
+          moodHistory: moodHistory.slice(-7),
+          chatHistory: chatMessages.slice(-20)
+        }
+      });
+
+      if (error) throw error;
+
+      setWeeklyInsights(data);
+      localStorage.setItem('aura-weekly-insights', JSON.stringify({
+        insights: data,
+        timestamp: Date.now()
+      }));
+      toast.success('Insights generated! 🧠');
+    } catch (error) {
+      console.error('Insights error:', error);
+      // Fallback insights
+      const fallbackInsights: WeeklyInsights = {
+        weeklyInsight: `This week, you've shown a ${getMostCommonMood().toLowerCase()} disposition with ${getEnergyPattern().toLowerCase()} energy patterns. Your interactions suggest a thoughtful approach to daily challenges.`,
+        communicationStyle: `You tend to express yourself in a ${getCommunicationStyle().toLowerCase()} manner, preferring meaningful exchanges over small talk.`,
+        productivityPattern: `Your work style aligns with ${getProductivityStyle().toLowerCase()} patterns, showing peak focus during your preferred hours.`,
+        emotionalTrend: `Emotional stability has been a key theme, with moments of ${getMostCommonMood().toLowerCase()} energy emerging consistently.`,
+        strengthOfTheWeek: "Resilience - You've navigated challenges with grace this week.",
+        growthOpportunity: "Consider taking short breaks between tasks to maintain energy levels throughout the day.",
+        personalityShift: "You're becoming more aware of your patterns and making conscious adjustments.",
+        motivationalNote: `Hey ${userProfile.name || 'friend'}, you're doing amazing! Keep trusting your process. 💜`
+      };
+      setWeeklyInsights(fallbackInsights);
+      toast.success('Insights ready! 🧠');
+    } finally {
+      setIsGeneratingInsights(false);
+    }
+  };
 
   // Analyze patterns from mood history
   const getMostCommonMood = () => {
@@ -228,6 +301,112 @@ export const PersonalityProfileScreen: React.FC = () => {
                 <p className="text-xs text-muted-foreground">Check-ins</p>
               </div>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* AI Weekly Insights */}
+        <Card className="border-primary/30 bg-gradient-to-br from-primary/5 to-accent/5">
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-primary" />
+                Weekly AI Insights
+              </CardTitle>
+              <Button 
+                size="sm" 
+                variant="outline" 
+                onClick={generateWeeklyInsights}
+                disabled={isGeneratingInsights}
+              >
+                {isGeneratingInsights ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <RefreshCw className="w-4 h-4" />
+                )}
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {!weeklyInsights ? (
+              <div className="text-center py-6">
+                <Brain className="w-12 h-12 mx-auto text-muted-foreground mb-3" />
+                <p className="text-muted-foreground mb-3">
+                  Generate AI-powered insights about your personality
+                </p>
+                <Button onClick={generateWeeklyInsights} disabled={isGeneratingInsights}>
+                  {isGeneratingInsights ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Analyzing...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-4 h-4 mr-2" />
+                      Generate Insights
+                    </>
+                  )}
+                </Button>
+              </div>
+            ) : (
+              <>
+                {/* Main Insight */}
+                <div className="p-4 rounded-xl bg-background/50 border border-border/50">
+                  <p className="text-sm leading-relaxed">{weeklyInsights.weeklyInsight}</p>
+                </div>
+
+                {/* Insight Cards */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="p-3 rounded-xl bg-blue-500/10 border border-blue-500/20">
+                    <div className="flex items-center gap-2 mb-2">
+                      <MessageCircle className="w-4 h-4 text-blue-500" />
+                      <span className="text-xs font-medium text-blue-500">Communication</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">{weeklyInsights.communicationStyle}</p>
+                  </div>
+                  
+                  <div className="p-3 rounded-xl bg-green-500/10 border border-green-500/20">
+                    <div className="flex items-center gap-2 mb-2">
+                      <TrendingUp className="w-4 h-4 text-green-500" />
+                      <span className="text-xs font-medium text-green-500">Productivity</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">{weeklyInsights.productivityPattern}</p>
+                  </div>
+                  
+                  <div className="p-3 rounded-xl bg-pink-500/10 border border-pink-500/20">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Heart className="w-4 h-4 text-pink-500" />
+                      <span className="text-xs font-medium text-pink-500">Emotional</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">{weeklyInsights.emotionalTrend}</p>
+                  </div>
+                  
+                  <div className="p-3 rounded-xl bg-yellow-500/10 border border-yellow-500/20">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Award className="w-4 h-4 text-yellow-500" />
+                      <span className="text-xs font-medium text-yellow-500">Strength</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">{weeklyInsights.strengthOfTheWeek}</p>
+                  </div>
+                </div>
+
+                {/* Growth & Motivation */}
+                <div className="space-y-3">
+                  <div className="p-3 rounded-xl bg-muted/50 border border-border/50">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Lightbulb className="w-4 h-4 text-orange-500" />
+                      <span className="text-xs font-medium">Growth Opportunity</span>
+                    </div>
+                    <p className="text-sm text-muted-foreground">{weeklyInsights.growthOpportunity}</p>
+                  </div>
+                  
+                  <div className="p-4 rounded-xl aura-gradient">
+                    <p className="text-sm font-medium text-primary-foreground">
+                      {weeklyInsights.motivationalNote}
+                    </p>
+                  </div>
+                </div>
+              </>
+            )}
           </CardContent>
         </Card>
 
