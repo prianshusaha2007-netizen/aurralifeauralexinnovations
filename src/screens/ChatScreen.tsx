@@ -9,12 +9,14 @@ import { ActionsBar } from '@/components/ActionsBar';
 import { USPTiles } from '@/components/USPTiles';
 import { ModelSelector } from '@/components/ModelSelector';
 import { VoiceButton } from '@/components/VoiceButton';
+import { MorningBriefingCard } from '@/components/MorningBriefingCard';
 import { useAura } from '@/contexts/AuraContext';
 import { useAuraChat } from '@/hooks/useAuraChat';
 import { useVoiceCommands } from '@/hooks/useVoiceCommands';
 import { useVoiceFeedback } from '@/hooks/useVoiceFeedback';
 import { useWakeWord } from '@/hooks/useWakeWord';
 import { useHotkeys } from '@/hooks/useHotkeys';
+import { useWelcomeBack, updateLastActive } from '@/hooks/useWelcomeBack';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -33,6 +35,8 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ onMenuClick, onVoiceMode
     sleepTime: userProfile.sleepTime,
   });
   const { speak, isSpeaking: isVoiceFeedbackSpeaking } = useVoiceFeedback();
+  const { shouldShowWelcomeBack, getWelcomeMessage } = useWelcomeBack();
+  
   const [inputValue, setInputValue] = useState('');
   const [showAutomation, setShowAutomation] = useState(false);
   const [selectedModel, setSelectedModel] = useState('gemini-flash');
@@ -41,11 +45,20 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ onMenuClick, onVoiceMode
   const [showVoiceInput, setShowVoiceInput] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isAnalyzingImage, setIsAnalyzingImage] = useState(false);
+  const [showMorningBriefing, setShowMorningBriefing] = useState(false);
+  const [welcomeBackShown, setWelcomeBackShown] = useState(false);
+  
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const voiceButtonRef = useRef<HTMLButtonElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
+
+  // Update last active time periodically
+  useEffect(() => {
+    const interval = setInterval(updateLastActive, 5 * 60 * 1000); // Every 5 min
+    return () => clearInterval(interval);
+  }, []);
 
   // Wake word detection
   const handleWakeWord = useCallback(() => {
@@ -84,19 +97,44 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ onMenuClick, onVoiceMode
     scrollToBottom();
   }, [chatMessages]);
 
-  // Send initial greeting if no messages
+  // Check for morning briefing
   useEffect(() => {
-    if (chatMessages.length === 0 && userProfile.onboardingComplete) {
-      const professionGreeting = userProfile.profession === 'Student' 
-        ? "Need help with studies, notes, or just wanna chill?"
-        : userProfile.profession === 'Working Professional'
-        ? "Work stuff, emails, or just need a break? I'm here!"
-        : "What are we working on today? I'm ready to help!";
+    const hour = new Date().getHours();
+    const lastBriefing = localStorage.getItem('aura-last-briefing');
+    const today = new Date().toDateString();
+    
+    // Show morning briefing between 5am-11am if not shown today
+    if (hour >= 5 && hour < 11 && lastBriefing !== today && chatMessages.length <= 1) {
+      setShowMorningBriefing(true);
+      localStorage.setItem('aura-last-briefing', today);
+    }
+  }, [chatMessages.length]);
+
+  // Send initial greeting or welcome back message
+  useEffect(() => {
+    if (chatMessages.length === 0 && userProfile.onboardingComplete && !welcomeBackShown) {
+      let greeting = '';
       
-      const greeting = `Hey ${userProfile.name}! 💫 What's up? ${professionGreeting}`;
+      if (shouldShowWelcomeBack) {
+        // Welcome back after being away
+        greeting = getWelcomeMessage(userProfile.name);
+        setWelcomeBackShown(true);
+      } else {
+        // Regular casual greetings - more human-like
+        const casualGreetings = [
+          `Yo ${userProfile.name}! What's good? 🔥`,
+          `${userProfile.name}! Sup? Ready to roll?`,
+          `Hey hey ${userProfile.name}! Whatcha up to?`,
+          `${userProfile.name}! 👋 Let's get it.`,
+          `Ayy ${userProfile.name}! What are we doing today?`,
+          `${userProfile.name}! Finally, some company. What's the vibe?`,
+        ];
+        greeting = casualGreetings[Math.floor(Math.random() * casualGreetings.length)];
+      }
+      
       addChatMessage({ content: greeting, sender: 'aura' });
     }
-  }, [userProfile.onboardingComplete]);
+  }, [userProfile.onboardingComplete, shouldShowWelcomeBack, welcomeBackShown]);
 
   const handleSend = async () => {
     if ((!inputValue.trim() && !selectedImage) || isThinking) return;
@@ -319,8 +357,16 @@ ${data.improvements?.length > 0 ? `**Suggestions:**\n${data.improvements.map((s:
         </p>
       </div>
 
+      {/* Morning Briefing Card */}
+      {showMorningBriefing && (
+        <MorningBriefingCard 
+          userName={userProfile.name}
+          onDismiss={() => setShowMorningBriefing(false)}
+        />
+      )}
+
       {/* USP Tiles - show when chat is empty or has few messages */}
-      {chatMessages.length <= 1 && (
+      {chatMessages.length <= 1 && !showMorningBriefing && (
         <div className="px-4 py-2">
           <USPTiles />
         </div>

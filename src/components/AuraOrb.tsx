@@ -1,5 +1,6 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
+import auraLogo from '@/assets/aura-logo.jpeg';
 
 interface AuraOrbProps {
   size?: 'sm' | 'md' | 'lg' | 'xl';
@@ -14,6 +15,13 @@ const sizeClasses = {
   xl: 'w-40 h-40',
 };
 
+const glowSizes = {
+  sm: 'w-16 h-16 -m-2',
+  md: 'w-28 h-28 -m-4',
+  lg: 'w-40 h-40 -m-6',
+  xl: 'w-56 h-56 -m-8',
+};
+
 export const AuraOrb: React.FC<AuraOrbProps> = ({ 
   size = 'lg', 
   isThinking = false,
@@ -24,13 +32,12 @@ export const AuraOrb: React.FC<AuraOrbProps> = ({
       {/* Outer glow ring */}
       <div 
         className={cn(
-          'absolute rounded-full opacity-30',
-          sizeClasses[size],
-          'bg-gradient-to-br from-aura-orb-inner to-aura-orb-outer',
+          'absolute rounded-full opacity-40',
+          glowSizes[size],
+          'bg-gradient-to-br from-primary/50 to-accent/50',
           'blur-xl',
           isThinking ? 'animate-pulse' : 'animate-breathe'
         )}
-        style={{ transform: 'scale(1.5)' }}
       />
       
       {/* Middle glow */}
@@ -38,32 +45,35 @@ export const AuraOrb: React.FC<AuraOrbProps> = ({
         className={cn(
           'absolute rounded-full opacity-50',
           sizeClasses[size],
-          'bg-gradient-to-br from-aura-orb-inner via-aura-orb-outer to-aura-orb-inner',
+          'bg-gradient-to-br from-primary/40 via-accent/30 to-primary/40',
           'blur-md',
           isThinking ? 'animate-pulse' : 'animate-breathe'
         )}
-        style={{ transform: 'scale(1.2)', animationDelay: '0.2s' }}
+        style={{ transform: 'scale(1.15)', animationDelay: '0.2s' }}
       />
       
-      {/* Main orb */}
+      {/* Main orb with logo */}
       <div 
         className={cn(
-          'relative rounded-full',
+          'relative rounded-full overflow-hidden',
           sizeClasses[size],
-          'bg-gradient-to-br from-aura-orb-inner via-primary to-aura-orb-outer',
-          'shadow-lg',
+          'shadow-lg ring-2 ring-primary/20',
           isThinking ? 'animate-pulse' : 'animate-breathe animate-pulse-glow'
         )}
         style={{ animationDelay: '0.1s' }}
       >
-        {/* Inner highlight */}
-        <div 
-          className="absolute inset-2 rounded-full bg-gradient-to-br from-white/30 to-transparent"
+        <img 
+          src={auraLogo} 
+          alt="AURA" 
+          className="w-full h-full object-cover"
         />
         
-        {/* Core light */}
+        {/* Subtle overlay for glow effect */}
         <div 
-          className="absolute inset-1/4 rounded-full bg-white/20 blur-sm"
+          className={cn(
+            "absolute inset-0 bg-gradient-to-br from-white/10 to-transparent",
+            isThinking && "animate-pulse"
+          )}
         />
       </div>
 
