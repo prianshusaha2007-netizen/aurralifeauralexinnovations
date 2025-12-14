@@ -8,6 +8,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { useAura } from '@/contexts/AuraContext';
 import { toast } from 'sonner';
+import { StreakCard } from '@/components/StreakCard';
 
 interface LeaderboardEntry {
   rank: number;
@@ -85,20 +86,23 @@ const mockChallenges: Challenge[] = [
 export const SocialLeaderboardScreen: React.FC = () => {
   const { userProfile } = useAura();
   const [challenges, setChallenges] = useState(mockChallenges);
+  const [isStreakCardOpen, setIsStreakCardOpen] = useState(false);
 
   const userRank = 12;
   const userScore = 1850;
   const userStreak = 15;
+  const habitsCompleted = 12;
+  const moodLogs = 6;
 
   const joinChallenge = (challengeId: string) => {
     setChallenges(prev => 
       prev.map(c => c.id === challengeId ? { ...c, joined: true, progress: 0 } : c)
     );
-    toast.success('Challenge joined! Let\'s crush it! 💪');
+    toast.success("Challenge joined! Let's crush it! 💪");
   };
 
   const shareStreak = () => {
-    toast.success('Streak shared! Your friends will be impressed 🔥');
+    setIsStreakCardOpen(true);
   };
 
   const getRankColor = (rank: number) => {
@@ -356,6 +360,18 @@ export const SocialLeaderboardScreen: React.FC = () => {
             </Card>
           </TabsContent>
         </Tabs>
+
+        {/* Streak Card Modal */}
+        <StreakCard
+          userName={userProfile.name || 'Friend'}
+          streak={userStreak}
+          score={userScore}
+          rank={userRank}
+          habitsCompleted={habitsCompleted}
+          moodLogs={moodLogs}
+          isOpen={isStreakCardOpen}
+          onClose={() => setIsStreakCardOpen(false)}
+        />
       </div>
     </div>
   );
