@@ -1,11 +1,12 @@
 import React, { useState, useRef } from 'react';
-import { Camera, Upload, X, Sparkles, Star, Heart, Zap, Palette, Sun, User, Shirt, Wand2, ImageOff, Focus, Brush, Loader2 } from 'lucide-react';
+import { Camera, Upload, X, Sparkles, Star, Heart, Zap, Palette, Sun, User, Shirt, Wand2, ImageOff, Focus, Brush, Loader2, Save, Share2, Images } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useNavigate } from 'react-router-dom';
 
 interface AnalysisResult {
   confidence: number;
@@ -36,13 +37,121 @@ const transformationOptions: TransformationOption[] = [
 ];
 
 export const ImageAnalysisScreen: React.FC = () => {
+  const navigate = useNavigate();
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
   const [transformedImage, setTransformedImage] = useState<string | null>(null);
   const [isTransforming, setIsTransforming] = useState(false);
   const [activeTransform, setActiveTransform] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const saveToGallery = async () => {
+    if (!selectedImage && !transformedImage) return;
+    
+    setIsSaving(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error('Please sign in to save images');
+        return;
+      }
+
+      // Upload image to storage
+      const imageToSave = transformedImage || selectedImage;
+      const fileName = `${user.id}/${Date.now()}.png`;
+      
+      // Convert base64 to blob
+      const base64Data = imageToSave!.split(',')[1];
+      const byteCharacters = atob(base64Data);
+      const byteNumbers = new Array(byteCharacters.length);
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+      }
+      const byteArray = new Uint8Array(byteNumbers);
+      const blob = new Blob([byteArray], { type: 'image/png' });
+
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('analyzed-images')
+        .upload(fileName, blob);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('analyzed-images')
+        .getPublicUrl(fileName);
+
+      // Save to database - cast to any to bypass type checking for new table
+      const insertData = {
+        user_id: user.id,
+        original_image_url: selectedImage || publicUrl,
+        transformed_image_url: transformedImage ? publicUrl : null,
+        analysis_data: analysisResult as any,
+        annotations: analysisResult?.improvements || [],
+        transformation_type: activeTransform,
+      };
+
+      const { error: dbError } = await supabase
+        .from('analyzed_images' as any)
+        .insert(insertData as any);
+
+      if (dbError) throw dbError;
+
+      toast.success('Saved to gallery! 📸');
+    } catch (error) {
+      console.error('Save error:', error);
+      toast.error('Failed to save image');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const shareImage = async () => {
+    const imageUrl = transformedImage || selectedImage;
+    if (!imageUrl) return;
+
+    if (navigator.share) {
+      try {
+        // Convert to blob for sharing
+        const base64Data = imageUrl.split(',')[1];
+        const byteCharacters = atob(base64Data);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+          byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        const blob = new Blob([byteArray], { type: 'image/png' });
+        const file = new File([blob], 'aura-analyzed.png', { type: 'image/png' });
+
+        await navigator.share({
+          title: 'AURA Analyzed Image',
+          text: analysisResult?.compliment || 'Check out my AURA analysis!',
+          files: [file],
+        });
+      } catch (error) {
+        if ((error as Error).name !== 'AbortError') {
+          // Fallback to download
+          downloadImage();
+        }
+      }
+    } else {
+      downloadImage();
+    }
+  };
+
+  const downloadImage = () => {
+    const imageUrl = transformedImage || selectedImage;
+    if (!imageUrl) return;
+    
+    const link = document.createElement('a');
+    link.href = imageUrl;
+    link.download = `aura-analyzed-${Date.now()}.png`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast.success('Image downloaded!');
+  };
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -394,20 +503,30 @@ export const ImageAnalysisScreen: React.FC = () => {
                 New Photo
               </Button>
               <Button 
-                variant="secondary"
-                onClick={() => {
-                  if (transformedImage) {
-                    const link = document.createElement('a');
-                    link.href = transformedImage;
-                    link.download = 'aura-transformed.png';
-                    link.click();
-                    toast.success('Image saved! 📥');
-                  }
-                }}
-                disabled={!transformedImage}
+                onClick={saveToGallery}
+                disabled={isSaving}
+                className="aura-gradient"
               >
-                <Sparkles className="w-4 h-4 mr-2" />
-                Save Result
+                {isSaving ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <Save className="w-4 h-4 mr-2" />
+                )}
+                Save to Gallery
+              </Button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <Button variant="outline" onClick={shareImage}>
+                <Share2 className="w-4 h-4 mr-2" />
+                Share
+              </Button>
+              <Button 
+                variant="secondary"
+                onClick={() => navigate('/gallery')}
+              >
+                <Images className="w-4 h-4 mr-2" />
+                View Gallery
               </Button>
             </div>
           </div>
