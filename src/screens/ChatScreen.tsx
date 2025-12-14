@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Send, Sparkles, Menu, Volume2, Mic, Radio } from 'lucide-react';
+import { Send, Sparkles, Menu, Volume2, Mic, Radio, Camera, ImagePlus, X, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { AuraOrb } from '@/components/AuraOrb';
@@ -39,9 +39,13 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ onMenuClick, onVoiceMode
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [wakeWordEnabled, setWakeWordEnabled] = useState(false);
   const [showVoiceInput, setShowVoiceInput] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [isAnalyzingImage, setIsAnalyzingImage] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const voiceButtonRef = useRef<HTMLButtonElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
 
   // Wake word detection
   const handleWakeWord = useCallback(() => {
@@ -95,11 +99,89 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ onMenuClick, onVoiceMode
   }, [userProfile.onboardingComplete]);
 
   const handleSend = async () => {
-    if (!inputValue.trim() || isThinking) return;
+    if ((!inputValue.trim() && !selectedImage) || isThinking) return;
 
     const userMessage = inputValue.trim();
     setInputValue('');
-    await sendMessage(userMessage, selectedModel);
+    
+    if (selectedImage) {
+      // Send image for analysis
+      await handleImageAnalysis(userMessage);
+    } else {
+      await sendMessage(userMessage, selectedModel);
+    }
+  };
+
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 10 * 1024 * 1024) {
+        toast.error('Image too large. Max 10MB.');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setSelectedImage(reader.result as string);
+        toast.success('Image attached! Add a message or send directly.');
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleImageAnalysis = async (additionalPrompt?: string) => {
+    if (!selectedImage) return;
+    
+    setIsAnalyzingImage(true);
+    const imageToSend = selectedImage;
+    setSelectedImage(null);
+    
+    // Add user message with image indicator
+    addChatMessage({ 
+      content: additionalPrompt ? `📷 ${additionalPrompt}` : '📷 Analyze this image', 
+      sender: 'user' 
+    });
+    
+    try {
+      const { data, error } = await supabase.functions.invoke('analyze-image', {
+        body: { image: imageToSend }
+      });
+
+      if (error) throw error;
+
+      // Format the analysis response
+      const response = `
+**${data.compliment}**
+
+${data.overallFeedback}
+
+**Scores:**
+• Confidence: ${data.confidence}/100
+• Outfit: ${data.outfitScore}/100  
+• Aesthetic: ${data.aesthetic}/100
+
+**Vibe:** ${data.vibe}
+**Mood:** ${data.mood} | **Expression:** ${data.expression}
+**Lighting:** ${data.lightingQuality}
+
+${data.improvements?.length > 0 ? `**Suggestions:**\n${data.improvements.map((s: string) => `• ${s}`).join('\n')}` : ''}
+      `.trim();
+
+      addChatMessage({ content: response, sender: 'aura' });
+    } catch (error) {
+      console.error('Image analysis error:', error);
+      addChatMessage({ 
+        content: "I couldn't analyze that image right now. Try again? 📸", 
+        sender: 'aura' 
+      });
+    } finally {
+      setIsAnalyzingImage(false);
+    }
+  };
+
+  const clearSelectedImage = () => {
+    setSelectedImage(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+    if (cameraInputRef.current) cameraInputRef.current.value = '';
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -276,8 +358,70 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ onMenuClick, onVoiceMode
         <div className="max-w-lg mx-auto">
           <ActionsBar onActionSelect={handleActionSelect} />
         </div>
+
+        {/* Image Preview */}
+        {selectedImage && (
+          <div className="max-w-lg mx-auto">
+            <div className="relative inline-block">
+              <img 
+                src={selectedImage} 
+                alt="Selected" 
+                className="h-20 w-20 object-cover rounded-xl border-2 border-primary/30"
+              />
+              <Button
+                variant="secondary"
+                size="icon"
+                className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-destructive hover:bg-destructive/80"
+                onClick={clearSelectedImage}
+              >
+                <X className="w-3 h-3 text-destructive-foreground" />
+              </Button>
+            </div>
+          </div>
+        )}
+        
+        {/* Hidden File Inputs */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          onChange={handleImageSelect}
+          className="hidden"
+        />
+        <input
+          ref={cameraInputRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          onChange={handleImageSelect}
+          className="hidden"
+        />
         
         <div className="flex items-center gap-2 max-w-lg mx-auto">
+          {/* Camera Button */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="rounded-full shrink-0 text-muted-foreground hover:text-primary hover:bg-primary/10"
+            onClick={() => cameraInputRef.current?.click()}
+            disabled={isThinking || isAnalyzingImage}
+            title="Take a photo"
+          >
+            <Camera className="w-5 h-5" />
+          </Button>
+
+          {/* Image Upload Button */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="rounded-full shrink-0 text-muted-foreground hover:text-primary hover:bg-primary/10"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isThinking || isAnalyzingImage}
+            title="Upload image"
+          >
+            <ImagePlus className="w-5 h-5" />
+          </Button>
+
           {/* Wake Word Toggle */}
           <Button
             variant="ghost"
@@ -295,7 +439,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ onMenuClick, onVoiceMode
           <VoiceButton 
             ref={voiceButtonRef}
             onTranscription={handleVoiceTranscription}
-            isProcessing={isThinking}
+            isProcessing={isThinking || isAnalyzingImage}
           />
           
           <div className="flex-1 relative">
@@ -303,9 +447,9 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ onMenuClick, onVoiceMode
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               onKeyPress={handleKeyPress}
-              placeholder="Hey AURA, what's up..."
+              placeholder={selectedImage ? "Add a message or tap send..." : "Hey AURA, what's up..."}
               className="rounded-full pr-12 bg-muted/50 border-border/50 focus:border-primary/50"
-              disabled={isThinking}
+              disabled={isThinking || isAnalyzingImage}
             />
             <Button
               variant="ghost"
@@ -313,12 +457,16 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ onMenuClick, onVoiceMode
               className={cn(
                 'absolute right-1 top-1/2 -translate-y-1/2 rounded-full',
                 'text-muted-foreground hover:text-primary',
-                inputValue.trim() && 'text-primary'
+                (inputValue.trim() || selectedImage) && 'text-primary'
               )}
               onClick={handleSend}
-              disabled={!inputValue.trim() || isThinking}
+              disabled={(!inputValue.trim() && !selectedImage) || isThinking || isAnalyzingImage}
             >
-              <Send className="w-4 h-4" />
+              {isAnalyzingImage ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Send className="w-4 h-4" />
+              )}
             </Button>
           </div>
 
