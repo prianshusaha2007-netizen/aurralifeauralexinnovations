@@ -8,7 +8,7 @@ import { AutomationModal } from '@/components/AutomationModal';
 import { ActionsBar } from '@/components/ActionsBar';
 import { USPTiles } from '@/components/USPTiles';
 import { ModelSelector } from '@/components/ModelSelector';
-import { VoiceButton } from '@/components/VoiceButton';
+import { ContinuousVoiceButton } from '@/components/ContinuousVoiceButton';
 import { MorningBriefingCard } from '@/components/MorningBriefingCard';
 import { useAura } from '@/contexts/AuraContext';
 import { useAuraChat } from '@/hooks/useAuraChat';
@@ -482,10 +482,10 @@ ${data.improvements?.length > 0 ? `**Suggestions:**\n${data.improvements.map((s:
             <Radio className={cn('w-5 h-5', wakeWordEnabled && 'animate-pulse')} />
           </Button>
           
-          <VoiceButton 
-            ref={voiceButtonRef}
+          <ContinuousVoiceButton 
             onTranscription={handleVoiceTranscription}
             isProcessing={isThinking || isAnalyzingImage}
+            continuous={wakeWordEnabled}
           />
           
           <div className="flex-1 relative">

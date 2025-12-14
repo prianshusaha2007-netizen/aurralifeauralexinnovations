@@ -15,7 +15,8 @@ import {
   Target,
   Droplets,
   Camera,
-  Trophy
+  Trophy,
+  Images
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -36,7 +37,8 @@ export type TabId =
   | 'permissions' 
   | 'settings'
   | 'image-analysis'
-  | 'social';
+  | 'social'
+  | 'gallery';
 
 interface MenuItem {
   id: TabId;
@@ -54,6 +56,7 @@ const menuItems: MenuItem[] = [
   { id: 'hydration', icon: Droplets, label: 'Hydration Tracker' },
   { id: 'mood', icon: Smile, label: 'Mood Check-in' },
   { id: 'image-analysis', icon: Camera, label: 'Image Analysis' },
+  { id: 'gallery', icon: Images, label: 'Image Gallery' },
   { id: 'social', icon: Trophy, label: 'Social & Leaderboards' },
   { id: 'profile', icon: User, label: 'Personality Profile' },
   { id: 'search', icon: Search, label: 'Smart Search' },

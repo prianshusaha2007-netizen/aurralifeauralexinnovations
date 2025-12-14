@@ -19,6 +19,7 @@ import { HabitTrackerScreen } from '@/screens/HabitTrackerScreen';
 import { HydrationScreen } from '@/screens/HydrationScreen';
 import { ImageAnalysisScreen } from '@/screens/ImageAnalysisScreen';
 import { SocialLeaderboardScreen } from '@/screens/SocialLeaderboardScreen';
+import { ImageGalleryScreen } from '@/screens/ImageGalleryScreen';
 import { AuraOrb } from '@/components/AuraOrb';
 import { DailyMoodPopup } from '@/components/DailyMoodPopup';
 import { SplashScreen } from '@/components/SplashScreen';
@@ -69,6 +70,7 @@ const AppContent: React.FC = () => {
       case 'history': return <ChatHistoryScreen />;
       case 'permissions': return <PermissionsScreen />;
       case 'image-analysis': return <ImageAnalysisScreen />;
+      case 'gallery': return <ImageGalleryScreen />;
       case 'social': return <SocialLeaderboardScreen />;
       default: return <ChatScreen onMenuClick={() => setSidebarOpen(true)} onVoiceModeClick={() => setVoiceModeOpen(true)} />;
     }

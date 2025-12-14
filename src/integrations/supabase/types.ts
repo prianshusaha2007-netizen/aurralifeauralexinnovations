@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      analyzed_images: {
+        Row: {
+          analysis_data: Json | null
+          annotations: string[] | null
+          created_at: string
+          id: string
+          original_image_url: string
+          transformation_type: string | null
+          transformed_image_url: string | null
+          user_id: string
+        }
+        Insert: {
+          analysis_data?: Json | null
+          annotations?: string[] | null
+          created_at?: string
+          id?: string
+          original_image_url: string
+          transformation_type?: string | null
+          transformed_image_url?: string | null
+          user_id: string
+        }
+        Update: {
+          analysis_data?: Json | null
+          annotations?: string[] | null
+          created_at?: string
+          id?: string
+          original_image_url?: string
+          transformation_type?: string | null
+          transformed_image_url?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       chat_messages: {
         Row: {
           content: string
