@@ -16,6 +16,7 @@ import { SmartSearchScreen } from '@/screens/SmartSearchScreen';
 import { ChatHistoryScreen } from '@/screens/ChatHistoryScreen';
 import { PermissionsScreen } from '@/screens/PermissionsScreen';
 import { HabitTrackerScreen } from '@/screens/HabitTrackerScreen';
+import { HydrationScreen } from '@/screens/HydrationScreen';
 import { AuraOrb } from '@/components/AuraOrb';
 import { DailyMoodPopup } from '@/components/DailyMoodPopup';
 import { SplashScreen } from '@/components/SplashScreen';
@@ -58,6 +59,7 @@ const AppContent: React.FC = () => {
       case 'memories': return <MemoriesScreen />;
       case 'routine': return <RoutineScreen />;
       case 'habits': return <HabitTrackerScreen />;
+      case 'hydration': return <HydrationScreen />;
       case 'settings': return <SettingsScreen />;
       case 'mood': return <MoodCheckInScreen />;
       case 'profile': return <PersonalityProfileScreen />;

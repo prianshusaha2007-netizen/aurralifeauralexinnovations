@@ -106,6 +106,57 @@ export type Database = {
         }
         Relationships: []
       }
+      hydration_logs: {
+        Row: {
+          amount_ml: number
+          created_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          amount_ml?: number
+          created_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          amount_ml?: number
+          created_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      hydration_settings: {
+        Row: {
+          created_at: string
+          daily_goal_ml: number
+          id: string
+          reminder_enabled: boolean
+          reminder_interval_minutes: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          daily_goal_ml?: number
+          id?: string
+          reminder_enabled?: boolean
+          reminder_interval_minutes?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          daily_goal_ml?: number
+          id?: string
+          reminder_enabled?: boolean
+          reminder_interval_minutes?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       memories: {
         Row: {
           category: string

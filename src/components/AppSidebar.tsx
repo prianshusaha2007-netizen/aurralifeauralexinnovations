@@ -12,7 +12,8 @@ import {
   Shield,
   Plus,
   X,
-  Target
+  Target,
+  Droplets
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -25,6 +26,7 @@ export type TabId =
   | 'memories' 
   | 'routine' 
   | 'habits'
+  | 'hydration'
   | 'mood' 
   | 'profile' 
   | 'search' 
@@ -45,6 +47,7 @@ const menuItems: MenuItem[] = [
   { id: 'memories', icon: Brain, label: 'Memories' },
   { id: 'routine', icon: Calendar, label: 'Routine & Reminders' },
   { id: 'habits', icon: Target, label: 'Habit Tracker' },
+  { id: 'hydration', icon: Droplets, label: 'Hydration Tracker' },
   { id: 'mood', icon: Smile, label: 'Mood Check-in' },
   { id: 'profile', icon: User, label: 'Personality Profile' },
   { id: 'search', icon: Search, label: 'Smart Search' },
