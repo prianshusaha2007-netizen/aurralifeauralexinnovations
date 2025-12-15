@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
-import { Download, Share2, Copy, Check, Volume2, ImageIcon, Sparkles } from 'lucide-react';
+import { Download, Share2, Copy, Check, Volume2, ImageIcon, CornerUpLeft, Smile, MoreHorizontal, Heart, ThumbsUp, Laugh, Angry, Frown, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
+import auraAvatar from '@/assets/aura-avatar.jpeg';
 
 interface ChatBubbleProps {
   content: string;
@@ -14,7 +15,20 @@ interface ChatBubbleProps {
   imageUrl?: string;
   isGeneratingImage?: boolean;
   onSpeak?: (text: string) => void;
+  onReply?: () => void;
+  replyTo?: { content: string; sender: string } | null;
+  reactions?: string[];
+  onReact?: (emoji: string) => void;
 }
+
+const REACTION_EMOJIS = [
+  { emoji: '❤️', icon: Heart },
+  { emoji: '👍', icon: ThumbsUp },
+  { emoji: '😂', icon: Laugh },
+  { emoji: '😮', icon: Sparkles },
+  { emoji: '😢', icon: Frown },
+  { emoji: '😠', icon: Angry },
+];
 
 export const ChatBubble: React.FC<ChatBubbleProps> = ({
   content,
@@ -23,12 +37,17 @@ export const ChatBubble: React.FC<ChatBubbleProps> = ({
   className,
   imageUrl,
   isGeneratingImage,
-  onSpeak
+  onSpeak,
+  onReply,
+  replyTo,
+  reactions = [],
+  onReact
 }) => {
   const isUser = sender === 'user';
   const [imageLoaded, setImageLoaded] = useState(false);
   const [copied, setCopied] = useState(false);
   const [showActions, setShowActions] = useState(false);
+  const [showReactions, setShowReactions] = useState(false);
 
   const handleCopy = async () => {
     try {
@@ -77,6 +96,12 @@ export const ChatBubble: React.FC<ChatBubbleProps> = ({
     }
   };
 
+  const handleReaction = (emoji: string) => {
+    onReact?.(emoji);
+    setShowReactions(false);
+    toast.success(`Reacted with ${emoji}`);
+  };
+
   // Extract image URL from markdown format
   const extractedImageUrl = imageUrl || (content.match(/!\[.*?\]\((data:image\/[^)]+)\)/)?.[1]);
   const textContent = content.replace(/!\[.*?\]\(data:image\/[^)]+\)/g, '').trim();
@@ -101,23 +126,40 @@ export const ChatBubble: React.FC<ChatBubbleProps> = ({
       animate={{ opacity: 1, y: 0, scale: 1 }}
       transition={{ duration: 0.2, ease: 'easeOut' }}
       className={cn(
-        'flex w-full gap-2',
+        'flex w-full gap-2 group',
         isUser ? 'justify-end' : 'justify-start',
         className
       )}
       onMouseEnter={() => setShowActions(true)}
-      onMouseLeave={() => setShowActions(false)}
+      onMouseLeave={() => { setShowActions(false); setShowReactions(false); }}
     >
-      {/* AURA Avatar */}
+      {/* AURA Avatar with Logo */}
       {!isUser && (
         <div className="flex-shrink-0 mt-auto">
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-lg shadow-primary/20">
-            <Sparkles className="w-4 h-4 text-white" />
+          <div className="w-8 h-8 rounded-full overflow-hidden shadow-lg shadow-primary/20 ring-2 ring-primary/20">
+            <img 
+              src={auraAvatar} 
+              alt="AURA" 
+              className="w-full h-full object-cover"
+            />
           </div>
         </div>
       )}
 
-      <div className="flex flex-col max-w-[80%] sm:max-w-[75%]">
+      <div className="flex flex-col max-w-[80%] sm:max-w-[75%] relative">
+        {/* Reply Preview */}
+        {replyTo && (
+          <div className={cn(
+            "mb-1 px-3 py-1.5 rounded-lg text-xs border-l-2",
+            isUser 
+              ? "bg-primary/20 border-primary/50 text-primary-foreground/70" 
+              : "bg-muted/50 border-muted-foreground/30 text-muted-foreground"
+          )}>
+            <span className="font-medium">{replyTo.sender === 'user' ? 'You' : 'AURA'}</span>
+            <p className="truncate">{replyTo.content.slice(0, 50)}...</p>
+          </div>
+        )}
+
         {/* Message Bubble */}
         <div 
           className={cn(
@@ -190,6 +232,18 @@ export const ChatBubble: React.FC<ChatBubbleProps> = ({
             </p>
           )}
 
+          {/* Reactions Display */}
+          {reactions.length > 0 && (
+            <div className={cn(
+              "absolute -bottom-3 flex gap-0.5 px-1.5 py-0.5 rounded-full bg-card border border-border shadow-sm",
+              isUser ? "right-2" : "left-2"
+            )}>
+              {reactions.map((emoji, i) => (
+                <span key={i} className="text-sm">{emoji}</span>
+              ))}
+            </div>
+          )}
+
           {/* Bubble Tail Effect */}
           <div 
             className={cn(
@@ -205,23 +259,76 @@ export const ChatBubble: React.FC<ChatBubbleProps> = ({
           />
         </div>
 
+        {/* Reaction Picker */}
+        <AnimatePresence>
+          {showReactions && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.8, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.8, y: 10 }}
+              className={cn(
+                "absolute -top-12 z-50 flex gap-1 p-1.5 rounded-full bg-card border border-border shadow-lg",
+                isUser ? "right-0" : "left-0"
+              )}
+            >
+              {REACTION_EMOJIS.map(({ emoji }) => (
+                <button
+                  key={emoji}
+                  onClick={() => handleReaction(emoji)}
+                  className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-muted transition-all hover:scale-125"
+                >
+                  <span className="text-lg">{emoji}</span>
+                </button>
+              ))}
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {/* Message Meta & Actions */}
         <div className={cn(
           "flex items-center gap-2 mt-1 px-1",
-          isUser ? "justify-end" : "justify-start"
+          isUser ? "justify-end" : "justify-start",
+          reactions.length > 0 && "mt-4"
         )}>
           {/* Timestamp */}
           <span className="text-[11px] text-muted-foreground">
             {format(new Date(timestamp), 'h:mm a')}
           </span>
 
-          {/* Quick Actions - show on hover for AI messages */}
-          {!isUser && (
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: showActions ? 1 : 0 }}
-              className="flex items-center gap-0.5"
-            >
+          {/* Quick Actions - show on hover */}
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: showActions ? 1 : 0 }}
+            className="flex items-center gap-0.5"
+          >
+            {/* Reply Button */}
+            {onReply && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={onReply}
+                className="h-6 w-6 rounded-full hover:bg-muted"
+                title="Reply"
+              >
+                <CornerUpLeft className="w-3 h-3 text-muted-foreground" />
+              </Button>
+            )}
+
+            {/* React Button */}
+            {onReact && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setShowReactions(!showReactions)}
+                className="h-6 w-6 rounded-full hover:bg-muted"
+                title="React"
+              >
+                <Smile className="w-3 h-3 text-muted-foreground" />
+              </Button>
+            )}
+
+            {/* Copy Button - for AI messages */}
+            {!isUser && (
               <Button
                 variant="ghost"
                 size="icon"
@@ -235,19 +342,21 @@ export const ChatBubble: React.FC<ChatBubbleProps> = ({
                   <Copy className="w-3 h-3 text-muted-foreground" />
                 )}
               </Button>
-              {onSpeak && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => onSpeak(textContent)}
-                  className="h-6 w-6 rounded-full hover:bg-muted"
-                  title="Listen"
-                >
-                  <Volume2 className="w-3 h-3 text-muted-foreground" />
-                </Button>
-              )}
-            </motion.div>
-          )}
+            )}
+
+            {/* Speak Button - for AI messages */}
+            {!isUser && onSpeak && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => onSpeak(textContent)}
+                className="h-6 w-6 rounded-full hover:bg-muted"
+                title="Listen"
+              >
+                <Volume2 className="w-3 h-3 text-muted-foreground" />
+              </Button>
+            )}
+          </motion.div>
         </div>
       </div>
 

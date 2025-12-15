@@ -1,16 +1,21 @@
 import React, { useState } from 'react';
-import { Sparkles, Gamepad2, Brain, BookOpen, Zap, Smile, Lightbulb, Heart } from 'lucide-react';
+import { Sparkles, Gamepad2, Brain, BookOpen, Zap, Smile, Lightbulb, Heart, Timer, Target, Star, Wind } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { MiniGame } from '@/components/MiniGames';
+import { ExpandedMiniGame } from '@/components/ExpandedMiniGames';
 
-type GameType = 'word-chain' | 'would-you-rather' | '20-questions' | null;
+type GameType = 'word-chain' | 'would-you-rather' | '20-questions' | 'memory-match' | 'reaction-time' | 'trivia' | 'breathing' | null;
 
-const gameNameToType: Record<string, 'word-chain' | 'would-you-rather' | '20-questions'> = {
+const gameNameToType: Record<string, GameType> = {
   'Word Chain': 'word-chain',
   'Would You Rather': 'would-you-rather',
   '20 Questions': '20-questions',
+  'Memory Match': 'memory-match',
+  'Reaction Time': 'reaction-time',
+  'Trivia Quiz': 'trivia',
+  'Breathing': 'breathing',
 };
 
 const funFacts = [
@@ -34,10 +39,13 @@ const productivityTips = [
 ];
 
 const miniGames = [
-  { name: 'Word Chain', desc: 'Say a word starting with the last letter of the previous word', icon: Brain },
-  { name: 'Would You Rather', desc: 'Fun dilemmas to think about', icon: Smile },
-  { name: 'Story Builder', desc: 'Create a story one sentence at a time', icon: BookOpen },
-  { name: '20 Questions', desc: 'Guess what AURA is thinking!', icon: Lightbulb },
+  { name: 'Word Chain', desc: 'Word starting with last letter', icon: Brain },
+  { name: 'Would You Rather', desc: 'Fun dilemmas', icon: Smile },
+  { name: '20 Questions', desc: 'Guess what AURA thinks', icon: Lightbulb },
+  { name: 'Memory Match', desc: 'Test your memory', icon: Target },
+  { name: 'Reaction Time', desc: 'How fast are you?', icon: Zap },
+  { name: 'Trivia Quiz', desc: 'Test your knowledge', icon: Star },
+  { name: 'Breathing', desc: 'Calm your mind', icon: Wind },
 ];
 
 const personalityTests = [
@@ -90,9 +98,14 @@ export const PlayLearnScreen: React.FC = () => {
   };
 
   if (activeGame) {
+    const isExpandedGame = ['memory-match', 'reaction-time', 'trivia', 'breathing'].includes(activeGame);
     return (
       <div className="flex flex-col h-full overflow-y-auto pb-24 p-4">
-        <MiniGame gameType={activeGame} onClose={() => setActiveGame(null)} />
+        {isExpandedGame ? (
+          <ExpandedMiniGame gameType={activeGame as any} onClose={() => setActiveGame(null)} />
+        ) : (
+          <MiniGame gameType={activeGame as any} onClose={() => setActiveGame(null)} />
+        )}
       </div>
     );
   }
