@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Send, Sparkles, Menu, Volume2, Mic, Radio, Camera, ImagePlus, X, Loader2, Ghost, Eye, EyeOff } from 'lucide-react';
+import { Send, Sparkles, Menu, Volume2, Mic, Radio, Camera, ImagePlus, X, Loader2, Ghost, Timer, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { AuraOrb } from '@/components/AuraOrb';
@@ -52,6 +52,9 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ onMenuClick, onVoiceMode
   // Vanish Mode - temporary chat that disappears
   const [vanishMode, setVanishMode] = useState(false);
   const [vanishMessages, setVanishMessages] = useState<ChatMessage[]>([]);
+  const [vanishTimer, setVanishTimer] = useState<number | null>(null); // null = no timer, number = seconds
+  const [showVanishOptions, setShowVanishOptions] = useState(false);
+  const vanishTimersRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -388,23 +391,55 @@ ${data.improvements?.length > 0 ? `**Suggestions:**\n${data.improvements.map((s:
     toast.info(`AURA says: ${message}`);
   };
 
+  // Clear all vanish timers on unmount
+  useEffect(() => {
+    return () => {
+      vanishTimersRef.current.forEach(timer => clearTimeout(timer));
+      vanishTimersRef.current.clear();
+    };
+  }, []);
+
+  // Timer options for vanish mode
+  const vanishTimerOptions = [
+    { label: 'No Timer', value: null, icon: '👻' },
+    { label: '30 sec', value: 30, icon: '⚡' },
+    { label: '1 min', value: 60, icon: '⏱️' },
+    { label: '5 min', value: 300, icon: '🕐' },
+  ];
+
   // Toggle Vanish Mode
   const toggleVanishMode = () => {
     if (vanishMode) {
-      // Exiting vanish mode - clear temporary messages
+      // Exiting vanish mode - clear temporary messages and timers
+      vanishTimersRef.current.forEach(timer => clearTimeout(timer));
+      vanishTimersRef.current.clear();
       setVanishMessages([]);
+      setVanishTimer(null);
+      setShowVanishOptions(false);
       toast.success('👻 Vanish mode off — messages cleared!', { duration: 2000 });
     } else {
-      // Entering vanish mode
-      toast.success('👻 Vanish mode on — messages will disappear when you leave!', { 
-        duration: 3000,
-        description: 'Yaar ye chats save nahi honge, ekdum private 🤫'
-      });
+      // Show options dropdown first
+      setShowVanishOptions(true);
     }
-    setVanishMode(!vanishMode);
+    if (vanishMode) setVanishMode(false);
   };
 
-  // Add vanish message (not saved to DB)
+  // Enable vanish mode with timer selection
+  const enableVanishMode = (timerValue: number | null) => {
+    setVanishTimer(timerValue);
+    setVanishMode(true);
+    setShowVanishOptions(false);
+    
+    const timerLabel = timerValue === 30 ? '30 seconds' : timerValue === 60 ? '1 minute' : timerValue === 300 ? '5 minutes' : 'exit';
+    toast.success(`👻 Vanish mode on!`, { 
+      duration: 3000,
+      description: timerValue 
+        ? `Messages auto-delete after ${timerLabel} ⚡`
+        : 'Messages disappear when you leave 🤫'
+    });
+  };
+
+  // Add vanish message (not saved to DB) with optional auto-delete
   const addVanishMessage = (message: Omit<ChatMessage, 'id' | 'timestamp'>) => {
     const newMessage: ChatMessage = {
       ...message,
@@ -412,6 +447,16 @@ ${data.improvements?.length > 0 ? `**Suggestions:**\n${data.improvements.map((s:
       timestamp: new Date(),
     };
     setVanishMessages(prev => [...prev, newMessage]);
+    
+    // Set auto-delete timer if enabled
+    if (vanishTimer !== null) {
+      const timerId = setTimeout(() => {
+        setVanishMessages(prev => prev.filter(m => m.id !== newMessage.id));
+        vanishTimersRef.current.delete(newMessage.id);
+      }, vanishTimer * 1000);
+      vanishTimersRef.current.set(newMessage.id, timerId);
+    }
+    
     return newMessage.id;
   };
 
@@ -449,7 +494,9 @@ ${data.improvements?.length > 0 ? `**Suggestions:**\n${data.improvements.map((s:
             <div className="flex items-center justify-center gap-2 py-2 px-4">
               <Ghost className="w-4 h-4 text-primary animate-pulse" />
               <span className="text-xs font-medium text-primary">
-                Vanish Mode On — Messages disappear when you leave 👻
+                {vanishTimer 
+                  ? `⏱️ Messages auto-delete after ${vanishTimer === 30 ? '30s' : vanishTimer === 60 ? '1min' : '5min'}` 
+                  : 'Vanish Mode On — Messages disappear when you leave 👻'}
               </span>
               <Button
                 variant="ghost"
@@ -459,6 +506,42 @@ ${data.improvements?.length > 0 ? `**Suggestions:**\n${data.improvements.map((s:
               >
                 Turn Off
               </Button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Vanish Mode Timer Options Dropdown */}
+      <AnimatePresence>
+        {showVanishOptions && !vanishMode && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="absolute top-16 right-4 z-50 bg-card border border-border rounded-xl shadow-lg overflow-hidden"
+          >
+            <div className="p-2 border-b border-border/50">
+              <p className="text-xs font-medium text-muted-foreground px-2">Choose vanish timer</p>
+            </div>
+            <div className="p-1">
+              {vanishTimerOptions.map((option) => (
+                <button
+                  key={option.value ?? 'none'}
+                  onClick={() => enableVanishMode(option.value)}
+                  className="w-full flex items-center gap-3 px-3 py-2 text-sm rounded-lg hover:bg-primary/10 transition-colors text-left"
+                >
+                  <span>{option.icon}</span>
+                  <span>{option.label}</span>
+                </button>
+              ))}
+            </div>
+            <div className="p-1 border-t border-border/50">
+              <button
+                onClick={() => setShowVanishOptions(false)}
+                className="w-full text-xs text-muted-foreground py-2 hover:text-foreground transition-colors"
+              >
+                Cancel
+              </button>
             </div>
           </motion.div>
         )}
