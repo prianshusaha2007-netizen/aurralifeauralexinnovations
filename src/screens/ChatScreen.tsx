@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Send, Sparkles, Menu, Volume2, Mic, Radio, Camera, ImagePlus, X, Loader2, Ghost, Timer, ChevronDown } from 'lucide-react';
+import { Send, Sparkles, Menu, Volume2, Mic, Radio, Camera, ImagePlus, X, Loader2, Ghost, Timer, ChevronDown, GraduationCap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { AuraOrb } from '@/components/AuraOrb';
 import { ChatBubble } from '@/components/ChatBubble';
 import { AutomationModal } from '@/components/AutomationModal';
@@ -10,6 +9,8 @@ import { USPTiles } from '@/components/USPTiles';
 import { ModelSelector } from '@/components/ModelSelector';
 import { ContinuousVoiceButton } from '@/components/ContinuousVoiceButton';
 import { MorningBriefingCard } from '@/components/MorningBriefingCard';
+import { QuickActions } from '@/components/QuickActions';
+import { TutorMode } from '@/components/TutorMode';
 import { useAura, ChatMessage } from '@/contexts/AuraContext';
 import { useAuraChat } from '@/hooks/useAuraChat';
 import { useVoiceCommands } from '@/hooks/useVoiceCommands';
@@ -25,6 +26,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 interface ChatScreenProps {
   onMenuClick?: () => void;
   onVoiceModeClick?: () => void;
+}
+
+// Extended message type with reactions and reply
+interface ExtendedMessage extends ChatMessage {
+  reactions?: string[];
+  replyTo?: { content: string; sender: string } | null;
 }
 
 export const ChatScreen: React.FC<ChatScreenProps> = ({ onMenuClick, onVoiceModeClick }) => {
@@ -45,15 +52,20 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ onMenuClick, onVoiceMode
   const [wakeWordEnabled, setWakeWordEnabled] = useState(false);
   const [showVoiceInput, setShowVoiceInput] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [imagePrompt, setImagePrompt] = useState('');
+  const [showImagePrompt, setShowImagePrompt] = useState(false);
   const [isAnalyzingImage, setIsAnalyzingImage] = useState(false);
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
   const [showMorningBriefing, setShowMorningBriefing] = useState(false);
   const [welcomeBackShown, setWelcomeBackShown] = useState(false);
+  const [showTutorMode, setShowTutorMode] = useState(false);
+  const [replyingTo, setReplyingTo] = useState<ExtendedMessage | null>(null);
+  const [messageReactions, setMessageReactions] = useState<Record<string, string[]>>({});
   
-  // Vanish Mode - temporary chat that disappears
+  // Vanish Mode
   const [vanishMode, setVanishMode] = useState(false);
   const [vanishMessages, setVanishMessages] = useState<ChatMessage[]>([]);
-  const [vanishTimer, setVanishTimer] = useState<number | null>(null); // null = no timer, number = seconds
+  const [vanishTimer, setVanishTimer] = useState<number | null>(null);
   const [showVanishOptions, setShowVanishOptions] = useState(false);
   const vanishTimersRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
   
@@ -65,7 +77,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ onMenuClick, onVoiceMode
 
   // Update last active time periodically
   useEffect(() => {
-    const interval = setInterval(updateLastActive, 5 * 60 * 1000); // Every 5 min
+    const interval = setInterval(updateLastActive, 5 * 60 * 1000);
     return () => clearInterval(interval);
   }, []);
 
@@ -73,7 +85,6 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ onMenuClick, onVoiceMode
   const handleWakeWord = useCallback(() => {
     toast.success('Hey! I heard you! 👋', { duration: 2000 });
     setShowVoiceInput(true);
-    // Trigger voice input after wake word
     setTimeout(() => {
       voiceButtonRef.current?.click();
     }, 500);
@@ -104,41 +115,35 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ onMenuClick, onVoiceMode
 
   useEffect(() => {
     scrollToBottom();
-  }, [chatMessages]);
+  }, [chatMessages, vanishMessages]);
 
-  // Check for morning briefing
+  // Morning briefing check
   useEffect(() => {
     const hour = new Date().getHours();
     const lastBriefing = localStorage.getItem('aura-last-briefing');
     const today = new Date().toDateString();
     
-    // Show morning briefing between 5am-11am if not shown today
     if (hour >= 5 && hour < 11 && lastBriefing !== today && chatMessages.length <= 1) {
       setShowMorningBriefing(true);
       localStorage.setItem('aura-last-briefing', today);
     }
   }, [chatMessages.length]);
 
-  // Send initial greeting or welcome back message
+  // Initial greeting
   useEffect(() => {
     if (chatMessages.length === 0 && userProfile.onboardingComplete && !welcomeBackShown) {
       let greeting = '';
       
       if (shouldShowWelcomeBack) {
-        // Welcome back after being away
         greeting = getWelcomeMessage(userProfile.name);
         setWelcomeBackShown(true);
       } else {
-        // Regular casual greetings - Indian human-like style
         const casualGreetings = [
           `Areyyy ${userProfile.name}! Kya scene hai? 🔥`,
           `Oye ${userProfile.name}! Kahan tha/thi itne din? 👋`,
           `Heyy ${userProfile.name}! Sup yaar, sab badhiya?`,
           `${userProfile.name}! Finally aa gaya/gayi! Bol kya plan hai today?`,
           `Ayy ${userProfile.name}! Ready to roll? Batao kya karna hai ✨`,
-          `${userProfile.name} bro/sis! Kya chal raha, spill the tea 🍵`,
-          `Yo ${userProfile.name}! What's good? Main toh ready hoon 🙌`,
-          `${userProfile.name}! Acha sun na, I was thinking about you only!`,
         ];
         greeting = casualGreetings[Math.floor(Math.random() * casualGreetings.length)];
       }
@@ -147,15 +152,14 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ onMenuClick, onVoiceMode
     }
   }, [userProfile.onboardingComplete, shouldShowWelcomeBack, welcomeBackShown]);
 
-  // Check if message is an image generation request
+  // Image generation detection
   const isImageGenRequest = (text: string): boolean => {
     const lowerText = text.toLowerCase();
     const triggers = [
-      'generate image', 'create image', 'make image', 'draw', 'generate a', 'create a picture',
-      'generate picture', 'make a picture', 'create art', 'generate art', 'make art',
-      'imagine', 'visualize', 'picture of', 'image of', 'photo of', 'illustration of',
-      'banao image', 'image banao', 'photo banao', 'tasveer banao', 'picture bana',
-      'ek image', 'ek photo', 'ek tasveer'
+      'generate image', 'create image', 'make image', 'draw', 'generate a', 
+      'create a picture', 'generate picture', 'make a picture', 'create art',
+      'imagine', 'visualize', 'picture of', 'image of', 'photo of',
+      'banao image', 'image banao', 'photo banao', 'tasveer banao',
     ];
     return triggers.some(t => lowerText.includes(t));
   };
@@ -165,9 +169,8 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ onMenuClick, onVoiceMode
     setIsGeneratingImage(true);
     addChatMessage({ content: prompt, sender: 'user' });
     
-    // Add thinking message
     const thinkingId = addChatMessage({ 
-      content: '🎨 Generating your image... hold on yaar, this is gonna be fire! ✨', 
+      content: '🎨 Creating your image... hold on yaar! ✨', 
       sender: 'aura' 
     });
 
@@ -179,14 +182,13 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ onMenuClick, onVoiceMode
       if (error) throw error;
 
       if (data.imageUrl) {
-        // Update thinking message with generated image
-        updateChatMessage(thinkingId, `Here's what I created for you! 🔥\n\n![Generated Image](${data.imageUrl})\n\n${data.textContent || 'Kaisa laga? Want me to create something else?'}`);
+        updateChatMessage(thinkingId, `Here's what I created! 🔥\n\n![Generated](${data.imageUrl})\n\n${data.textContent || 'Kaisa laga?'}`);
       } else {
-        updateChatMessage(thinkingId, data.error || "Oops, couldn't generate that image yaar. Try a different prompt? 😅");
+        updateChatMessage(thinkingId, data.error || "Couldn't generate that yaar. Try different prompt? 😅");
       }
     } catch (error) {
       console.error('Image generation error:', error);
-      updateChatMessage(thinkingId, "Arre yaar, image generation failed. Maybe try again? 🙈");
+      updateChatMessage(thinkingId, "Image generation failed yaar. Try again? 🙈");
     } finally {
       setIsGeneratingImage(false);
     }
@@ -198,23 +200,28 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ onMenuClick, onVoiceMode
     const userMessage = inputValue.trim();
     setInputValue('');
     
-    if (selectedImage) {
-      // Send image for analysis
-      await handleImageAnalysis(userMessage);
+    if (selectedImage && showImagePrompt) {
+      await handleImageAnalysis(imagePrompt || userMessage || 'Analyze this image');
+    } else if (selectedImage) {
+      setShowImagePrompt(true);
+      return;
     } else if (isImageGenRequest(userMessage)) {
-      // Handle image generation
       await handleImageGeneration(userMessage);
     } else if (vanishMode) {
-      // Vanish mode - don't save to DB
       addVanishMessage({ content: userMessage, sender: 'user' });
-      // Still call AI but add response to vanish messages
       await sendVanishMessage(userMessage);
     } else {
-      await sendMessage(userMessage, selectedModel);
+      // Add reply context if replying
+      if (replyingTo) {
+        const contextMessage = `[Replying to: "${replyingTo.content.slice(0, 50)}..."]\n\n${userMessage}`;
+        await sendMessage(contextMessage, selectedModel);
+        setReplyingTo(null);
+      } else {
+        await sendMessage(userMessage, selectedModel);
+      }
     }
   };
 
-  // Send message in vanish mode (no DB save)
   const sendVanishMessage = async (message: string) => {
     try {
       const allMessages = [...vanishMessages, { id: 'temp', content: message, sender: 'user' as const, timestamp: new Date() }];
@@ -229,8 +236,6 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ onMenuClick, onVoiceMode
             goals: userProfile.goals,
             languages: userProfile.languages,
             tonePreference: userProfile.tonePreference,
-            wakeTime: userProfile.wakeTime,
-            sleepTime: userProfile.sleepTime,
           },
           preferredModel: selectedModel,
         },
@@ -238,7 +243,6 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ onMenuClick, onVoiceMode
 
       if (response.error) throw response.error;
 
-      // Parse streaming response
       const reader = response.data.getReader?.();
       if (reader) {
         let fullContent = '';
@@ -268,7 +272,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ onMenuClick, onVoiceMode
       }
     } catch (error) {
       console.error('Vanish chat error:', error);
-      addVanishMessage({ content: 'Oops, kuch gadbad ho gayi yaar. Try again? 😅', sender: 'aura' });
+      addVanishMessage({ content: 'Oops, kuch gadbad ho gayi yaar 😅', sender: 'aura' });
     }
   };
 
@@ -282,57 +286,45 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ onMenuClick, onVoiceMode
       const reader = new FileReader();
       reader.onloadend = () => {
         setSelectedImage(reader.result as string);
-        toast.success('Image attached! Add a message or send directly.');
+        setShowImagePrompt(true);
+        toast.success('Image ready! Tell me what to do with it 📸');
       };
       reader.readAsDataURL(file);
     }
   };
 
-  const handleImageAnalysis = async (additionalPrompt?: string) => {
+  const handleImageAnalysis = async (prompt: string) => {
     if (!selectedImage) return;
     
     setIsAnalyzingImage(true);
     const imageToSend = selectedImage;
-    setSelectedImage(null);
+    clearSelectedImage();
     
-    // Add user message with image indicator
-    addChatMessage({ 
-      content: additionalPrompt ? `📷 ${additionalPrompt}` : '📷 Analyze this image', 
-      sender: 'user' 
-    });
+    addChatMessage({ content: `📷 ${prompt}`, sender: 'user' });
     
     try {
       const { data, error } = await supabase.functions.invoke('analyze-image', {
-        body: { image: imageToSend }
+        body: { image: imageToSend, prompt }
       });
 
       if (error) throw error;
 
-      // Format the analysis response
-      const response = `
+      const response = data.compliment ? `
 **${data.compliment}**
 
 ${data.overallFeedback}
 
-**Scores:**
-• Confidence: ${data.confidence}/100
-• Outfit: ${data.outfitScore}/100  
-• Aesthetic: ${data.aesthetic}/100
+**Scores:** Confidence ${data.confidence}/100 • Outfit ${data.outfitScore}/100 • Aesthetic ${data.aesthetic}/100
 
-**Vibe:** ${data.vibe}
-**Mood:** ${data.mood} | **Expression:** ${data.expression}
-**Lighting:** ${data.lightingQuality}
+**Vibe:** ${data.vibe} | **Mood:** ${data.mood}
 
-${data.improvements?.length > 0 ? `**Suggestions:**\n${data.improvements.map((s: string) => `• ${s}`).join('\n')}` : ''}
-      `.trim();
+${data.improvements?.length > 0 ? `**Tips:** ${data.improvements.join(', ')}` : ''}
+      `.trim() : data.analysis || data.description || 'Image analyzed!';
 
       addChatMessage({ content: response, sender: 'aura' });
     } catch (error) {
       console.error('Image analysis error:', error);
-      addChatMessage({ 
-        content: "I couldn't analyze that image right now. Try again? 📸", 
-        sender: 'aura' 
-      });
+      addChatMessage({ content: "Couldn't analyze that image yaar. Try again? 📸", sender: 'aura' });
     } finally {
       setIsAnalyzingImage(false);
     }
@@ -340,64 +332,41 @@ ${data.improvements?.length > 0 ? `**Suggestions:**\n${data.improvements.map((s:
 
   const clearSelectedImage = () => {
     setSelectedImage(null);
+    setImagePrompt('');
+    setShowImagePrompt(false);
     if (fileInputRef.current) fileInputRef.current.value = '';
     if (cameraInputRef.current) cameraInputRef.current.value = '';
-  };
-
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
-    }
   };
 
   const handleVoiceTranscription = async (text: string) => {
     if (!text) return;
     setShowVoiceInput(false);
     
-    // Check for voice commands first
     const commandResult = await processCommand(text);
     
     if (commandResult.handled && commandResult.response) {
-      // Add user message
       addChatMessage({ content: text, sender: 'user' });
-      // Add AURA's response for handled commands
       addChatMessage({ content: commandResult.response, sender: 'aura' });
-      
-      // Speak the response if it's a voice command
-      if (commandResult.speakResponse) {
-        await speak(commandResult.response);
-      }
+      if (commandResult.speakResponse) await speak(commandResult.response);
     } else if (commandResult.type === 'general') {
-      // Not a command, send as regular message
       addChatMessage({ content: text, sender: 'user' });
       await sendMessage(text, selectedModel);
     } else if (commandResult.response) {
-      // Partially handled (acknowledged but not executed)
       addChatMessage({ content: text, sender: 'user' });
       addChatMessage({ content: commandResult.response, sender: 'aura' });
-      
-      // Speak the response
-      if (commandResult.speakResponse) {
-        await speak(commandResult.response);
-      }
+      if (commandResult.speakResponse) await speak(commandResult.response);
     } else {
-      // Fallback: just set as input
       setInputValue(text);
     }
   };
 
   const toggleWakeWord = () => {
     if (!isWakeWordSupported) {
-      toast.error('Wake word detection not supported in this browser');
+      toast.error('Wake word not supported in this browser');
       return;
     }
     setWakeWordEnabled(!wakeWordEnabled);
-    toast.success(
-      !wakeWordEnabled 
-        ? 'Wake word enabled! Say "Hey AURA" to start talking.' 
-        : 'Wake word disabled.'
-    );
+    toast.success(!wakeWordEnabled ? 'Say "Hey AURA" to start!' : 'Wake word disabled.');
   };
 
   const handleSpeakMessage = async (text: string) => {
@@ -409,38 +378,72 @@ ${data.improvements?.length > 0 ? `**Suggestions:**\n${data.improvements.map((s:
 
     try {
       setIsSpeaking(true);
-      const { data, error } = await supabase.functions.invoke('text-to-voice', {
-        body: { text, voice: 'nova' }
+      // Try ElevenLabs first, fallback to OpenAI
+      const { data, error } = await supabase.functions.invoke('elevenlabs-tts', {
+        body: { text }
       });
 
       if (error) throw error;
-
-      if (data?.requiresSetup) {
-        toast.info('Voice playback needs setup', {
-          description: 'Add OpenAI API key for voice features.',
-        });
-        setIsSpeaking(false);
-        return;
-      }
 
       if (data?.audioContent) {
         const audio = new Audio(`data:audio/mp3;base64,${data.audioContent}`);
         audioRef.current = audio;
         audio.onended = () => setIsSpeaking(false);
         await audio.play();
+      } else if (data?.requiresSetup) {
+        toast.info('Voice requires API setup');
+        setIsSpeaking(false);
       }
     } catch (error) {
       console.error('TTS error:', error);
-      toast.error('Could not play voice');
-      setIsSpeaking(false);
+      // Fallback to original text-to-voice
+      try {
+        const { data } = await supabase.functions.invoke('text-to-voice', {
+          body: { text, voice: 'nova' }
+        });
+        if (data?.audioContent) {
+          const audio = new Audio(`data:audio/mp3;base64,${data.audioContent}`);
+          audioRef.current = audio;
+          audio.onended = () => setIsSpeaking(false);
+          await audio.play();
+        }
+      } catch {
+        toast.error('Voice playback failed');
+        setIsSpeaking(false);
+      }
     }
   };
 
-  const handleActionSelect = (actionId: string, message: string) => {
-    toast.info(`AURA says: ${message}`);
+  const handleQuickAction = (actionId: string, message: string) => {
+    setInputValue(message);
+    // Auto-send for some actions
+    if (['boost-mood', 'schedule', 'break-time'].includes(actionId)) {
+      addChatMessage({ content: message, sender: 'user' });
+      sendMessage(message, selectedModel);
+      setInputValue('');
+    }
   };
 
-  // Clear all vanish timers on unmount
+  const handleReaction = (messageId: string, emoji: string) => {
+    setMessageReactions(prev => ({
+      ...prev,
+      [messageId]: [...(prev[messageId] || []), emoji]
+    }));
+  };
+
+  const handleReply = (message: ExtendedMessage) => {
+    setReplyingTo(message);
+    toast.info(`Replying to: "${message.content.slice(0, 30)}..."`);
+  };
+
+  const handleStartLesson = (subject: string, topic: string) => {
+    setShowTutorMode(false);
+    const message = `Teach me about ${topic} in ${subject}. Explain it simply like I'm a beginner, with examples.`;
+    addChatMessage({ content: message, sender: 'user' });
+    sendMessage(message, selectedModel);
+  };
+
+  // Vanish mode functions
   useEffect(() => {
     return () => {
       vanishTimersRef.current.forEach(timer => clearTimeout(timer));
@@ -448,7 +451,6 @@ ${data.improvements?.length > 0 ? `**Suggestions:**\n${data.improvements.map((s:
     };
   }, []);
 
-  // Timer options for vanish mode
   const vanishTimerOptions = [
     { label: 'No Timer', value: null, icon: '👻' },
     { label: '30 sec', value: 30, icon: '⚡' },
@@ -456,39 +458,27 @@ ${data.improvements?.length > 0 ? `**Suggestions:**\n${data.improvements.map((s:
     { label: '5 min', value: 300, icon: '🕐' },
   ];
 
-  // Toggle Vanish Mode
   const toggleVanishMode = () => {
     if (vanishMode) {
-      // Exiting vanish mode - clear temporary messages and timers
       vanishTimersRef.current.forEach(timer => clearTimeout(timer));
       vanishTimersRef.current.clear();
       setVanishMessages([]);
       setVanishTimer(null);
       setShowVanishOptions(false);
-      toast.success('👻 Vanish mode off — messages cleared!', { duration: 2000 });
+      toast.success('👻 Vanish mode off — messages cleared!');
     } else {
-      // Show options dropdown first
       setShowVanishOptions(true);
     }
     if (vanishMode) setVanishMode(false);
   };
 
-  // Enable vanish mode with timer selection
   const enableVanishMode = (timerValue: number | null) => {
     setVanishTimer(timerValue);
     setVanishMode(true);
     setShowVanishOptions(false);
-    
-    const timerLabel = timerValue === 30 ? '30 seconds' : timerValue === 60 ? '1 minute' : timerValue === 300 ? '5 minutes' : 'exit';
-    toast.success(`👻 Vanish mode on!`, { 
-      duration: 3000,
-      description: timerValue 
-        ? `Messages auto-delete after ${timerLabel} ⚡`
-        : 'Messages disappear when you leave 🤫'
-    });
+    toast.success('👻 Vanish mode on!');
   };
 
-  // Add vanish message (not saved to DB) with optional auto-delete
   const addVanishMessage = (message: Omit<ChatMessage, 'id' | 'timestamp'>) => {
     const newMessage: ChatMessage = {
       ...message,
@@ -497,7 +487,6 @@ ${data.improvements?.length > 0 ? `**Suggestions:**\n${data.improvements.map((s:
     };
     setVanishMessages(prev => [...prev, newMessage]);
     
-    // Set auto-delete timer if enabled
     if (vanishTimer !== null) {
       const timerId = setTimeout(() => {
         setVanishMessages(prev => prev.filter(m => m.id !== newMessage.id));
@@ -509,14 +498,12 @@ ${data.improvements?.length > 0 ? `**Suggestions:**\n${data.improvements.map((s:
     return newMessage.id;
   };
 
-  // Current messages to display
   const displayMessages = vanishMode ? vanishMessages : chatMessages;
-
   const lastAuraMessage = displayMessages.filter(m => m.sender === 'aura').slice(-1)[0];
 
   return (
     <div className={cn("flex flex-col h-full relative", vanishMode && "vanish-mode-active")}>
-      {/* Vanish Mode Background Effect */}
+      {/* Vanish Mode Background */}
       <AnimatePresence>
         {vanishMode && (
           <motion.div
@@ -524,9 +511,7 @@ ${data.improvements?.length > 0 ? `**Suggestions:**\n${data.improvements.map((s:
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="absolute inset-0 pointer-events-none z-0"
-            style={{
-              background: 'linear-gradient(180deg, hsl(var(--primary) / 0.05) 0%, transparent 30%, transparent 70%, hsl(var(--primary) / 0.05) 100%)',
-            }}
+            style={{ background: 'linear-gradient(180deg, hsl(var(--primary) / 0.05) 0%, transparent 30%)' }}
           />
         )}
       </AnimatePresence>
@@ -542,17 +527,8 @@ ${data.improvements?.length > 0 ? `**Suggestions:**\n${data.improvements.map((s:
           >
             <div className="flex items-center justify-center gap-2 py-2 px-4">
               <Ghost className="w-4 h-4 text-primary animate-pulse" />
-              <span className="text-xs font-medium text-primary">
-                {vanishTimer 
-                  ? `⏱️ Messages auto-delete after ${vanishTimer === 30 ? '30s' : vanishTimer === 60 ? '1min' : '5min'}` 
-                  : 'Vanish Mode On — Messages disappear when you leave 👻'}
-              </span>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-6 px-2 text-xs text-primary hover:bg-primary/20"
-                onClick={toggleVanishMode}
-              >
+              <span className="text-xs font-medium text-primary">Vanish Mode Active 👻</span>
+              <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={toggleVanishMode}>
                 Turn Off
               </Button>
             </div>
@@ -560,81 +536,66 @@ ${data.improvements?.length > 0 ? `**Suggestions:**\n${data.improvements.map((s:
         )}
       </AnimatePresence>
 
-      {/* Vanish Mode Timer Options Dropdown */}
+      {/* Vanish Options Dropdown */}
       <AnimatePresence>
         {showVanishOptions && !vanishMode && (
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className="absolute top-16 right-4 z-50 bg-card border border-border rounded-xl shadow-lg overflow-hidden"
+            className="absolute top-16 right-4 z-50 bg-card border rounded-xl shadow-lg overflow-hidden"
           >
             <div className="p-2 border-b border-border/50">
-              <p className="text-xs font-medium text-muted-foreground px-2">Choose vanish timer</p>
+              <p className="text-xs font-medium text-muted-foreground px-2">Choose timer</p>
             </div>
             <div className="p-1">
-              {vanishTimerOptions.map((option) => (
+              {vanishTimerOptions.map((opt) => (
                 <button
-                  key={option.value ?? 'none'}
-                  onClick={() => enableVanishMode(option.value)}
-                  className="w-full flex items-center gap-3 px-3 py-2 text-sm rounded-lg hover:bg-primary/10 transition-colors text-left"
+                  key={opt.value ?? 'none'}
+                  onClick={() => enableVanishMode(opt.value)}
+                  className="w-full flex items-center gap-3 px-3 py-2 text-sm rounded-lg hover:bg-primary/10 transition-colors"
                 >
-                  <span>{option.icon}</span>
-                  <span>{option.label}</span>
+                  <span>{opt.icon}</span>
+                  <span>{opt.label}</span>
                 </button>
               ))}
             </div>
-            <div className="p-1 border-t border-border/50">
-              <button
-                onClick={() => setShowVanishOptions(false)}
-                className="w-full text-xs text-muted-foreground py-2 hover:text-foreground transition-colors"
-              >
-                Cancel
-              </button>
-            </div>
+            <button
+              onClick={() => setShowVanishOptions(false)}
+              className="w-full text-xs text-muted-foreground py-2 hover:text-foreground border-t"
+            >
+              Cancel
+            </button>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Header with Orb and Controls */}
+      {/* Header */}
       <div className="flex flex-col items-center pt-4 pb-2 relative z-10">
         <div className="absolute inset-0 bg-gradient-to-b from-accent/10 via-primary/5 to-transparent" />
         
-        {/* Menu Button */}
-        <Button
-          variant="ghost"
-          size="icon"
-          className="absolute top-2 left-4 z-10 rounded-full"
-          onClick={onMenuClick}
-        >
+        <Button variant="ghost" size="icon" className="absolute top-2 left-4 z-10 rounded-full" onClick={onMenuClick}>
           <Menu className="w-5 h-5" />
         </Button>
         
-        {/* Voice Mode, Vanish Mode & Model Selector */}
         <div className="absolute top-2 right-4 z-10 flex items-center gap-1">
-          {/* Vanish Mode Toggle */}
           <Button
             variant="ghost"
             size="icon"
-            className={cn(
-              "rounded-full transition-all",
-              vanishMode 
-                ? "text-primary bg-primary/20 hover:bg-primary/30" 
-                : "text-muted-foreground hover:text-primary hover:bg-primary/10"
-            )}
+            className={cn("rounded-full", vanishMode && "text-primary bg-primary/20")}
             onClick={toggleVanishMode}
-            title={vanishMode ? "Exit Vanish Mode" : "Enable Vanish Mode (messages disappear)"}
           >
             <Ghost className={cn("w-5 h-5", vanishMode && "animate-pulse")} />
           </Button>
-          
           <Button
             variant="ghost"
             size="icon"
-            className="rounded-full text-muted-foreground hover:text-primary hover:bg-primary/10"
-            onClick={onVoiceModeClick}
-            title="Continuous Voice Mode"
+            className="rounded-full"
+            onClick={() => setShowTutorMode(true)}
           >
+            <GraduationCap className="w-5 h-5" />
+          </Button>
+          <Button variant="ghost" size="icon" className="rounded-full" onClick={onVoiceModeClick}>
             <Mic className="w-5 h-5" />
           </Button>
           <ModelSelector value={selectedModel} onChange={setSelectedModel} />
@@ -643,37 +604,46 @@ ${data.improvements?.length > 0 ? `**Suggestions:**\n${data.improvements.map((s:
         <AuraOrb size="md" isThinking={isThinking || isVoiceFeedbackSpeaking} className="animate-float" />
         <h1 className="mt-2 text-lg font-bold aura-gradient-text">AURA</h1>
         <p className="text-xs text-muted-foreground">
-          {isVoiceFeedbackSpeaking ? 'Speaking...' : isThinking ? 'Thinking...' : isWakeWordListening ? '🎤 Listening for "Hey AURA"...' : 'Your AI Bestfriend & Life Assistant'}
+          {isVoiceFeedbackSpeaking ? 'Speaking...' : isThinking ? 'Thinking...' : 'Your AI Bestfriend ✨'}
         </p>
       </div>
 
-      {/* Morning Briefing Card */}
+      {/* Morning Briefing */}
       {showMorningBriefing && (
-        <MorningBriefingCard 
-          userName={userProfile.name}
-          onDismiss={() => setShowMorningBriefing(false)}
-        />
+        <MorningBriefingCard userName={userProfile.name} onDismiss={() => setShowMorningBriefing(false)} />
       )}
 
-      {/* USP Tiles - show when chat is empty or has few messages */}
+      {/* Tutor Mode Modal */}
+      <AnimatePresence>
+        {showTutorMode && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 z-50 bg-background/80 backdrop-blur-sm p-4 overflow-y-auto"
+          >
+            <TutorMode onStartLesson={handleStartLesson} onClose={() => setShowTutorMode(false)} />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* USP Tiles */}
       {displayMessages.length <= 1 && !showMorningBriefing && !vanishMode && (
         <div className="px-4 py-2">
           <USPTiles />
         </div>
       )}
 
-      {/* Vanish Mode Empty State */}
+      {/* Vanish Empty State */}
       {vanishMode && vanishMessages.length === 0 && (
         <div className="px-4 py-8 text-center">
           <Ghost className="w-16 h-16 mx-auto text-primary/30 mb-4" />
           <p className="text-muted-foreground font-medium">Vanish Mode Active 👻</p>
-          <p className="text-xs text-muted-foreground/60 mt-1">
-            Messages here won't be saved. Ekdum secret! 🤫
-          </p>
+          <p className="text-xs text-muted-foreground/60 mt-1">Messages won't be saved 🤫</p>
         </div>
       )}
 
-      {/* Messages Area - Clean ChatGPT/Gemini Style */}
+      {/* Messages */}
       <div className="flex-1 overflow-y-auto px-3 sm:px-6 py-4 space-y-4 z-10">
         <div className="max-w-2xl mx-auto space-y-4">
           {displayMessages.map((message) => (
@@ -683,24 +653,20 @@ ${data.improvements?.length > 0 ? `**Suggestions:**\n${data.improvements.map((s:
               sender={message.sender}
               timestamp={message.timestamp}
               onSpeak={message.sender === 'aura' ? handleSpeakMessage : undefined}
+              onReply={() => handleReply(message as ExtendedMessage)}
+              onReact={(emoji) => handleReaction(message.id, emoji)}
+              reactions={messageReactions[message.id]}
+              replyTo={replyingTo?.id === message.id ? null : undefined}
             />
           ))}
           
-          {/* Typing Indicator - Modern Style */}
+          {/* Typing Indicator */}
           {(isThinking || isGeneratingImage) && displayMessages[displayMessages.length - 1]?.sender === 'user' && (
-            <motion.div 
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="flex gap-2"
-            >
-              {/* AURA Avatar */}
-              <div className="flex-shrink-0 mt-auto">
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-lg shadow-primary/20">
-                  <Sparkles className="w-4 h-4 text-white animate-pulse" />
-                </div>
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="flex gap-2">
+              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center">
+                <Sparkles className="w-4 h-4 text-white animate-pulse" />
               </div>
-              
-              <div className="bg-card border border-border/50 px-4 py-3 rounded-2xl rounded-bl-md shadow-sm">
+              <div className="bg-card border px-4 py-3 rounded-2xl rounded-bl-md">
                 <div className="flex items-center gap-2">
                   <div className="flex gap-1">
                     <span className="w-2 h-2 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: '0ms' }} />
@@ -708,7 +674,7 @@ ${data.improvements?.length > 0 ? `**Suggestions:**\n${data.improvements.map((s:
                     <span className="w-2 h-2 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: '300ms' }} />
                   </div>
                   <span className="text-xs text-muted-foreground ml-2">
-                    {isGeneratingImage ? 'Creating image...' : 'Typing...'}
+                    {isGeneratingImage ? 'Creating...' : 'Typing...'}
                   </span>
                 </div>
               </div>
@@ -719,90 +685,110 @@ ${data.improvements?.length > 0 ? `**Suggestions:**\n${data.improvements.map((s:
         </div>
       </div>
 
-      {/* Input Area - Modern WhatsApp/Instagram Style */}
-      <div className="p-3 pb-20 bg-gradient-to-t from-background via-background/95 to-transparent backdrop-blur-sm">
-        {/* Image Preview */}
+      {/* Input Area */}
+      <div className="p-3 pb-20 bg-gradient-to-t from-background via-background/95 to-transparent">
+        {/* Reply Preview */}
+        {replyingTo && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            className="max-w-2xl mx-auto mb-2"
+          >
+            <div className="flex items-center gap-2 px-3 py-2 bg-muted/50 rounded-lg border-l-2 border-primary">
+              <span className="text-xs text-muted-foreground flex-1 truncate">
+                Replying to: {replyingTo.content.slice(0, 40)}...
+              </span>
+              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setReplyingTo(null)}>
+                <X className="w-3 h-3" />
+              </Button>
+            </div>
+          </motion.div>
+        )}
+
+        {/* Image Preview with Prompt */}
         {selectedImage && (
           <div className="max-w-2xl mx-auto mb-3">
-            <div className="relative inline-block">
-              <img 
-                src={selectedImage} 
-                alt="Selected" 
-                className="h-24 w-24 object-cover rounded-2xl border-2 border-primary/30 shadow-lg"
-              />
-              <Button
-                variant="secondary"
-                size="icon"
-                className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-destructive hover:bg-destructive/80 shadow-md"
-                onClick={clearSelectedImage}
-              >
-                <X className="w-3 h-3 text-destructive-foreground" />
-              </Button>
+            <div className="relative p-3 bg-card border rounded-2xl">
+              <div className="flex gap-3">
+                <div className="relative">
+                  <img src={selectedImage} alt="Selected" className="h-20 w-20 object-cover rounded-xl" />
+                  <Button
+                    variant="secondary"
+                    size="icon"
+                    className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-destructive"
+                    onClick={clearSelectedImage}
+                  >
+                    <X className="w-3 h-3 text-white" />
+                  </Button>
+                </div>
+                {showImagePrompt && (
+                  <div className="flex-1 space-y-2">
+                    <p className="text-xs text-muted-foreground">What should I do with this image?</p>
+                    <div className="flex flex-wrap gap-1">
+                      {['Analyze', 'Describe', 'Mood check', 'Outfit rating', 'Extract text'].map(opt => (
+                        <Button
+                          key={opt}
+                          variant="outline"
+                          size="sm"
+                          className="h-7 text-xs rounded-full"
+                          onClick={() => {
+                            setImagePrompt(opt);
+                            handleImageAnalysis(opt);
+                          }}
+                        >
+                          {opt}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )}
         
-        {/* Hidden File Inputs */}
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*"
-          onChange={handleImageSelect}
-          className="hidden"
-        />
-        <input
-          ref={cameraInputRef}
-          type="file"
-          accept="image/*"
-          capture="environment"
-          onChange={handleImageSelect}
-          className="hidden"
-        />
+        {/* Hidden Inputs */}
+        <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageSelect} className="hidden" />
+        <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" onChange={handleImageSelect} className="hidden" />
         
-        {/* Main Input Container */}
         <div className="max-w-2xl mx-auto">
+          {/* Quick Actions */}
+          <QuickActions onAction={handleQuickAction} className="mb-2" />
+
           {/* Actions Bar */}
           <div className="mb-2">
-            <ActionsBar onActionSelect={handleActionSelect} />
+            <ActionsBar onActionSelect={(id, msg) => toast.info(`AURA: ${msg}`)} />
           </div>
 
           {/* Input Row */}
           <div className="flex items-end gap-2">
-            {/* Left Actions */}
             <div className="flex items-center gap-1 pb-1">
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-10 w-10 rounded-full text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
+                className="h-10 w-10 rounded-full"
                 onClick={() => cameraInputRef.current?.click()}
-                disabled={isThinking || isAnalyzingImage || isGeneratingImage}
-                title="Take a photo"
+                disabled={isThinking || isAnalyzingImage}
               >
                 <Camera className="w-5 h-5" />
               </Button>
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-10 w-10 rounded-full text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
+                className="h-10 w-10 rounded-full"
                 onClick={() => fileInputRef.current?.click()}
-                disabled={isThinking || isAnalyzingImage || isGeneratingImage}
-                title="Upload image"
+                disabled={isThinking || isAnalyzingImage}
               >
                 <ImagePlus className="w-5 h-5" />
               </Button>
             </div>
 
-            {/* Text Input - Expandable like WhatsApp */}
             <div className="flex-1 relative">
-              <div className={cn(
-                "flex items-end bg-card border border-border/60 rounded-3xl transition-all shadow-sm",
-                "focus-within:border-primary/50 focus-within:shadow-md focus-within:shadow-primary/5"
-              )}>
+              <div className="flex items-end bg-card border rounded-3xl focus-within:border-primary/50 shadow-sm">
                 <textarea
                   value={inputValue}
                   onChange={(e) => {
                     setInputValue(e.target.value);
-                    // Auto-resize
                     e.target.style.height = 'auto';
                     e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px';
                   }}
@@ -812,37 +798,27 @@ ${data.improvements?.length > 0 ? `**Suggestions:**\n${data.improvements.map((s:
                       handleSend();
                     }
                   }}
-                  placeholder={selectedImage ? "Add a caption..." : "Message AURA... ✨"}
-                  className={cn(
-                    "flex-1 bg-transparent border-0 resize-none py-3 px-4",
-                    "text-[15px] placeholder:text-muted-foreground/60",
-                    "focus:outline-none focus:ring-0",
-                    "min-h-[44px] max-h-[120px]"
-                  )}
+                  placeholder={selectedImage ? "What to do with image?" : "Message AURA... ✨"}
+                  className="flex-1 bg-transparent border-0 resize-none py-3 px-4 text-[15px] focus:outline-none min-h-[44px] max-h-[120px]"
                   style={{ height: '44px' }}
                   disabled={isThinking || isAnalyzingImage || isGeneratingImage}
                   rows={1}
                 />
-                
-                {/* Voice Button Inside Input */}
                 <div className="flex items-center pr-2 pb-1.5">
                   <ContinuousVoiceButton 
                     onTranscription={handleVoiceTranscription}
-                    isProcessing={isThinking || isAnalyzingImage || isGeneratingImage}
+                    isProcessing={isThinking || isAnalyzingImage}
                     continuous={wakeWordEnabled}
                   />
                 </div>
               </div>
             </div>
 
-            {/* Send Button - Large and Prominent */}
             <Button
               size="icon"
               className={cn(
-                "h-11 w-11 rounded-full shadow-lg transition-all duration-200",
-                (inputValue.trim() || selectedImage) 
-                  ? "bg-primary hover:bg-primary/90 hover:scale-105 shadow-primary/30" 
-                  : "bg-muted hover:bg-muted/80"
+                "h-11 w-11 rounded-full shadow-lg transition-all",
+                (inputValue.trim() || selectedImage) ? "bg-primary hover:bg-primary/90" : "bg-muted"
               )}
               onClick={handleSend}
               disabled={(!inputValue.trim() && !selectedImage) || isThinking || isAnalyzingImage || isGeneratingImage}
@@ -850,58 +826,42 @@ ${data.improvements?.length > 0 ? `**Suggestions:**\n${data.improvements.map((s:
               {isAnalyzingImage || isGeneratingImage ? (
                 <Loader2 className="w-5 h-5 animate-spin" />
               ) : (
-                <Send className={cn(
-                  "w-5 h-5 transition-colors",
-                  (inputValue.trim() || selectedImage) ? "text-primary-foreground" : "text-muted-foreground"
-                )} />
+                <Send className={cn("w-5 h-5", (inputValue.trim() || selectedImage) ? "text-primary-foreground" : "text-muted-foreground")} />
               )}
             </Button>
           </div>
 
-          {/* Bottom Actions Row */}
+          {/* Bottom Row */}
           <div className="flex items-center justify-between mt-2 px-1">
-            <div className="flex items-center gap-1">
-              {/* Wake Word Toggle */}
-              <Button
-                variant="ghost"
-                size="sm"
-                className={cn(
-                  'h-8 px-3 rounded-full text-xs gap-1.5',
-                  wakeWordEnabled 
-                    ? 'text-primary bg-primary/10 hover:bg-primary/20' 
-                    : 'text-muted-foreground hover:text-primary hover:bg-primary/10'
-                )}
-                onClick={toggleWakeWord}
-              >
-                <Radio className={cn('w-3.5 h-3.5', wakeWordEnabled && 'animate-pulse')} />
-                {wakeWordEnabled ? '"Hey AURA" On' : 'Wake Word'}
-              </Button>
-            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              className={cn('h-8 px-3 rounded-full text-xs', wakeWordEnabled && 'text-primary bg-primary/10')}
+              onClick={toggleWakeWord}
+            >
+              <Radio className={cn('w-3.5 h-3.5 mr-1.5', wakeWordEnabled && 'animate-pulse')} />
+              {wakeWordEnabled ? '"Hey AURA" On' : 'Wake Word'}
+            </Button>
 
             <div className="flex items-center gap-1">
-              {/* Speak Last Message */}
               {lastAuraMessage && (
                 <Button
                   variant="ghost"
                   size="sm"
-                  className={cn(
-                    'h-8 px-3 rounded-full text-xs gap-1.5',
-                    isSpeaking ? 'text-primary bg-primary/10' : 'text-muted-foreground hover:text-primary hover:bg-primary/10'
-                  )}
+                  className={cn('h-8 px-3 rounded-full text-xs', isSpeaking && 'text-primary bg-primary/10')}
                   onClick={() => handleSpeakMessage(lastAuraMessage.content)}
                 >
-                  <Volume2 className={cn("w-3.5 h-3.5", isSpeaking && "animate-pulse")} />
+                  <Volume2 className={cn("w-3.5 h-3.5 mr-1.5", isSpeaking && "animate-pulse")} />
                   {isSpeaking ? 'Speaking...' : 'Listen'}
                 </Button>
               )}
-              
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-8 px-3 rounded-full text-xs gap-1.5 text-muted-foreground hover:text-accent hover:bg-accent/10"
+                className="h-8 px-3 rounded-full text-xs"
                 onClick={() => setShowAutomation(true)}
               >
-                <Sparkles className="w-3.5 h-3.5" />
+                <Sparkles className="w-3.5 h-3.5 mr-1.5" />
                 Actions
               </Button>
             </div>
@@ -909,10 +869,7 @@ ${data.improvements?.length > 0 ? `**Suggestions:**\n${data.improvements.map((s:
         </div>
       </div>
       
-      <AutomationModal
-        isOpen={showAutomation}
-        onClose={() => setShowAutomation(false)}
-      />
+      <AutomationModal isOpen={showAutomation} onClose={() => setShowAutomation(false)} />
     </div>
   );
 };

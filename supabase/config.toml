@@ -1,5 +1,8 @@
 project_id = "cdhrhwxctdtvkmlvedgb"
 
+[functions.elevenlabs-tts]
+verify_jwt = false
+
 [functions.analyze-image]
 enabled = true
 verify_jwt = false
