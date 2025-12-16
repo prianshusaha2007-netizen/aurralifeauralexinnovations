@@ -1,8 +1,9 @@
 import React from 'react';
-import { Shield, Mic, Camera, Bell, MapPin, HardDrive, CheckCircle2, XCircle, Loader2 } from 'lucide-react';
+import { Shield, Mic, Camera, Bell, MapPin, HardDrive, CheckCircle2, XCircle, Loader2, Smartphone } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useMobilePermissions, PermissionStatus } from '@/hooks/useMobilePermissions';
+import { Capacitor } from '@capacitor/core';
 import { cn } from '@/lib/utils';
 
 interface Permission {
@@ -62,6 +63,9 @@ export const PermissionsScreen: React.FC = () => {
     },
   ];
 
+  const isNative = Capacitor.isNativePlatform();
+  const platform = Capacitor.getPlatform();
+
   const getStatusIcon = (status: string) => {
     if (status === 'granted') {
       return <CheckCircle2 className="w-5 h-5 text-green-500" />;
@@ -107,6 +111,15 @@ export const PermissionsScreen: React.FC = () => {
         <p className="text-sm text-muted-foreground mt-1">
           Grant permissions for the best AURA experience
         </p>
+        
+        {/* Platform Badge */}
+        <div className={cn(
+          'inline-flex items-center gap-1.5 mt-3 px-3 py-1 rounded-full text-xs font-medium',
+          isNative ? 'bg-green-500/20 text-green-500' : 'bg-muted text-muted-foreground'
+        )}>
+          <Smartphone className="w-3 h-3" />
+          {isNative ? `Native ${platform === 'ios' ? 'iOS' : 'Android'} App` : 'Web Browser'}
+        </div>
       </div>
 
       {/* Status Card */}

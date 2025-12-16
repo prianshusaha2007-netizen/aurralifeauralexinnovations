@@ -1,4 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
+import { Capacitor } from '@capacitor/core';
+import { Camera } from '@capacitor/camera';
+import { Geolocation } from '@capacitor/geolocation';
+import { LocalNotifications } from '@capacitor/local-notifications';
 import { toast } from 'sonner';
 
 export interface PermissionStatus {
@@ -10,6 +14,7 @@ export interface PermissionStatus {
 }
 
 export const useMobilePermissions = () => {
+  const isNative = Capacitor.isNativePlatform();
   const [permissions, setPermissions] = useState<PermissionStatus>({
     microphone: 'prompt',
     camera: 'prompt',
@@ -35,7 +40,24 @@ export const useMobilePermissions = () => {
     };
 
     try {
-      // Check microphone
+      // Check camera (works for both native and web)
+      if (isNative) {
+        try {
+          const camPerm = await Camera.checkPermissions();
+          newPermissions.camera = camPerm.camera as 'granted' | 'denied' | 'prompt';
+        } catch {
+          newPermissions.camera = 'prompt';
+        }
+      } else if (navigator.permissions) {
+        try {
+          const cam = await navigator.permissions.query({ name: 'camera' as PermissionName });
+          newPermissions.camera = cam.state as 'granted' | 'denied' | 'prompt';
+        } catch {
+          newPermissions.camera = 'prompt';
+        }
+      }
+
+      // Check microphone (web only for now)
       if (navigator.permissions) {
         try {
           const mic = await navigator.permissions.query({ name: 'microphone' as PermissionName });
@@ -45,23 +67,27 @@ export const useMobilePermissions = () => {
         }
       }
 
-      // Check camera
-      if (navigator.permissions) {
-        try {
-          const cam = await navigator.permissions.query({ name: 'camera' as PermissionName });
-          newPermissions.camera = cam.state as 'granted' | 'denied' | 'prompt';
-        } catch {
-          newPermissions.camera = 'prompt';
-        }
-      }
-
       // Check notifications
-      if ('Notification' in window) {
+      if (isNative) {
+        try {
+          const notifPerm = await LocalNotifications.checkPermissions();
+          newPermissions.notifications = notifPerm.display as 'granted' | 'denied' | 'default';
+        } catch {
+          newPermissions.notifications = 'default';
+        }
+      } else if ('Notification' in window) {
         newPermissions.notifications = Notification.permission as 'granted' | 'denied' | 'default';
       }
 
       // Check geolocation
-      if (navigator.permissions) {
+      if (isNative) {
+        try {
+          const geoPerm = await Geolocation.checkPermissions();
+          newPermissions.geolocation = geoPerm.location as 'granted' | 'denied' | 'prompt';
+        } catch {
+          newPermissions.geolocation = 'prompt';
+        }
+      } else if (navigator.permissions) {
         try {
           const geo = await navigator.permissions.query({ name: 'geolocation' });
           newPermissions.geolocation = geo.state as 'granted' | 'denied' | 'prompt';
@@ -95,6 +121,18 @@ export const useMobilePermissions = () => {
 
   const requestCamera = useCallback(async (): Promise<boolean> => {
     try {
+      if (isNative) {
+        const perm = await Camera.requestPermissions({ permissions: ['camera'] });
+        if (perm.camera === 'granted') {
+          setPermissions(prev => ({ ...prev, camera: 'granted' }));
+          toast.success('Camera access granted! 📷');
+          return true;
+        }
+        setPermissions(prev => ({ ...prev, camera: 'denied' }));
+        toast.error('Camera access denied');
+        return false;
+      }
+      
       const stream = await navigator.mediaDevices.getUserMedia({ video: true });
       stream.getTracks().forEach(track => track.stop());
       setPermissions(prev => ({ ...prev, camera: 'granted' }));
@@ -106,21 +144,32 @@ export const useMobilePermissions = () => {
       toast.error('Camera access denied');
       return false;
     }
-  }, []);
+  }, [isNative]);
 
   const requestNotifications = useCallback(async (): Promise<boolean> => {
-    if (!('Notification' in window)) {
-      toast.error('Notifications not supported');
-      return false;
-    }
-
     try {
+      if (isNative) {
+        const perm = await LocalNotifications.requestPermissions();
+        if (perm.display === 'granted') {
+          setPermissions(prev => ({ ...prev, notifications: 'granted' }));
+          toast.success('Notifications enabled! 🔔');
+          return true;
+        }
+        setPermissions(prev => ({ ...prev, notifications: 'denied' }));
+        toast.error('Notifications denied');
+        return false;
+      }
+      
+      if (!('Notification' in window)) {
+        toast.error('Notifications not supported');
+        return false;
+      }
+
       const result = await Notification.requestPermission();
       setPermissions(prev => ({ ...prev, notifications: result as 'granted' | 'denied' | 'default' }));
       
       if (result === 'granted') {
         toast.success('Notifications enabled! 🔔');
-        // Show test notification
         new Notification('AURA', {
           body: 'Notifications are now enabled! 🎉',
           icon: '/favicon.ico'
@@ -134,31 +183,48 @@ export const useMobilePermissions = () => {
       console.error('Notification permission error:', error);
       return false;
     }
-  }, []);
+  }, [isNative]);
 
   const requestGeolocation = useCallback(async (): Promise<boolean> => {
-    return new Promise((resolve) => {
-      if (!navigator.geolocation) {
-        toast.error('Location not supported');
-        resolve(false);
-        return;
-      }
-
-      navigator.geolocation.getCurrentPosition(
-        () => {
+    try {
+      if (isNative) {
+        const perm = await Geolocation.requestPermissions();
+        if (perm.location === 'granted') {
           setPermissions(prev => ({ ...prev, geolocation: 'granted' }));
           toast.success('Location access granted! 📍');
-          resolve(true);
-        },
-        (error) => {
-          console.error('Geolocation error:', error);
-          setPermissions(prev => ({ ...prev, geolocation: 'denied' }));
-          toast.error('Location access denied');
-          resolve(false);
+          return true;
         }
-      );
-    });
-  }, []);
+        setPermissions(prev => ({ ...prev, geolocation: 'denied' }));
+        toast.error('Location access denied');
+        return false;
+      }
+      
+      return new Promise((resolve) => {
+        if (!navigator.geolocation) {
+          toast.error('Location not supported');
+          resolve(false);
+          return;
+        }
+
+        navigator.geolocation.getCurrentPosition(
+          () => {
+            setPermissions(prev => ({ ...prev, geolocation: 'granted' }));
+            toast.success('Location access granted! 📍');
+            resolve(true);
+          },
+          (error) => {
+            console.error('Geolocation error:', error);
+            setPermissions(prev => ({ ...prev, geolocation: 'denied' }));
+            toast.error('Location access denied');
+            resolve(false);
+          }
+        );
+      });
+    } catch (error) {
+      console.error('Geolocation error:', error);
+      return false;
+    }
+  }, [isNative]);
 
   const requestAllPermissions = useCallback(async () => {
     toast.info('Requesting permissions...');
