@@ -11,6 +11,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { StreakCard } from '@/components/StreakCard';
+import { FriendInviteSystem } from '@/components/FriendInviteSystem';
+import { AchievementBadges } from '@/components/AchievementBadges';
 
 interface LeaderboardEntry {
   rank: number;
@@ -216,6 +218,10 @@ export const SocialLeaderboardScreen: React.FC = () => {
           <p className="text-muted-foreground mt-1">
             Track your progress and compete with friends
           </p>
+          <div className="flex justify-center gap-2 mt-4">
+            <FriendInviteSystem />
+            <AchievementBadges />
+          </div>
         </div>
 
         {/* Your Stats Card */}

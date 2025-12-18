@@ -229,9 +229,12 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ onMenuClick, onVoiceMode
     try {
       const allMessages = [...vanishMessages, { id: 'temp', content: message, sender: 'user' as const, timestamp: new Date() }];
       
+      // Add thinking indicator
+      const thinkingId = addVanishMessage({ content: '...', sender: 'aura' });
+      
       const response = await supabase.functions.invoke('aura-chat', {
         body: {
-          messages: allMessages.map(m => ({ role: m.sender === 'user' ? 'user' : 'assistant', content: m.content })),
+          messages: allMessages.slice(0, -1).map(m => ({ role: m.sender === 'user' ? 'user' : 'assistant', content: m.content })),
           userProfile: {
             name: userProfile.name,
             age: userProfile.age,
@@ -246,10 +249,10 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ onMenuClick, onVoiceMode
 
       if (response.error) throw response.error;
 
+      // Handle streaming response
       const reader = response.data.getReader?.();
       if (reader) {
         let fullContent = '';
-        const messageId = addVanishMessage({ content: '', sender: 'aura' });
         
         const decoder = new TextDecoder();
         while (true) {
@@ -266,11 +269,41 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ onMenuClick, onVoiceMode
                 const content = json.choices?.[0]?.delta?.content || '';
                 fullContent += content;
                 setVanishMessages(prev => 
-                  prev.map(m => m.id === messageId ? { ...m, content: fullContent } : m)
+                  prev.map(m => m.id === thinkingId ? { ...m, content: fullContent } : m)
                 );
               } catch {}
             }
           }
+        }
+        
+        // If no content was streamed, handle non-streaming response
+        if (!fullContent) {
+          const text = await response.data.text?.();
+          if (text) {
+            try {
+              const parsed = JSON.parse(text);
+              fullContent = parsed.choices?.[0]?.message?.content || parsed.content || text;
+            } catch {
+              fullContent = text;
+            }
+            setVanishMessages(prev => 
+              prev.map(m => m.id === thinkingId ? { ...m, content: fullContent } : m)
+            );
+          }
+        }
+      } else {
+        // Non-streaming response
+        const text = typeof response.data === 'string' ? response.data : JSON.stringify(response.data);
+        try {
+          const parsed = JSON.parse(text);
+          const content = parsed.choices?.[0]?.message?.content || parsed.content || 'Got it! 👻';
+          setVanishMessages(prev => 
+            prev.map(m => m.id === thinkingId ? { ...m, content } : m)
+          );
+        } catch {
+          setVanishMessages(prev => 
+            prev.map(m => m.id === thinkingId ? { ...m, content: 'Got your message! 👻' } : m)
+          );
         }
       }
     } catch (error) {
@@ -579,50 +612,61 @@ ${data.improvements?.length > 0 ? `**Tips:** ${data.improvements.join(', ')}` : 
         )}
       </AnimatePresence>
 
-      {/* Header */}
-      <div className="flex flex-col items-center pt-4 pb-2 relative z-10">
-        <div className="absolute inset-0 bg-gradient-to-b from-accent/10 via-primary/5 to-transparent" />
-        
-        <Button variant="ghost" size="icon" className="absolute top-2 left-4 z-10 rounded-full" onClick={onMenuClick}>
-          <Menu className="w-5 h-5" />
-        </Button>
-        
-        <div className="absolute top-2 right-4 z-10 flex items-center gap-1">
-          <Button
-            variant="ghost"
-            size="icon"
-            className={cn("rounded-full", vanishMode && "text-primary bg-primary/20")}
-            onClick={toggleVanishMode}
+      {/* Fixed Header - Sticky on Scroll */}
+      <div className="sticky top-0 z-50 bg-background/95 backdrop-blur-md border-b border-border/50">
+        <div className="flex items-center justify-between px-3 py-2">
+          {/* Left - Menu Button */}
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="h-9 w-9 rounded-full shrink-0" 
+            onClick={onMenuClick}
           >
-            <Ghost className={cn("w-5 h-5", vanishMode && "animate-pulse")} />
+            <Menu className="w-5 h-5" />
           </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="rounded-full"
-            onClick={() => setShowTutorMode(true)}
-          >
-            <GraduationCap className="w-5 h-5" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className={cn("rounded-full", activeGame && "text-primary bg-primary/20")}
-            onClick={() => setShowChatGames(true)}
-          >
-            <Gamepad2 className={cn("w-5 h-5", activeGame && "animate-pulse")} />
-          </Button>
-          <Button variant="ghost" size="icon" className="rounded-full" onClick={onVoiceModeClick}>
-            <Mic className="w-5 h-5" />
-          </Button>
-          <ModelSelector value={selectedModel} onChange={setSelectedModel} />
+          
+          {/* Center - Title */}
+          <div className="flex items-center gap-2">
+            <AuraOrb size="sm" isThinking={isThinking || isVoiceFeedbackSpeaking} />
+            <span className="font-semibold text-sm">AURA</span>
+          </div>
+          
+          {/* Right - Actions */}
+          <div className="flex items-center gap-0.5">
+            <Button
+              variant="ghost"
+              size="icon"
+              className={cn("h-8 w-8 rounded-full", vanishMode && "text-primary bg-primary/20")}
+              onClick={toggleVanishMode}
+            >
+              <Ghost className={cn("w-4 h-4", vanishMode && "animate-pulse")} />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 rounded-full"
+              onClick={() => setShowTutorMode(true)}
+            >
+              <GraduationCap className="w-4 h-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className={cn("h-8 w-8 rounded-full", activeGame && "text-primary bg-primary/20")}
+              onClick={() => setShowChatGames(true)}
+            >
+              <Gamepad2 className={cn("w-4 h-4", activeGame && "animate-pulse")} />
+            </Button>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="h-8 w-8 rounded-full" 
+              onClick={onVoiceModeClick}
+            >
+              <Mic className="w-4 h-4" />
+            </Button>
+          </div>
         </div>
-        
-        <AuraOrb size="md" isThinking={isThinking || isVoiceFeedbackSpeaking} className="animate-float" />
-        <h1 className="mt-2 text-lg font-bold aura-gradient-text">AURA</h1>
-        <p className="text-xs text-muted-foreground">
-          {isVoiceFeedbackSpeaking ? 'Speaking...' : isThinking ? 'Thinking...' : 'Your AI Bestfriend ✨'}
-        </p>
       </div>
 
       {/* Morning Briefing */}
