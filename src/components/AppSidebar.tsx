@@ -34,7 +34,8 @@ export type TabId =
   | 'settings'
   | 'image-analysis'
   | 'social'
-  | 'gallery';
+  | 'gallery'
+  | 'progress';
 
 interface MenuItem {
   id: TabId | 'new-chat';
@@ -52,6 +53,7 @@ const menuItems: MenuItem[] = [
   { id: 'games', icon: Gamepad2, label: 'Play Games', divider: true },
   { id: 'routine', icon: Calendar, label: 'Daily Routine', section: 'Wellness' },
   { id: 'hydration', icon: Droplets, label: 'Hydration Tracker' },
+  { id: 'progress', icon: BarChart3, label: 'Progress Dashboard' },
   { id: 'social', icon: Trophy, label: 'Social Leaderboard', divider: true },
   { id: 'memories', icon: Brain, label: 'Memories', section: 'Personal' },
   { id: 'image-analysis', icon: Image, label: 'Image Analysis' },

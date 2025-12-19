@@ -227,14 +227,23 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ onMenuClick, onVoiceMode
 
   const sendVanishMessage = async (message: string) => {
     try {
-      const allMessages = [...vanishMessages, { id: 'temp', content: message, sender: 'user' as const, timestamp: new Date() }];
+      const conversationHistory = vanishMessages.map(m => ({ 
+        role: m.sender === 'user' ? 'user' : 'assistant' as const, 
+        content: m.content 
+      }));
+      conversationHistory.push({ role: 'user', content: message });
       
       // Add thinking indicator
       const thinkingId = addVanishMessage({ content: '...', sender: 'aura' });
       
-      const response = await supabase.functions.invoke('aura-chat', {
-        body: {
-          messages: allMessages.slice(0, -1).map(m => ({ role: m.sender === 'user' ? 'user' : 'assistant', content: m.content })),
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/aura-chat`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        },
+        body: JSON.stringify({
+          messages: conversationHistory,
           userProfile: {
             name: userProfile.name,
             age: userProfile.age,
@@ -244,67 +253,54 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ onMenuClick, onVoiceMode
             tonePreference: userProfile.tonePreference,
           },
           preferredModel: selectedModel,
-        },
+        }),
       });
 
-      if (response.error) throw response.error;
+      if (!response.ok || !response.body) {
+        throw new Error('Failed to get response');
+      }
 
-      // Handle streaming response
-      const reader = response.data.getReader?.();
-      if (reader) {
-        let fullContent = '';
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let fullContent = '';
+      let textBuffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
         
-        const decoder = new TextDecoder();
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          
-          const chunk = decoder.decode(value, { stream: true });
-          const lines = chunk.split('\n');
-          
-          for (const line of lines) {
-            if (line.startsWith('data: ') && line !== 'data: [DONE]') {
-              try {
-                const json = JSON.parse(line.slice(6));
-                const content = json.choices?.[0]?.delta?.content || '';
-                fullContent += content;
-                setVanishMessages(prev => 
-                  prev.map(m => m.id === thinkingId ? { ...m, content: fullContent } : m)
-                );
-              } catch {}
+        textBuffer += decoder.decode(value, { stream: true });
+
+        let newlineIndex: number;
+        while ((newlineIndex = textBuffer.indexOf('\n')) !== -1) {
+          let line = textBuffer.slice(0, newlineIndex);
+          textBuffer = textBuffer.slice(newlineIndex + 1);
+
+          if (line.endsWith('\r')) line = line.slice(0, -1);
+          if (line.startsWith(':') || line.trim() === '') continue;
+          if (!line.startsWith('data: ')) continue;
+
+          const jsonStr = line.slice(6).trim();
+          if (jsonStr === '[DONE]') break;
+
+          try {
+            const parsed = JSON.parse(jsonStr);
+            const content = parsed.choices?.[0]?.delta?.content;
+            if (content) {
+              fullContent += content;
+              setVanishMessages(prev => 
+                prev.map(m => m.id === thinkingId ? { ...m, content: fullContent } : m)
+              );
             }
-          }
+          } catch {}
         }
-        
-        // If no content was streamed, handle non-streaming response
-        if (!fullContent) {
-          const text = await response.data.text?.();
-          if (text) {
-            try {
-              const parsed = JSON.parse(text);
-              fullContent = parsed.choices?.[0]?.message?.content || parsed.content || text;
-            } catch {
-              fullContent = text;
-            }
-            setVanishMessages(prev => 
-              prev.map(m => m.id === thinkingId ? { ...m, content: fullContent } : m)
-            );
-          }
-        }
-      } else {
-        // Non-streaming response
-        const text = typeof response.data === 'string' ? response.data : JSON.stringify(response.data);
-        try {
-          const parsed = JSON.parse(text);
-          const content = parsed.choices?.[0]?.message?.content || parsed.content || 'Got it! 👻';
-          setVanishMessages(prev => 
-            prev.map(m => m.id === thinkingId ? { ...m, content } : m)
-          );
-        } catch {
-          setVanishMessages(prev => 
-            prev.map(m => m.id === thinkingId ? { ...m, content: 'Got your message! 👻' } : m)
-          );
-        }
+      }
+
+      // Fallback if no content streamed
+      if (!fullContent) {
+        setVanishMessages(prev => 
+          prev.map(m => m.id === thinkingId ? { ...m, content: "I'm here in vanish mode! 👻" } : m)
+        );
       }
     } catch (error) {
       console.error('Vanish chat error:', error);
