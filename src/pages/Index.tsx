@@ -3,6 +3,8 @@ import { Navigate } from 'react-router-dom';
 import { AuraProvider, useAura } from '@/contexts/AuraContext';
 import { useAuth } from '@/hooks/useAuth';
 import { AppSidebar, TabId } from '@/components/AppSidebar';
+import { GlobalBottomNav } from '@/components/GlobalBottomNav';
+import { ReminderPopup } from '@/components/ReminderPopup';
 import { ChatScreen } from '@/screens/ChatScreen';
 import { MemoriesScreen } from '@/screens/MemoriesScreen';
 import { RoutineScreen } from '@/screens/RoutineScreen';
@@ -20,12 +22,15 @@ import { ImageAnalysisScreen } from '@/screens/ImageAnalysisScreen';
 import { SocialLeaderboardScreen } from '@/screens/SocialLeaderboardScreen';
 import { ImageGalleryScreen } from '@/screens/ImageGalleryScreen';
 import { ProgressDashboardScreen } from '@/screens/ProgressDashboardScreen';
+import { RemindersScreen } from '@/screens/RemindersScreen';
+import { SmartServicesScreen } from '@/screens/SmartServicesScreen';
+import { DailyRoutineScreen } from '@/screens/DailyRoutineScreen';
 import { AuraOrb } from '@/components/AuraOrb';
 import { DailyMoodPopup } from '@/components/DailyMoodPopup';
 import { SplashScreen } from '@/components/SplashScreen';
 import { PageTransition } from '@/components/PageTransition';
 import { ContinuousVoiceMode } from '@/components/ContinuousVoiceMode';
-
+import { useReminders } from '@/hooks/useReminders';
 import { useMorningBriefing } from '@/hooks/useMorningBriefing';
 
 const AppContent: React.FC = () => {
@@ -34,7 +39,8 @@ const AppContent: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [voiceModeOpen, setVoiceModeOpen] = useState(false);
   
-  // Initialize morning briefing (will auto-show if appropriate time)
+  const { activeReminder, snoozeReminder, completeReminder, dismissActiveReminder } = useReminders();
+  
   useMorningBriefing();
 
   if (isLoading) {
@@ -60,7 +66,7 @@ const AppContent: React.FC = () => {
       case 'chat': return <ChatScreen onMenuClick={() => setSidebarOpen(true)} onVoiceModeClick={() => setVoiceModeOpen(true)} />;
       case 'games': return <PlayLearnScreen />;
       case 'memories': return <MemoriesScreen />;
-      case 'routine': return <RoutineScreen />;
+      case 'routine': return <DailyRoutineScreen onMenuClick={() => setSidebarOpen(true)} />;
       case 'habits': return <HabitTrackerScreen />;
       case 'hydration': return <HydrationScreen />;
       case 'settings': return <SettingsScreen />;
@@ -73,20 +79,27 @@ const AppContent: React.FC = () => {
       case 'gallery': return <ImageGalleryScreen />;
       case 'social': return <SocialLeaderboardScreen />;
       case 'progress': return <ProgressDashboardScreen />;
+      case 'reminders': return <RemindersScreen onMenuClick={() => setSidebarOpen(true)} />;
+      case 'services': return <SmartServicesScreen onMenuClick={() => setSidebarOpen(true)} />;
       default: return <ChatScreen onMenuClick={() => setSidebarOpen(true)} onVoiceModeClick={() => setVoiceModeOpen(true)} />;
     }
   };
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      {/* Daily Mood Check-in Popup */}
       <DailyMoodPopup userName={userProfile.name} />
 
-      {/* Continuous Voice Mode */}
       <ContinuousVoiceMode
         isOpen={voiceModeOpen}
         onClose={() => setVoiceModeOpen(false)}
         userName={userProfile.name}
+      />
+
+      <ReminderPopup
+        reminder={activeReminder}
+        onSnooze={(mins) => activeReminder && snoozeReminder(activeReminder.id, mins)}
+        onComplete={() => activeReminder && completeReminder(activeReminder.id)}
+        onDismiss={dismissActiveReminder}
       />
 
       <AppSidebar 
@@ -97,11 +110,17 @@ const AppContent: React.FC = () => {
         onNewChat={handleNewChat}
       />
 
-      <main className="flex-1 overflow-hidden">
+      <main className="flex-1 overflow-hidden pb-16">
         <PageTransition pageKey={activeTab}>
           {renderScreen()}
         </PageTransition>
       </main>
+
+      <GlobalBottomNav
+        activeTab={activeTab}
+        onTabChange={(tab) => setActiveTab(tab as TabId)}
+        onMenuClick={() => setSidebarOpen(true)}
+      />
     </div>
   );
 };
@@ -110,7 +129,6 @@ const ProtectedApp: React.FC = () => {
   const { user, loading } = useAuth();
   const [showSplash, setShowSplash] = useState(true);
 
-  // Show splash only on first load
   useEffect(() => {
     const hasSeenSplash = sessionStorage.getItem('aura-splash-seen');
     if (hasSeenSplash) {

@@ -12,7 +12,9 @@ import {
   Trophy,
   BarChart3,
   Image,
-  ImageIcon
+  ImageIcon,
+  Bell,
+  MapPin
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -35,7 +37,9 @@ export type TabId =
   | 'image-analysis'
   | 'social'
   | 'gallery'
-  | 'progress';
+  | 'progress'
+  | 'reminders'
+  | 'services';
 
 interface MenuItem {
   id: TabId | 'new-chat';
@@ -50,7 +54,9 @@ const menuItems: MenuItem[] = [
   { id: 'new-chat', icon: Plus, label: 'New Chat', action: true },
   { id: 'chat', icon: MessageSquare, label: 'Chat', section: 'Main' },
   { id: 'history', icon: History, label: 'Chat History' },
-  { id: 'games', icon: Gamepad2, label: 'Play Games', divider: true },
+  { id: 'reminders', icon: Bell, label: 'Reminders & Alarms' },
+  { id: 'services', icon: MapPin, label: 'Smart Services', divider: true },
+  { id: 'games', icon: Gamepad2, label: 'Play Games' },
   { id: 'routine', icon: Calendar, label: 'Daily Routine', section: 'Wellness' },
   { id: 'hydration', icon: Droplets, label: 'Hydration Tracker' },
   { id: 'progress', icon: BarChart3, label: 'Progress Dashboard' },
