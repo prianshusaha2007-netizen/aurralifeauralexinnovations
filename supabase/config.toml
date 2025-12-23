@@ -7,16 +7,16 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.analyze-image]
-verify_jwt = true
+verify_jwt = false
 
 [functions.aura-chat]
-verify_jwt = true
+verify_jwt = false
 
 [functions.voice-to-text]
-verify_jwt = true
+verify_jwt = false
 
 [functions.text-to-voice]
-verify_jwt = true
+verify_jwt = false
 
 [functions.save-memory]
 verify_jwt = true
@@ -28,7 +28,7 @@ verify_jwt = true
 verify_jwt = true
 
 [functions.web-search]
-verify_jwt = true
+verify_jwt = false
 
 [functions.realtime-session]
 verify_jwt = false
@@ -52,13 +52,13 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.transform-image]
-verify_jwt = true
+verify_jwt = false
 
 [functions.generate-personality-insights]
 verify_jwt = false
 
 [functions.generate-image]
-verify_jwt = true
+verify_jwt = false
 
 [functions.routine-notifications]
 verify_jwt = false

@@ -1,5 +1,4 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -16,30 +15,6 @@ serve(async (req) => {
   }
 
   try {
-    // Authenticate the request
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      return new Response(
-        JSON.stringify({ error: 'Authentication required' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY')!;
-    
-    const supabase = createClient(supabaseUrl, supabaseKey, {
-      global: { headers: { Authorization: authHeader } }
-    });
-
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
     // Parse and validate input
     let requestData;
     try {
@@ -79,7 +54,7 @@ serve(async (req) => {
     // Validate search type
     const searchType = typeof type === 'string' && VALID_SEARCH_TYPES.includes(type) ? type : 'google';
 
-    console.log(`Web search for user ${user.id}: type=${searchType}, query=${trimmedQuery}`);
+    console.log(`Web search: type=${searchType}, query=${trimmedQuery}`);
 
     // Use Lovable AI with grounded search capability
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
