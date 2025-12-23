@@ -1,9 +1,10 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { Mic, MicOff, Loader2, CheckCircle2, XCircle, Volume2, Play, Square, RotateCcw } from 'lucide-react';
+import { Mic, MicOff, Loader2, CheckCircle2, XCircle, Volume2, Play, Square, RotateCcw, Download, Share2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 import { Capacitor } from '@capacitor/core';
+import { toast } from 'sonner';
 
 type TestState = 'idle' | 'recording' | 'recorded' | 'playing' | 'error';
 
@@ -11,22 +12,114 @@ interface MicrophoneTestProps {
   onTestComplete?: (success: boolean) => void;
 }
 
+// Waveform visualization component
+const AudioWaveform: React.FC<{ 
+  analyser: AnalyserNode | null; 
+  isActive: boolean;
+  mode: 'recording' | 'playback';
+}> = ({ analyser, isActive, mode }) => {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const animationRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (!canvasRef.current || !isActive) return;
+
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const draw = () => {
+      if (!analyser) {
+        // Draw static waveform when no analyser
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = mode === 'recording' ? 'hsl(var(--primary))' : 'hsl(var(--primary))';
+        const barCount = 40;
+        const barWidth = canvas.width / barCount - 2;
+        
+        for (let i = 0; i < barCount; i++) {
+          const height = Math.random() * 30 + 5;
+          const x = i * (barWidth + 2);
+          const y = (canvas.height - height) / 2;
+          ctx.fillRect(x, y, barWidth, height);
+        }
+        animationRef.current = requestAnimationFrame(draw);
+        return;
+      }
+
+      const dataArray = new Uint8Array(analyser.frequencyBinCount);
+      analyser.getByteFrequencyData(dataArray);
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      
+      const barCount = 40;
+      const barWidth = canvas.width / barCount - 2;
+      const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+      
+      if (mode === 'recording') {
+        gradient.addColorStop(0, 'hsl(var(--primary))');
+        gradient.addColorStop(1, 'hsl(var(--primary) / 0.3)');
+      } else {
+        gradient.addColorStop(0, 'hsl(142 76% 36%)');
+        gradient.addColorStop(1, 'hsl(142 76% 36% / 0.3)');
+      }
+      
+      ctx.fillStyle = gradient;
+
+      for (let i = 0; i < barCount; i++) {
+        const dataIndex = Math.floor(i * dataArray.length / barCount);
+        const value = dataArray[dataIndex] || 0;
+        const height = Math.max(4, (value / 255) * canvas.height * 0.8);
+        const x = i * (barWidth + 2);
+        const y = (canvas.height - height) / 2;
+        
+        ctx.beginPath();
+        ctx.roundRect(x, y, barWidth, height, 2);
+        ctx.fill();
+      }
+
+      animationRef.current = requestAnimationFrame(draw);
+    };
+
+    draw();
+
+    return () => {
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current);
+      }
+    };
+  }, [analyser, isActive, mode]);
+
+  if (!isActive) return null;
+
+  return (
+    <canvas 
+      ref={canvasRef} 
+      width={320} 
+      height={60} 
+      className="w-full h-[60px] rounded-lg bg-muted/30"
+    />
+  );
+};
+
 export const MicrophoneTest: React.FC<MicrophoneTestProps> = ({ onTestComplete }) => {
   const [testState, setTestState] = useState<TestState>('idle');
   const [audioLevel, setAudioLevel] = useState(0);
   const [errorMessage, setErrorMessage] = useState('');
   const [recordingTime, setRecordingTime] = useState(0);
   const [playbackProgress, setPlaybackProgress] = useState(0);
+  const [recordingBlob, setRecordingBlob] = useState<Blob | null>(null);
   
   const streamRef = useRef<MediaStream | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
+  const playbackAnalyserRef = useRef<AnalyserNode | null>(null);
   const animationRef = useRef<number | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const audioUrlRef = useRef<string | null>(null);
   const audioElementRef = useRef<HTMLAudioElement | null>(null);
   const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const [analyserNode, setAnalyserNode] = useState<AnalyserNode | null>(null);
 
   const MAX_RECORDING_TIME = 5; // 5 seconds max
 
@@ -51,6 +144,7 @@ export const MicrophoneTest: React.FC<MicrophoneTestProps> = ({ onTestComplete }
       mediaRecorderRef.current.stop();
     }
     analyserRef.current = null;
+    setAnalyserNode(null);
   }, []);
 
   const cleanupAudio = useCallback(() => {
@@ -63,6 +157,7 @@ export const MicrophoneTest: React.FC<MicrophoneTestProps> = ({ onTestComplete }
       audioElementRef.current = null;
     }
     chunksRef.current = [];
+    playbackAnalyserRef.current = null;
   }, []);
 
   useEffect(() => {
@@ -92,6 +187,7 @@ export const MicrophoneTest: React.FC<MicrophoneTestProps> = ({ onTestComplete }
     setErrorMessage('');
     setAudioLevel(0);
     setRecordingTime(0);
+    setRecordingBlob(null);
     chunksRef.current = [];
 
     try {
@@ -121,6 +217,7 @@ export const MicrophoneTest: React.FC<MicrophoneTestProps> = ({ onTestComplete }
       const analyser = audioContext.createAnalyser();
       analyser.fftSize = 256;
       analyserRef.current = analyser;
+      setAnalyserNode(analyser);
 
       source.connect(analyser);
 
@@ -153,6 +250,7 @@ export const MicrophoneTest: React.FC<MicrophoneTestProps> = ({ onTestComplete }
       mediaRecorder.onstop = () => {
         const blob = new Blob(chunksRef.current, { type: mimeType || 'audio/webm' });
         audioUrlRef.current = URL.createObjectURL(blob);
+        setRecordingBlob(blob);
         setTestState('recorded');
         onTestComplete?.(true);
       };
@@ -214,18 +312,36 @@ export const MicrophoneTest: React.FC<MicrophoneTestProps> = ({ onTestComplete }
       audioContextRef.current = null;
     }
     setAudioLevel(0);
+    setAnalyserNode(null);
   }, []);
 
-  const playRecording = useCallback(() => {
+  const playRecording = useCallback(async () => {
     if (!audioUrlRef.current) return;
 
     const audio = new Audio(audioUrlRef.current);
     audioElementRef.current = audio;
+
+    // Create audio context for playback visualization
+    try {
+      const audioContext = new AudioContext();
+      const source = audioContext.createMediaElementSource(audio);
+      const analyser = audioContext.createAnalyser();
+      analyser.fftSize = 256;
+      
+      source.connect(analyser);
+      analyser.connect(audioContext.destination);
+      
+      playbackAnalyserRef.current = analyser;
+      setAnalyserNode(analyser);
+    } catch (err) {
+      console.log('Could not create playback analyser');
+    }
     
     audio.onplay = () => setTestState('playing');
     audio.onended = () => {
       setTestState('recorded');
       setPlaybackProgress(0);
+      setAnalyserNode(null);
     };
     audio.ontimeupdate = () => {
       if (audio.duration) {
@@ -244,6 +360,7 @@ export const MicrophoneTest: React.FC<MicrophoneTestProps> = ({ onTestComplete }
     }
     setTestState('recorded');
     setPlaybackProgress(0);
+    setAnalyserNode(null);
   }, []);
 
   const resetTest = useCallback(() => {
@@ -254,7 +371,48 @@ export const MicrophoneTest: React.FC<MicrophoneTestProps> = ({ onTestComplete }
     setRecordingTime(0);
     setPlaybackProgress(0);
     setErrorMessage('');
+    setRecordingBlob(null);
   }, [cleanup, cleanupAudio]);
+
+  const downloadRecording = useCallback(() => {
+    if (!recordingBlob) return;
+
+    const url = URL.createObjectURL(recordingBlob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `mic-test-${new Date().toISOString().slice(0, 10)}.webm`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast.success('Recording downloaded!');
+  }, [recordingBlob]);
+
+  const shareRecording = useCallback(async () => {
+    if (!recordingBlob) return;
+
+    const file = new File([recordingBlob], `mic-test-${new Date().toISOString().slice(0, 10)}.webm`, {
+      type: recordingBlob.type
+    });
+
+    if (navigator.share && navigator.canShare({ files: [file] })) {
+      try {
+        await navigator.share({
+          title: 'AURA Microphone Test',
+          text: 'Here is my microphone test recording for troubleshooting',
+          files: [file]
+        });
+        toast.success('Recording shared!');
+      } catch (err: any) {
+        if (err.name !== 'AbortError') {
+          toast.error('Could not share recording');
+        }
+      }
+    } else {
+      // Fallback to download
+      downloadRecording();
+    }
+  }, [recordingBlob, downloadRecording]);
 
   return (
     <div className="space-y-4">
@@ -307,28 +465,46 @@ export const MicrophoneTest: React.FC<MicrophoneTestProps> = ({ onTestComplete }
           </div>
         </div>
 
-        {/* Audio level indicator for recording */}
+        {/* Waveform visualization for recording */}
         {testState === 'recording' && (
           <div className="mt-4 space-y-2">
-            <div className="flex items-center gap-2">
-              <Volume2 className="w-4 h-4 text-muted-foreground" />
-              <span className="text-xs text-muted-foreground">Audio Level</span>
-            </div>
-            <Progress value={audioLevel} className="h-2" />
+            <AudioWaveform 
+              analyser={analyserNode} 
+              isActive={testState === 'recording'} 
+              mode="recording"
+            />
             <p className="text-xs text-center text-muted-foreground">
               {audioLevel > 30 ? '🎤 Sound detected!' : 'Speak into your microphone...'}
             </p>
           </div>
         )}
 
-        {/* Playback progress */}
+        {/* Waveform visualization for playback */}
         {testState === 'playing' && (
           <div className="mt-4 space-y-2">
-            <div className="flex items-center gap-2">
-              <Volume2 className="w-4 h-4 text-muted-foreground" />
-              <span className="text-xs text-muted-foreground">Playback</span>
+            <AudioWaveform 
+              analyser={analyserNode} 
+              isActive={testState === 'playing'} 
+              mode="playback"
+            />
+            <Progress value={playbackProgress} className="h-1" />
+          </div>
+        )}
+
+        {/* Static waveform for recorded state */}
+        {testState === 'recorded' && recordingBlob && (
+          <div className="mt-4">
+            <div className="w-full h-[40px] rounded-lg bg-muted/30 flex items-center justify-center gap-1 px-2">
+              {Array.from({ length: 40 }).map((_, i) => (
+                <div 
+                  key={i}
+                  className="bg-green-500/60 rounded-full w-1.5"
+                  style={{ 
+                    height: `${Math.sin(i * 0.3) * 10 + Math.random() * 15 + 8}px`,
+                  }}
+                />
+              ))}
             </div>
-            <Progress value={playbackProgress} className="h-2" />
           </div>
         )}
       </div>
@@ -366,7 +542,7 @@ export const MicrophoneTest: React.FC<MicrophoneTestProps> = ({ onTestComplete }
               size="lg"
             >
               <Play className="w-5 h-5 mr-2" />
-              Play Recording
+              Play
             </Button>
             <Button
               onClick={resetTest}
@@ -412,6 +588,30 @@ export const MicrophoneTest: React.FC<MicrophoneTestProps> = ({ onTestComplete }
           </Button>
         )}
       </div>
+
+      {/* Save & Share buttons */}
+      {testState === 'recorded' && recordingBlob && (
+        <div className="flex gap-2">
+          <Button
+            onClick={downloadRecording}
+            variant="outline"
+            className="flex-1 rounded-xl"
+            size="lg"
+          >
+            <Download className="w-5 h-5 mr-2" />
+            Save Recording
+          </Button>
+          <Button
+            onClick={shareRecording}
+            variant="outline"
+            className="flex-1 rounded-xl"
+            size="lg"
+          >
+            <Share2 className="w-5 h-5 mr-2" />
+            Share for Support
+          </Button>
+        </div>
+      )}
 
       {/* Help text */}
       {testState === 'error' && Capacitor.isNativePlatform() && (
