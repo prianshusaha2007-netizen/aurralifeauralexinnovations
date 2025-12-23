@@ -31,6 +31,7 @@ import { DailyMoodPopup } from '@/components/DailyMoodPopup';
 import { SplashScreen } from '@/components/SplashScreen';
 import { PageTransition } from '@/components/PageTransition';
 import { ContinuousVoiceMode } from '@/components/ContinuousVoiceMode';
+import { PermissionsOnboardingModal } from '@/components/PermissionsOnboardingModal';
 import { useReminders } from '@/hooks/useReminders';
 import { useMorningBriefing } from '@/hooks/useMorningBriefing';
 
@@ -107,6 +108,7 @@ const AppContent: React.FC = () => {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <DailyMoodPopup userName={userProfile.name} />
+      <PermissionsOnboardingModal />
 
       <ContinuousVoiceMode
         isOpen={voiceModeOpen}
