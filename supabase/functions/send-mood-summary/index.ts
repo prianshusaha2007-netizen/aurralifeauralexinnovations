@@ -8,23 +8,54 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-interface MoodSummaryRequest {
-  userId: string;
-  email: string;
-  userName: string;
-}
-
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { userId, email, userName }: MoodSummaryRequest = await req.json();
-    
-    console.log("Generating mood summary for user:", userId);
-
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+    
+    // Get the authorization header to verify the user
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      console.error('No authorization header provided');
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Create a client with the user's auth token to verify identity
+    const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } }
+    });
+
+    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser();
+    if (authError || !user) {
+      console.error('Auth error:', authError);
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Parse request body but use authenticated user's data
+    const { userName }: { userName?: string } = await req.json();
+    const userId = user.id; // Use authenticated user's ID
+    const email = user.email; // Use authenticated user's email
+    
+    if (!email) {
+      return new Response(JSON.stringify({ error: 'User email not found' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    
+    console.log("Generating mood summary for authenticated user:", userId);
+
+    // Use service role for data access after authentication is verified
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
@@ -50,6 +81,8 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
+    const displayName = userName || user.user_metadata?.name || 'friend';
+
     const moodSummary = moodData && moodData.length > 0 
       ? moodData.map(m => `${new Date(m.created_at).toLocaleDateString()}: Mood: ${m.mood}, Energy: ${m.energy}, Stress: ${m.stress}${m.notes ? `, Notes: ${m.notes}` : ''}`).join('\n')
       : "No mood check-ins recorded this week.";
@@ -65,7 +98,7 @@ serve(async (req) => {
         messages: [
           {
             role: "system",
-            content: `You are AURA, a caring AI companion. Generate a warm, personalized weekly mood summary email for ${userName}. Include:
+            content: `You are AURA, a caring AI companion. Generate a warm, personalized weekly mood summary email for ${displayName}. Include:
 1. A friendly greeting
 2. Overview of their week's emotional patterns
 3. Key insights about their mood, energy, and stress levels
@@ -134,7 +167,7 @@ Keep the tone warm, supportive, and personal. Format with clear sections using H
     }
 
     const emailResult = await emailResponse.json();
-    console.log("Email sent successfully:", emailResult);
+    console.log("Email sent successfully to user:", userId);
 
     return new Response(JSON.stringify({ success: true, emailResult }), {
       status: 200,

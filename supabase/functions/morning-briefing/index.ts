@@ -12,13 +12,41 @@ serve(async (req) => {
   }
 
   try {
-    const { userId, latitude, longitude } = await req.json();
-    
-    console.log('Generating morning briefing for user:', userId);
-
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+    
+    // Get the authorization header to verify the user
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      console.error('No authorization header provided');
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Create a client with the user's auth token to verify identity
+    const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } }
+    });
+
+    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser();
+    if (authError || !user) {
+      console.error('Auth error:', authError);
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const { latitude, longitude } = await req.json();
+    const userId = user.id; // Use authenticated user's ID, not from request body
+    
+    console.log('Generating morning briefing for authenticated user:', userId);
+
+    // Use service role for data access after authentication is verified
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Fetch user profile
     const { data: profile } = await supabase
@@ -221,7 +249,7 @@ serve(async (req) => {
       fullMessage: `${greeting}, ${userName}! ☀️\n\n${weatherInfo}${newsInfo}${scheduleInfo}${habitInfo}${moodInsight}\n\n${motivation}`,
     };
 
-    console.log('Morning briefing generated:', briefing);
+    console.log('Morning briefing generated for user:', userId);
 
     return new Response(JSON.stringify(briefing), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

@@ -1,7 +1,7 @@
 project_id = "cdhrhwxctdtvkmlvedgb"
 
 [functions.morning-briefing]
-verify_jwt = false
+verify_jwt = true
 
 [functions.elevenlabs-tts]
 verify_jwt = false
