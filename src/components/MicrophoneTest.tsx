@@ -5,101 +5,13 @@ import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 import { Capacitor } from '@capacitor/core';
 import { toast } from 'sonner';
+import { AudioWaveform } from './AudioWaveform';
 
 type TestState = 'idle' | 'recording' | 'recorded' | 'playing' | 'error';
 
 interface MicrophoneTestProps {
   onTestComplete?: (success: boolean) => void;
 }
-
-// Waveform visualization component
-const AudioWaveform: React.FC<{ 
-  analyser: AnalyserNode | null; 
-  isActive: boolean;
-  mode: 'recording' | 'playback';
-}> = ({ analyser, isActive, mode }) => {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const animationRef = useRef<number | null>(null);
-
-  useEffect(() => {
-    if (!canvasRef.current || !isActive) return;
-
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    const draw = () => {
-      if (!analyser) {
-        // Draw static waveform when no analyser
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.fillStyle = mode === 'recording' ? 'hsl(var(--primary))' : 'hsl(var(--primary))';
-        const barCount = 40;
-        const barWidth = canvas.width / barCount - 2;
-        
-        for (let i = 0; i < barCount; i++) {
-          const height = Math.random() * 30 + 5;
-          const x = i * (barWidth + 2);
-          const y = (canvas.height - height) / 2;
-          ctx.fillRect(x, y, barWidth, height);
-        }
-        animationRef.current = requestAnimationFrame(draw);
-        return;
-      }
-
-      const dataArray = new Uint8Array(analyser.frequencyBinCount);
-      analyser.getByteFrequencyData(dataArray);
-
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      
-      const barCount = 40;
-      const barWidth = canvas.width / barCount - 2;
-      const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
-      
-      if (mode === 'recording') {
-        gradient.addColorStop(0, 'hsl(var(--primary))');
-        gradient.addColorStop(1, 'hsl(var(--primary) / 0.3)');
-      } else {
-        gradient.addColorStop(0, 'hsl(142 76% 36%)');
-        gradient.addColorStop(1, 'hsl(142 76% 36% / 0.3)');
-      }
-      
-      ctx.fillStyle = gradient;
-
-      for (let i = 0; i < barCount; i++) {
-        const dataIndex = Math.floor(i * dataArray.length / barCount);
-        const value = dataArray[dataIndex] || 0;
-        const height = Math.max(4, (value / 255) * canvas.height * 0.8);
-        const x = i * (barWidth + 2);
-        const y = (canvas.height - height) / 2;
-        
-        ctx.beginPath();
-        ctx.roundRect(x, y, barWidth, height, 2);
-        ctx.fill();
-      }
-
-      animationRef.current = requestAnimationFrame(draw);
-    };
-
-    draw();
-
-    return () => {
-      if (animationRef.current) {
-        cancelAnimationFrame(animationRef.current);
-      }
-    };
-  }, [analyser, isActive, mode]);
-
-  if (!isActive) return null;
-
-  return (
-    <canvas 
-      ref={canvasRef} 
-      width={320} 
-      height={60} 
-      className="w-full h-[60px] rounded-lg bg-muted/30"
-    />
-  );
-};
 
 export const MicrophoneTest: React.FC<MicrophoneTestProps> = ({ onTestComplete }) => {
   const [testState, setTestState] = useState<TestState>('idle');

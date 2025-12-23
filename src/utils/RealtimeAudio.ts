@@ -5,6 +5,7 @@ export class AudioRecorder {
   private audioContext: AudioContext | null = null;
   private processor: ScriptProcessorNode | null = null;
   private source: MediaStreamAudioSourceNode | null = null;
+  private analyser: AnalyserNode | null = null;
 
   constructor(private onAudioData: (audioData: Float32Array) => void) {}
 
@@ -27,17 +28,26 @@ export class AudioRecorder {
       this.source = this.audioContext.createMediaStreamSource(this.stream);
       this.processor = this.audioContext.createScriptProcessor(4096, 1, 1);
       
+      // Create analyser for visualization
+      this.analyser = this.audioContext.createAnalyser();
+      this.analyser.fftSize = 256;
+      
       this.processor.onaudioprocess = (e) => {
         const inputData = e.inputBuffer.getChannelData(0);
         this.onAudioData(new Float32Array(inputData));
       };
       
+      this.source.connect(this.analyser);
       this.source.connect(this.processor);
       this.processor.connect(this.audioContext.destination);
     } catch (error) {
       console.error('Error accessing microphone:', error);
       throw error;
     }
+  }
+
+  getAnalyser(): AnalyserNode | null {
+    return this.analyser;
   }
 
   stop() {
@@ -48,6 +58,10 @@ export class AudioRecorder {
     if (this.processor) {
       this.processor.disconnect();
       this.processor = null;
+    }
+    if (this.analyser) {
+      this.analyser.disconnect();
+      this.analyser = null;
     }
     if (this.stream) {
       this.stream.getTracks().forEach(track => track.stop());
@@ -174,6 +188,7 @@ export class RealtimeChat {
   private recorder: AudioRecorder | null = null;
   private audioQueue: AudioQueue | null = null;
   private audioContext: AudioContext | null = null;
+  private outputAnalyser: AnalyserNode | null = null;
 
   constructor(
     private onMessage: (message: any) => void,
@@ -182,6 +197,14 @@ export class RealtimeChat {
   ) {
     this.audioEl = document.createElement("audio");
     this.audioEl.autoplay = true;
+  }
+
+  getInputAnalyser(): AnalyserNode | null {
+    return this.recorder?.getAnalyser() || null;
+  }
+
+  getOutputAnalyser(): AnalyserNode | null {
+    return this.outputAnalyser;
   }
 
   async init(instructions?: string) {

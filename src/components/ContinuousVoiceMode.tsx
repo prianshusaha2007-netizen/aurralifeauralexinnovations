@@ -1,8 +1,9 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Mic, MicOff, Phone, Volume2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AuraOrb } from './AuraOrb';
+import { AudioWaveform } from './AudioWaveform';
 import { RealtimeChat } from '@/utils/RealtimeAudio';
 import { toast } from 'sonner';
 
@@ -23,15 +24,24 @@ export const ContinuousVoiceMode: React.FC<ContinuousVoiceModeProps> = ({
   const [isMuted, setIsMuted] = useState(false);
   const [transcript, setTranscript] = useState('');
   const [auraResponse, setAuraResponse] = useState('');
+  const [analyser, setAnalyser] = useState<AnalyserNode | null>(null);
   const chatRef = useRef<RealtimeChat | null>(null);
 
   const handleMessage = (event: any) => {
     console.log('Voice mode event:', event.type);
   };
 
-  const handleSpeakingChange = (speaking: boolean) => {
+  const handleSpeakingChange = useCallback((speaking: boolean) => {
     setIsSpeaking(speaking);
-  };
+    // Update analyser based on speaking state
+    if (chatRef.current) {
+      if (speaking) {
+        setAnalyser(chatRef.current.getOutputAnalyser());
+      } else {
+        setAnalyser(chatRef.current.getInputAnalyser());
+      }
+    }
+  }, []);
 
   const handleTranscript = (text: string, isFinal: boolean) => {
     if (isFinal) {
@@ -58,6 +68,12 @@ Adapt your tone based on the conversation - playful when appropriate, supportive
       setIsConnected(true);
       setTranscript('');
       setAuraResponse('');
+      // Set initial analyser for input visualization
+      setTimeout(() => {
+        if (chatRef.current) {
+          setAnalyser(chatRef.current.getInputAnalyser());
+        }
+      }, 500);
       toast.success('Voice mode connected!');
     } catch (error) {
       console.error('Error starting conversation:', error);
@@ -74,6 +90,7 @@ Adapt your tone based on the conversation - playful when appropriate, supportive
     setIsSpeaking(false);
     setTranscript('');
     setAuraResponse('');
+    setAnalyser(null);
   };
 
   const toggleMute = () => {
@@ -151,10 +168,30 @@ Adapt your tone based on the conversation - playful when appropriate, supportive
             />
           </motion.div>
 
+          {/* Audio Waveform Visualization */}
+          {isConnected && (
+            <motion.div
+              className="mt-8 w-full max-w-sm px-4"
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.3 }}
+            >
+              <AudioWaveform 
+                analyser={analyser} 
+                isActive={isConnected} 
+                mode={isSpeaking ? 'speaking' : 'listening'}
+                className="mx-auto"
+              />
+              <p className="text-xs text-center text-muted-foreground mt-2">
+                {isSpeaking ? '🔊 AURA is responding' : '🎤 Listening to you'}
+              </p>
+            </motion.div>
+          )}
+
           {/* Transcript display */}
           {isConnected && (auraResponse || transcript) && (
             <motion.div
-              className="mt-8 max-w-sm text-center"
+              className="mt-4 max-w-sm text-center"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
             >
