@@ -70,8 +70,16 @@ export const NotificationSettings: React.FC<NotificationSettingsProps> = ({ clas
       return;
     }
 
+    // Check if we're on a secure origin
+    if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
+      toast.error('Notifications require HTTPS. Please use a secure connection.');
+      return;
+    }
+
     try {
       const permission = await Notification.requestPermission();
+      console.log('Notification permission result:', permission);
+      
       if (permission === 'granted') {
         setPushEnabled(true);
         saveSettings({ pushEnabled: true });
@@ -79,15 +87,21 @@ export const NotificationSettings: React.FC<NotificationSettingsProps> = ({ clas
         
         // Register service worker if not already registered
         if ('serviceWorker' in navigator) {
-          const registration = await navigator.serviceWorker.ready;
-          console.log('Service worker ready for push');
+          try {
+            const registration = await navigator.serviceWorker.ready;
+            console.log('Service worker ready for push');
+          } catch (swError) {
+            console.log('Service worker not ready:', swError);
+          }
         }
       } else if (permission === 'denied') {
-        toast.error('Notifications blocked. Enable in browser settings.');
+        toast.error('Notifications blocked. Click the lock icon in your browser address bar → Site Settings → Allow Notifications.');
+      } else {
+        toast.info('Notification permission dismissed. Try again to enable.');
       }
     } catch (error) {
       console.error('Push permission error:', error);
-      toast.error('Could not enable notifications');
+      toast.error('Could not enable notifications. Try refreshing the page.');
     }
   };
 

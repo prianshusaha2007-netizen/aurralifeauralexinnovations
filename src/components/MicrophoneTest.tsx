@@ -184,19 +184,25 @@ export const MicrophoneTest: React.FC<MicrophoneTestProps> = ({ onTestComplete }
     } catch (error: any) {
       cleanup();
       setTestState('error');
+      console.error('Microphone test error:', error);
       
       if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
         if (Capacitor.isNativePlatform()) {
-          setErrorMessage('Microphone access denied. Please enable microphone in your device settings.');
+          setErrorMessage('Microphone access denied. Please go to Settings → Apps → AURA → Permissions and enable microphone.');
+        } else if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
+          setErrorMessage('Microphone requires a secure (HTTPS) connection. Please use HTTPS or localhost.');
         } else {
-          setErrorMessage('Microphone access denied. Please allow access in your browser settings.');
+          setErrorMessage('Microphone access denied. Click the lock/site icon in your browser address bar → Site Settings → Allow Microphone.');
         }
+        toast.error('Microphone permission denied. Check browser/device settings.');
       } else if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') {
         setErrorMessage('No microphone found. Please connect a microphone.');
       } else if (error.name === 'NotReadableError' || error.name === 'TrackStartError') {
-        setErrorMessage('Microphone is in use by another app.');
+        setErrorMessage('Microphone is in use by another app. Close other apps using the mic.');
+      } else if (error.name === 'SecurityError') {
+        setErrorMessage('Microphone requires a secure (HTTPS) connection.');
       } else {
-        setErrorMessage(error.message || 'Could not access microphone.');
+        setErrorMessage(error.message || 'Could not access microphone. Try refreshing the page.');
       }
       
       onTestComplete?.(false);
