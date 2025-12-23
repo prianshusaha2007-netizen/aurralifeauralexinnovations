@@ -14,7 +14,8 @@ import {
   Volume2,
   Bell,
   BellRing,
-  Mic
+  Mic,
+  Shield
 } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { useAura } from '@/contexts/AuraContext';
@@ -24,6 +25,7 @@ import { useToast } from '@/hooks/use-toast';
 import { WeeklyEmailSettings } from '@/components/WeeklyEmailSettings';
 import { VoiceSettingsPanel } from '@/components/VoiceSettingsPanel';
 import { MicrophoneTest } from '@/components/MicrophoneTest';
+import { ResetPermissionsGuide } from '@/components/ResetPermissionsGuide';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { useMorningBriefing } from '@/hooks/useMorningBriefing';
@@ -140,6 +142,13 @@ export const SettingsScreen: React.FC = () => {
           label: 'Test Microphone',
           description: 'Verify your microphone works',
           isMicTest: true,
+          action: <ChevronRight className="w-5 h-5 text-muted-foreground" />,
+        },
+        {
+          icon: Shield,
+          label: 'Reset Permissions',
+          description: 'Fix denied microphone or notification access',
+          isPermissionsGuide: true,
           action: <ChevronRight className="w-5 h-5 text-muted-foreground" />,
         },
       ],
@@ -340,6 +349,35 @@ export const SettingsScreen: React.FC = () => {
                             <DialogTitle>Microphone Test</DialogTitle>
                           </DialogHeader>
                           <MicrophoneTest />
+                        </DialogContent>
+                      </Dialog>
+                    );
+                  }
+
+                  // Permissions guide with dialog
+                  if (item.isPermissionsGuide) {
+                    return (
+                      <Dialog key={item.label}>
+                        <DialogTrigger asChild>
+                          <button
+                            className={cn(
+                              'flex items-center gap-4 w-full p-4 text-left -mx-4',
+                              'hover:bg-muted/50 transition-colors',
+                              index !== (section.items?.length ?? 0) - 1 && 'border-b border-border/50'
+                            )}
+                          >
+                            <div className="p-2 rounded-lg bg-muted text-foreground">
+                              <Icon className="w-4 h-4" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium">{item.label}</p>
+                              <p className="text-xs text-muted-foreground truncate">{item.description}</p>
+                            </div>
+                            {item.action}
+                          </button>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-lg max-h-[80vh] overflow-y-auto">
+                          <ResetPermissionsGuide />
                         </DialogContent>
                       </Dialog>
                     );
