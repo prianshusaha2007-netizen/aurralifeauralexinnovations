@@ -28,6 +28,7 @@ serve(async (req) => {
       .single();
 
     const userName = profile?.name || 'friend';
+    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
 
     // Fetch weather if location provided
     let weatherInfo = '';
@@ -54,6 +55,41 @@ serve(async (req) => {
       } catch (e) {
         console.log('Weather fetch failed:', e);
       }
+    }
+
+    // Fetch latest news
+    let newsInfo = '';
+    try {
+      const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'google/gemini-2.5-flash',
+          messages: [
+            {
+              role: 'system',
+              content: 'You are a news assistant. Provide 3 brief, verified news updates. Each update should be 1 line max. No sensationalism. Focus on meaningful updates. Format: • [Update 1]\\n• [Update 2]\\n• [Update 3]',
+            },
+            {
+              role: 'user',
+              content: 'Give me 3 important news updates for today. Keep it brief and meaningful.',
+            },
+          ],
+        }),
+      });
+
+      if (aiResponse.ok) {
+        const aiData = await aiResponse.json();
+        const newsContent = aiData.choices?.[0]?.message?.content || '';
+        if (newsContent) {
+          newsInfo = `📰 Today's Quick Updates:\n${newsContent}\n\n`;
+        }
+      }
+    } catch (e) {
+      console.log('News fetch failed:', e);
     }
 
     // Fetch today's schedule
@@ -134,7 +170,6 @@ serve(async (req) => {
     }
 
     // Generate motivational message using Lovable AI
-    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     let motivation = "Today is a new opportunity to grow. You've got this! 💪";
 
     if (LOVABLE_API_KEY) {
@@ -178,11 +213,12 @@ serve(async (req) => {
     const briefing = {
       greeting: `${greeting}, ${userName}! ☀️`,
       weather: weatherInfo,
+      news: newsInfo,
       schedule: scheduleInfo,
       habits: habitInfo,
       mood: moodInsight,
       motivation,
-      fullMessage: `${greeting}, ${userName}! ☀️\n\n${weatherInfo}${scheduleInfo}${habitInfo}${moodInsight}\n\n${motivation}`,
+      fullMessage: `${greeting}, ${userName}! ☀️\n\n${weatherInfo}${newsInfo}${scheduleInfo}${habitInfo}${moodInsight}\n\n${motivation}`,
     };
 
     console.log('Morning briefing generated:', briefing);

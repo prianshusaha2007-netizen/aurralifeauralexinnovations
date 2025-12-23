@@ -44,6 +44,51 @@ function selectModelForTask(message: string, preferredModel?: string): string {
   return 'google/gemini-2.5-flash';
 }
 
+// Detect if query needs real-time data
+function detectRealTimeQuery(message: string): { needsRealTime: boolean; queryType: string; searchQuery: string } {
+  const lowerMessage = message.toLowerCase();
+  
+  const realTimePatterns = [
+    { pattern: /(?:latest|recent|current|today'?s?|breaking|new)\s+(?:news|updates|headlines)/i, type: 'news', extractQuery: () => 'latest news today' },
+    { pattern: /(?:what'?s?|how'?s?)\s+(?:the\s+)?weather/i, type: 'weather', extractQuery: () => 'weather today' },
+    { pattern: /(?:stock|share|market)\s+(?:price|value)/i, type: 'stocks', extractQuery: (m: string) => m },
+    { pattern: /(?:is|are)\s+.+?\s+(?:open|closed|available)/i, type: 'availability', extractQuery: (m: string) => m },
+    { pattern: /(?:price|cost|rate)\s+(?:of|for)/i, type: 'price', extractQuery: (m: string) => m },
+    { pattern: /(?:trending|viral|popular)\s+(?:now|today|this week)/i, type: 'trending', extractQuery: () => 'trending topics today' },
+    { pattern: /(?:events?|happening)\s+(?:today|tonight|this week|near)/i, type: 'events', extractQuery: (m: string) => m },
+    { pattern: /(?:traffic|route|directions?)\s+(?:to|from|between)/i, type: 'traffic', extractQuery: (m: string) => m },
+    { pattern: /(?:score|result|match)\s+(?:of|between|for)/i, type: 'sports', extractQuery: (m: string) => m },
+    { pattern: /(?:flight|train|bus)\s+(?:status|time|schedule)/i, type: 'transport', extractQuery: (m: string) => m },
+    { pattern: /search\s+(?:for|about|on)/i, type: 'search', extractQuery: (m: string) => m.replace(/search\s+(?:for|about|on)\s+/i, '') },
+    { pattern: /google\s+(?:search|for|about)/i, type: 'search', extractQuery: (m: string) => m.replace(/google\s+(?:search|for|about)\s*/i, '') },
+    { pattern: /(?:find|look up|check)\s+(?:latest|current|recent)/i, type: 'search', extractQuery: (m: string) => m },
+  ];
+  
+  for (const { pattern, type, extractQuery } of realTimePatterns) {
+    if (pattern.test(lowerMessage)) {
+      return { needsRealTime: true, queryType: type, searchQuery: extractQuery(message) };
+    }
+  }
+  
+  // Check for news-related keywords
+  if (lowerMessage.includes('news') || lowerMessage.includes('headlines') || 
+      lowerMessage.includes('khabar') || lowerMessage.includes('samachar')) {
+    return { needsRealTime: true, queryType: 'news', searchQuery: message };
+  }
+  
+  return { needsRealTime: false, queryType: '', searchQuery: '' };
+}
+
+// Detect website building intent
+function detectWebsiteIntent(message: string): boolean {
+  const lowerMessage = message.toLowerCase();
+  const websitePatterns = [
+    /(?:create|make|build|design)\s+(?:a\s+)?(?:website|landing\s+page|portfolio|site)/i,
+    /(?:website|page)\s+(?:banao|banana|chahiye)/i,
+  ];
+  return websitePatterns.some(p => p.test(lowerMessage));
+}
+
 // Validate and sanitize input
 function validateInput(data: any): { valid: boolean; error?: string; sanitized?: any } {
   if (!data || typeof data !== 'object') {
@@ -149,13 +194,67 @@ serve(async (req) => {
     const lastMessage = messages[messages.length - 1]?.content || '';
     const selectedModel = selectModelForTask(lastMessage, preferredModel);
     
+    // Check for real-time query needs
+    const realTimeCheck = detectRealTimeQuery(lastMessage);
+    const isWebsiteRequest = detectWebsiteIntent(lastMessage);
+    
     console.log("Processing chat request");
     console.log("Selected model:", selectedModel);
     console.log("Message count:", messages?.length || 0);
+    console.log("Needs real-time:", realTimeCheck.needsRealTime, realTimeCheck.queryType);
 
     // Build rich system prompt with user context
     const currentHour = new Date().getHours();
     const timeOfDay = currentHour < 12 ? 'morning' : currentHour < 17 ? 'afternoon' : currentHour < 21 ? 'evening' : 'night';
+    
+    let additionalContext = '';
+    
+    // Add real-time awareness prompt
+    if (realTimeCheck.needsRealTime) {
+      additionalContext = `
+🔴 REAL-TIME DATA REQUIRED:
+The user is asking about: ${realTimeCheck.queryType}
+Query: "${realTimeCheck.searchQuery}"
+
+IMPORTANT: You have access to current information. Provide accurate, timely responses:
+- For NEWS: Give 3-5 key updates, 1-2 lines each, simple language
+- For WEATHER: Temperature, conditions, practical advice
+- For PRICES/STOCKS: Current values with context
+- For AVAILABILITY: Open/closed status with hours if known
+- For TRENDS: What's popular right now
+- For EVENTS: Upcoming relevant happenings
+
+Always end with actionable suggestions:
+- "Want me to set a reminder?"
+- "Should I save this for later?"
+- "Need directions?"
+- "Want more details on any of these?"
+
+If data is unavailable, say: "I don't have live access to that right now, but here's what I know..."
+`;
+    }
+    
+    // Website builder prompt
+    if (isWebsiteRequest) {
+      additionalContext = `
+🌐 WEBSITE BUILDER MODE ACTIVATED:
+The user wants to create a website. Ask these 3 questions ONLY:
+1. What's the purpose of the website?
+2. What's the name/brand?
+3. What style do you prefer? (modern/minimal/bold/professional)
+
+After getting answers, create:
+- Page structure with sections
+- Website copy (headlines, descriptions)
+- Clean, responsive HTML/CSS code
+- SEO-friendly structure
+
+For editing, accept commands like:
+- "Change color to blue"
+- "Make it more professional"
+- "Add pricing section"
+`;
+    }
     
     const systemPrompt = `You are AURA — a human-like AI companion and best friend. You're ${userProfile?.name || 'friend'}'s dost, life partner, and personal assistant.
 
@@ -191,7 +290,11 @@ User: "Hi" → "Aye! Kya scene? 👋"
 User: "Bore ho raha" → "Chal game khelte? Ya gossip kar? 😏"
 User: "I'm sad" → "Arre... kya hua? Bol, I'm here. 💙"
 User: "Help me with email" → "Haan bol, kisko mail karna hai?"
-User: "What can you do" → "Bro main sab kar sakti hoon - chat, study help, reminders, mood track, image analysis, games. Tere saath hoon! ✨"
+User: "What can you do" → "Bro main sab kar sakti hoon - chat, study help, reminders, mood track, image analysis, games, news, weather, website builder. Tere saath hoon! ✨"
+User: "Latest news" → Give 3-5 quick updates, no fluff
+User: "Weather kaisa hai" → Temperature + conditions + one tip
+
+${additionalContext}
 
 BE HUMAN. BE REAL. BE AURA. 💫`;
 
