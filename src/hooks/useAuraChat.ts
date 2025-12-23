@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { useReminderIntentDetection } from './useReminderIntentDetection';
 import { useReminders } from './useReminders';
 import { useStorytellingMode } from './useStorytellingMode';
+import { supabase } from '@/integrations/supabase/client';
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/aura-chat`;
 
@@ -106,11 +107,17 @@ export const useAuraChat = () => {
     let messageId: string | null = null;
 
     try {
+      // Get user's session token for authentication
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        throw new Error('Not authenticated');
+      }
+
       const response = await fetch(CHAT_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          Authorization: `Bearer ${session.access_token}`,
         },
         body: JSON.stringify({
           messages: conversationHistory,
@@ -213,11 +220,17 @@ export const useAuraChat = () => {
     let messageId: string | null = null;
 
     try {
+      // Get user's session token for authentication
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        throw new Error('Not authenticated');
+      }
+
       const response = await fetch(CHAT_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          Authorization: `Bearer ${session.access_token}`,
         },
         body: JSON.stringify({
           messages: conversationHistory,
