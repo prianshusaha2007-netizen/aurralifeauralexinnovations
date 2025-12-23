@@ -1,6 +1,23 @@
 import { useRef, useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
+interface VoiceSettings {
+  voiceName: string;
+  speed: number;
+  pitch: number;
+  volume: number;
+}
+
+const getVoiceSettings = (): VoiceSettings => {
+  try {
+    const saved = localStorage.getItem('aura-voice-settings');
+    if (saved) {
+      return JSON.parse(saved);
+    }
+  } catch {}
+  return { voiceName: '', speed: 1.0, pitch: 1.0, volume: 1.0 };
+};
+
 export const useVoiceFeedback = () => {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -19,12 +36,14 @@ export const useVoiceFeedback = () => {
       // Cancel any ongoing speech
       window.speechSynthesis.cancel();
 
+      const settings = getVoiceSettings();
       const utterance = new SpeechSynthesisUtterance(text);
       utteranceRef.current = utterance;
       
-      // Try to find a nice female voice
+      // Use saved voice preference or find a nice default
       const voices = window.speechSynthesis.getVoices();
-      const preferredVoice = voices.find(v => 
+      const savedVoice = voices.find(v => v.name === settings.voiceName);
+      const preferredVoice = savedVoice || voices.find(v => 
         v.name.includes('Samantha') || 
         v.name.includes('Google UK English Female') ||
         v.name.includes('Microsoft Zira') ||
@@ -35,9 +54,9 @@ export const useVoiceFeedback = () => {
         utterance.voice = preferredVoice;
       }
       
-      utterance.rate = 1.0;
-      utterance.pitch = 1.0;
-      utterance.volume = 1.0;
+      utterance.rate = settings.speed;
+      utterance.pitch = settings.pitch;
+      utterance.volume = settings.volume;
 
       utterance.onend = () => {
         setIsSpeaking(false);

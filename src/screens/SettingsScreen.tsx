@@ -41,10 +41,16 @@ export const SettingsScreen: React.FC = () => {
   const { showBriefingNotification } = useMorningBriefing();
   
   // Voice settings state
-  const [voiceSettings, setVoiceSettings] = useState({
-    voice: 'nova',
-    speed: 1.0,
-    pitch: 0,
+  const [voiceSettings, setVoiceSettings] = useState(() => {
+    const saved = localStorage.getItem('aura-voice-settings');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch {
+        return { voiceName: '', speed: 1.0, pitch: 1.0, volume: 1.0 };
+      }
+    }
+    return { voiceName: '', speed: 1.0, pitch: 1.0, volume: 1.0 };
   });
 
   // Push notification state
