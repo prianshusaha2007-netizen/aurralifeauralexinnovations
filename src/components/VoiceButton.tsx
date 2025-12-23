@@ -4,12 +4,45 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import { Capacitor } from '@capacitor/core';
 
 interface VoiceButtonProps {
   onTranscription: (text: string) => void;
   isProcessing?: boolean;
   className?: string;
 }
+
+// Helper to request microphone permission
+const requestMicrophonePermission = async (): Promise<boolean> => {
+  try {
+    // On native platforms, we need to handle permissions differently
+    if (Capacitor.isNativePlatform()) {
+      // For iOS/Android, getUserMedia will trigger the native permission dialog
+      // But we should try to get a stream first to trigger the prompt
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      stream.getTracks().forEach(track => track.stop());
+      return true;
+    }
+    
+    // For web, check if permissions API is available
+    if (navigator.permissions) {
+      try {
+        const result = await navigator.permissions.query({ name: 'microphone' as PermissionName });
+        if (result.state === 'denied') {
+          toast.error('Microphone access denied. Please enable in your browser/device settings.');
+          return false;
+        }
+      } catch {
+        // Permissions API might not support microphone query
+      }
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('Permission request error:', error);
+    return false;
+  }
+};
 
 export const VoiceButton = forwardRef<HTMLButtonElement, VoiceButtonProps>(({
   onTranscription,
@@ -23,18 +56,53 @@ export const VoiceButton = forwardRef<HTMLButtonElement, VoiceButtonProps>(({
 
   const startRecording = useCallback(async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        audio: {
-          sampleRate: 16000,
-          channelCount: 1,
-          echoCancellation: true,
-          noiseSuppression: true,
-        }
-      });
+      // First check/request microphone permission
+      const hasPermission = await requestMicrophonePermission();
+      if (!hasPermission) {
+        return;
+      }
 
-      const mediaRecorder = new MediaRecorder(stream, {
-        mimeType: 'audio/webm;codecs=opus',
-      });
+      // Check if getUserMedia is available
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        toast.error('Audio recording is not supported on this device/browser');
+        return;
+      }
+
+      // Try to get the audio stream with fallback options for mobile compatibility
+      let stream: MediaStream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ 
+          audio: {
+            sampleRate: 16000,
+            channelCount: 1,
+            echoCancellation: true,
+            noiseSuppression: true,
+          }
+        });
+      } catch (constraintError) {
+        // Fallback to basic audio constraints for older devices
+        console.log('Falling back to basic audio constraints');
+        stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      }
+
+      // Check for supported MIME types
+      let mimeType = 'audio/webm;codecs=opus';
+      if (!MediaRecorder.isTypeSupported(mimeType)) {
+        mimeType = 'audio/webm';
+        if (!MediaRecorder.isTypeSupported(mimeType)) {
+          mimeType = 'audio/mp4';
+          if (!MediaRecorder.isTypeSupported(mimeType)) {
+            mimeType = ''; // Use browser default
+          }
+        }
+      }
+
+      const recorderOptions: MediaRecorderOptions = {};
+      if (mimeType) {
+        recorderOptions.mimeType = mimeType;
+      }
+
+      const mediaRecorder = new MediaRecorder(stream, recorderOptions);
 
       mediaRecorderRef.current = mediaRecorder;
       chunksRef.current = [];
@@ -46,7 +114,7 @@ export const VoiceButton = forwardRef<HTMLButtonElement, VoiceButtonProps>(({
       };
 
       mediaRecorder.onstop = async () => {
-        const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
+        const blob = new Blob(chunksRef.current, { type: mimeType || 'audio/webm' });
         stream.getTracks().forEach(track => track.stop());
         
         setIsTranscribing(true);
@@ -87,9 +155,23 @@ export const VoiceButton = forwardRef<HTMLButtonElement, VoiceButtonProps>(({
       mediaRecorder.start();
       setIsRecording(true);
       toast.info('🎤 Recording... Tap again to stop');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Microphone error:', error);
-      toast.error('Could not access microphone. Please check permissions.');
+      
+      // Provide more specific error messages
+      if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+        toast.error('Microphone access denied. Please allow microphone access in your device settings.');
+      } else if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') {
+        toast.error('No microphone found. Please connect a microphone.');
+      } else if (error.name === 'NotReadableError' || error.name === 'TrackStartError') {
+        toast.error('Microphone is in use by another app. Please close other apps using the microphone.');
+      } else if (error.name === 'OverconstrainedError') {
+        toast.error('Microphone does not support the required settings.');
+      } else if (error.name === 'SecurityError') {
+        toast.error('Microphone access blocked. Please use HTTPS or localhost.');
+      } else {
+        toast.error('Could not access microphone. Please check permissions in your device settings.');
+      }
     }
   }, [onTranscription]);
 
