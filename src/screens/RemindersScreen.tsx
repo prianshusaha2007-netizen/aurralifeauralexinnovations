@@ -14,7 +14,7 @@ import { Card } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useReminders, Reminder, ReminderCategory } from '@/hooks/useReminders';
+import { useReminders, Reminder, ReminderCategory, RepeatPattern } from '@/hooks/useReminders';
 import { VoiceReminderInput } from '@/components/VoiceReminderInput';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -72,26 +72,26 @@ export const RemindersScreen: React.FC<RemindersScreenProps> = ({ onMenuClick })
   const activeReminders = reminders.filter(r => r.isActive && !r.completedAt);
   const completedReminders = reminders.filter(r => r.completedAt);
 
-  const handleQuickReminder = (text: string) => {
-    const reminder = addFromNaturalLanguage(text);
+  const handleQuickReminder = async (text: string) => {
+    const reminder = await addFromNaturalLanguage(text);
     if (reminder) {
       toast.success(`Got it. I'll remind you.`);
     }
   };
 
-  const handleNaturalLanguageAdd = () => {
+  const handleNaturalLanguageAdd = async () => {
     if (!newReminderText.trim()) return;
     
-    const reminder = addFromNaturalLanguage(newReminderText);
+    const reminder = await addFromNaturalLanguage(newReminderText);
     if (reminder) {
       toast.success(`Done. I've set that.`);
       setNewReminderText('');
     }
   };
 
-  const handleVoiceTranscription = (text: string) => {
+  const handleVoiceTranscription = async (text: string) => {
     setShowVoiceInput(false);
-    const reminder = addFromNaturalLanguage(text);
+    const reminder = await addFromNaturalLanguage(text);
     if (reminder) {
       toast.success(`Got it! I'll remind you to ${reminder.title}. ⏰`);
     } else {
@@ -373,6 +373,26 @@ export const RemindersScreen: React.FC<RemindersScreenProps> = ({ onMenuClick })
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Edit Reminder Dialog */}
+      <Dialog open={!!editingReminder} onOpenChange={() => setEditingReminder(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Reminder</DialogTitle>
+          </DialogHeader>
+          {editingReminder && (
+            <EditReminderForm
+              reminder={editingReminder}
+              onSave={(updates) => {
+                updateReminder(editingReminder.id, updates);
+                setEditingReminder(null);
+                toast.success('Reminder updated!');
+              }}
+              onCancel={() => setEditingReminder(null)}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
@@ -437,5 +457,121 @@ const ReminderCard: React.FC<ReminderCardProps> = ({
         </div>
       </Card>
     </motion.div>
+  );
+};
+
+// Edit Reminder Form Component
+interface EditReminderFormProps {
+  reminder: Reminder;
+  onSave: (updates: Partial<Reminder>) => void;
+  onCancel: () => void;
+}
+
+const EditReminderForm: React.FC<EditReminderFormProps> = ({
+  reminder,
+  onSave,
+  onCancel,
+}) => {
+  const [title, setTitle] = useState(reminder.title);
+  const [time, setTime] = useState(format(reminder.time, 'HH:mm'));
+  const [date, setDate] = useState(format(reminder.time, 'yyyy-MM-dd'));
+  const [category, setCategory] = useState<ReminderCategory>(reminder.category);
+  const [repeatPattern, setRepeatPattern] = useState(reminder.repeatPattern);
+
+  const handleSave = () => {
+    const [hours, minutes] = time.split(':').map(Number);
+    const newTime = new Date(date);
+    newTime.setHours(hours, minutes, 0, 0);
+
+    onSave({
+      title,
+      time: newTime,
+      category,
+      repeatPattern: repeatPattern as RepeatPattern,
+      icon: getCategoryEmoji(category),
+    });
+  };
+
+  const getCategoryEmoji = (cat: ReminderCategory): string => {
+    const emojis: Record<ReminderCategory, string> = {
+      'one-time': '🔔',
+      'alarm': '⏰',
+      'repeating': '🔁',
+      'health': '💊',
+      'productivity': '📚',
+    };
+    return emojis[cat];
+  };
+
+  return (
+    <div className="space-y-4 pt-4">
+      <div>
+        <Label>Title</Label>
+        <Input
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          className="mt-1"
+        />
+      </div>
+      
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <Label>Time</Label>
+          <Input
+            type="time"
+            value={time}
+            onChange={(e) => setTime(e.target.value)}
+            className="mt-1"
+          />
+        </div>
+        <div>
+          <Label>Date</Label>
+          <Input
+            type="date"
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+            className="mt-1"
+          />
+        </div>
+      </div>
+
+      <div>
+        <Label>Category</Label>
+        <Select value={category} onValueChange={(v) => setCategory(v as ReminderCategory)}>
+          <SelectTrigger className="mt-1">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {Object.entries(categoryLabels).map(([key, label]) => (
+              <SelectItem key={key} value={key}>{label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div>
+        <Label>Repeat</Label>
+        <Select value={repeatPattern} onValueChange={(v) => setRepeatPattern(v as RepeatPattern)}>
+          <SelectTrigger className="mt-1">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="none">Don't repeat</SelectItem>
+            <SelectItem value="daily">Daily</SelectItem>
+            <SelectItem value="weekly">Weekly</SelectItem>
+            <SelectItem value="custom">Custom</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="flex gap-2">
+        <Button variant="outline" onClick={onCancel} className="flex-1">
+          Cancel
+        </Button>
+        <Button onClick={handleSave} className="flex-1 aura-gradient">
+          Save Changes
+        </Button>
+      </div>
+    </div>
   );
 };

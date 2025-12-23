@@ -67,7 +67,7 @@ export const useAuraChat = () => {
     const reminderIntent = detectReminderIntent(userMessage);
     if (reminderIntent.isReminder && reminderIntent.confidence >= 60) {
       addChatMessage({ content: userMessage, sender: 'user' });
-      const reminder = addFromNaturalLanguage(userMessage);
+      const reminder = await addFromNaturalLanguage(userMessage);
       if (reminder) {
         const confirmation = generateReminderConfirmation(reminder.title, reminderIntent.timeText);
         addChatMessage({ content: confirmation, sender: 'aura' });
