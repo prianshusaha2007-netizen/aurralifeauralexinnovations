@@ -1,9 +1,10 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useAura, ChatMessage } from '@/contexts/AuraContext';
 import { toast } from 'sonner';
 import { useReminderIntentDetection } from './useReminderIntentDetection';
 import { useReminders } from './useReminders';
 import { useStorytellingMode } from './useStorytellingMode';
+import { useMoodCheckIn } from './useMoodCheckIn';
 import { supabase } from '@/integrations/supabase/client';
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/aura-chat`;
@@ -26,6 +27,13 @@ export const useAuraChat = () => {
     getStorySystemPrompt,
     generateStoryStartMessage 
   } = useStorytellingMode();
+  const {
+    shouldAskMood,
+    detectMoodFromMessage,
+    getMoodResponse,
+    saveMood,
+    markMoodAsked,
+  } = useMoodCheckIn();
 
   const sendMessage = useCallback(async (userMessage: string, preferredModel?: string) => {
     if (!userMessage.trim()) return;
@@ -74,6 +82,13 @@ export const useAuraChat = () => {
         addChatMessage({ content: confirmation, sender: 'aura' });
         return;
       }
+    }
+
+    // Check if user is expressing mood
+    const detectedMood = detectMoodFromMessage(userMessage);
+    if (detectedMood) {
+      // Save the mood silently
+      saveMood(detectedMood, userMessage);
     }
 
     // Regular chat flow (or story continuation)
@@ -312,5 +327,5 @@ export const useAuraChat = () => {
     }
   };
 
-  return { sendMessage, isThinking, storyState, endStory };
+  return { sendMessage, isThinking, storyState, endStory, shouldAskMood, markMoodAsked };
 };
