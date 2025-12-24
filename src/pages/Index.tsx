@@ -5,7 +5,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { AppSidebar, TabId } from '@/components/AppSidebar';
 import { GlobalBottomNav } from '@/components/GlobalBottomNav';
 import { ReminderPopup } from '@/components/ReminderPopup';
-import { ChatScreen } from '@/screens/ChatScreen';
+import { CalmChatScreen } from '@/screens/CalmChatScreen';
 import { MemoriesScreen } from '@/screens/MemoriesScreen';
 import { RoutineScreen } from '@/screens/RoutineScreen';
 import { SettingsScreen } from '@/screens/SettingsScreen';
@@ -83,7 +83,7 @@ const AppContent: React.FC = () => {
 
   const renderScreen = () => {
     switch (activeTab) {
-      case 'chat': return <ChatScreen onMenuClick={() => setSidebarOpen(true)} onVoiceModeClick={() => setVoiceModeOpen(true)} />;
+      case 'chat': return <CalmChatScreen onMenuClick={() => setSidebarOpen(true)} />;
       case 'games': return <PlayLearnScreen />;
       case 'memories': return <MemoriesScreen />;
       case 'routine': return <DailyRoutineScreen onMenuClick={() => setSidebarOpen(true)} />;
@@ -101,7 +101,7 @@ const AppContent: React.FC = () => {
       case 'progress': return <ProgressDashboardScreen />;
       case 'reminders': return <RemindersScreen onMenuClick={() => setSidebarOpen(true)} />;
       case 'services': return <SmartServicesScreen onMenuClick={() => setSidebarOpen(true)} />;
-      default: return <ChatScreen onMenuClick={() => setSidebarOpen(true)} onVoiceModeClick={() => setVoiceModeOpen(true)} />;
+      default: return <CalmChatScreen onMenuClick={() => setSidebarOpen(true)} />;
     }
   };
 
