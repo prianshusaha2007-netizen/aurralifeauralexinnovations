@@ -68,17 +68,24 @@ export const CalmChatScreen: React.FC<CalmChatScreenProps> = ({ onMenuClick }) =
     return () => clearInterval(timer);
   }, []);
 
-  // Check for morning flow
+  // Check for morning flow - only fetch briefing if user is authenticated
   useEffect(() => {
-    const hour = new Date().getHours();
-    const lastShown = localStorage.getItem('aura-morning-flow-date');
-    const today = new Date().toISOString().split('T')[0];
+    const checkMorningFlow = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return; // Don't fetch if not authenticated
+      
+      const hour = new Date().getHours();
+      const lastShown = localStorage.getItem('aura-morning-flow-date');
+      const today = new Date().toISOString().split('T')[0];
+      
+      if (hour >= 5 && hour < 11 && lastShown !== today && chatMessages.length <= 1) {
+        setShowMorningFlow(true);
+        localStorage.setItem('aura-morning-flow-date', today);
+        fetchBriefing();
+      }
+    };
     
-    if (hour >= 5 && hour < 11 && lastShown !== today && chatMessages.length <= 1) {
-      setShowMorningFlow(true);
-      localStorage.setItem('aura-morning-flow-date', today);
-      fetchBriefing();
-    }
+    checkMorningFlow();
   }, [chatMessages.length, fetchBriefing]);
 
   // Scroll to bottom
