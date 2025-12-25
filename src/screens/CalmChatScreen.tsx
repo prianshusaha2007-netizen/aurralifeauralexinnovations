@@ -1,15 +1,16 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Send, Mic, Camera, Loader2, Menu } from 'lucide-react';
+import { Send, Mic, Plus, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { CalmChatBubble } from '@/components/CalmChatBubble';
 import { MemorySavePrompt } from '@/components/MemorySavePrompt';
-import { useAura, ChatMessage } from '@/contexts/AuraContext';
+import { MediaToolsSheet } from '@/components/MediaToolsSheet';
+import { ChatQuickActions } from '@/components/ChatQuickActions';
+import { useAura } from '@/contexts/AuraContext';
 import { useAuraChat } from '@/hooks/useAuraChat';
 import { useVoiceFeedback } from '@/hooks/useVoiceFeedback';
 import { useRotatingPlaceholder } from '@/hooks/useRotatingPlaceholder';
 import { useMorningBriefing } from '@/hooks/useMorningBriefing';
 import { cn } from '@/lib/utils';
-import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { motion, AnimatePresence } from 'framer-motion';
 import auraAvatar from '@/assets/aura-avatar.jpeg';
@@ -56,6 +57,8 @@ export const CalmChatScreen: React.FC<CalmChatScreenProps> = ({ onMenuClick }) =
   const [statusIndex, setStatusIndex] = useState(0);
   const [memoryPrompt, setMemoryPrompt] = useState<{ content: string; show: boolean }>({ content: '', show: false });
   const [showMorningFlow, setShowMorningFlow] = useState(false);
+  const [showMediaSheet, setShowMediaSheet] = useState(false);
+  const [showQuickActions, setShowQuickActions] = useState(true);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -88,6 +91,12 @@ export const CalmChatScreen: React.FC<CalmChatScreenProps> = ({ onMenuClick }) =
     checkMorningFlow();
   }, [chatMessages.length, fetchBriefing]);
 
+  // Hide quick actions when chat has messages (user messages specifically)
+  useEffect(() => {
+    const hasUserMessages = chatMessages.some(m => m.sender === 'user');
+    setShowQuickActions(!hasUserMessages);
+  }, [chatMessages]);
+
   // Scroll to bottom
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -117,11 +126,12 @@ export const CalmChatScreen: React.FC<CalmChatScreenProps> = ({ onMenuClick }) =
     }
   }, [userProfile.onboardingComplete, userProfile.name, chatMessages.length, addChatMessage]);
 
-  const handleSend = async () => {
-    if (!inputValue.trim() || isThinking) return;
+  const handleSend = async (messageOverride?: string) => {
+    const messageToSend = messageOverride || inputValue.trim();
+    if (!messageToSend || isThinking) return;
 
-    const userMessage = inputValue.trim();
     setInputValue('');
+    setShowQuickActions(false);
     
     // Reset textarea height
     if (inputRef.current) {
@@ -130,14 +140,14 @@ export const CalmChatScreen: React.FC<CalmChatScreenProps> = ({ onMenuClick }) =
 
     // Check for memory intent
     const noPrompts = localStorage.getItem('aura-no-memory-prompts') === 'true';
-    if (!noPrompts && detectMemoryIntent(userMessage)) {
+    if (!noPrompts && detectMemoryIntent(messageToSend)) {
       // Save and show prompt after a delay
       setTimeout(() => {
-        setMemoryPrompt({ content: userMessage, show: true });
+        setMemoryPrompt({ content: messageToSend, show: true });
       }, 2000);
     }
 
-    await sendMessage(userMessage);
+    await sendMessage(messageToSend);
   };
 
   const handleSpeak = async (text: string) => {
@@ -146,8 +156,15 @@ export const CalmChatScreen: React.FC<CalmChatScreenProps> = ({ onMenuClick }) =
 
   const handleMorningQuestion = async (answer: string) => {
     setShowMorningFlow(false);
-    setInputValue(answer);
-    await handleSend();
+    await handleSend(answer);
+  };
+
+  const handleQuickAction = async (actionId: string, message: string) => {
+    await handleSend(message);
+  };
+
+  const handleMediaAction = async (actionId: string, message: string) => {
+    await handleSend(message);
   };
 
   const currentStatus = isThinking ? 'Thinking...' : isSpeaking ? 'Speaking...' : STATUS_MESSAGES[statusIndex];
@@ -243,6 +260,16 @@ export const CalmChatScreen: React.FC<CalmChatScreenProps> = ({ onMenuClick }) =
             />
           ))}
 
+          {/* Quick Actions - Show when chat is empty or minimal */}
+          <AnimatePresence>
+            {showQuickActions && !showMorningFlow && chatMessages.length <= 1 && (
+              <ChatQuickActions 
+                onAction={handleQuickAction}
+                className="py-6"
+              />
+            )}
+          </AnimatePresence>
+
           {/* Memory Save Prompt */}
           <AnimatePresence>
             {memoryPrompt.show && (
@@ -280,7 +307,17 @@ export const CalmChatScreen: React.FC<CalmChatScreenProps> = ({ onMenuClick }) =
       {/* Input Area */}
       <div className="p-4 pb-6 bg-gradient-to-t from-background via-background to-transparent">
         <div className="max-w-2xl mx-auto">
-          <div className="flex items-end gap-3">
+          <div className="flex items-end gap-2">
+            {/* Plus Button for Media & Tools */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-12 w-12 rounded-full shrink-0 text-muted-foreground hover:text-foreground hover:bg-accent/50"
+              onClick={() => setShowMediaSheet(true)}
+            >
+              <Plus className="w-6 h-6" />
+            </Button>
+
             {/* Input Container */}
             <div className="flex-1 relative">
               <div className="flex items-end bg-card border border-border/50 rounded-3xl focus-within:border-primary/40 focus-within:ring-2 focus-within:ring-primary/10 transition-all shadow-sm">
@@ -326,7 +363,7 @@ export const CalmChatScreen: React.FC<CalmChatScreenProps> = ({ onMenuClick }) =
                   ? "bg-primary hover:bg-primary/90 shadow-primary/20" 
                   : "bg-muted text-muted-foreground"
               )}
-              onClick={handleSend}
+              onClick={() => handleSend()}
               disabled={!inputValue.trim() || isThinking}
             >
               {isThinking ? (
@@ -343,6 +380,13 @@ export const CalmChatScreen: React.FC<CalmChatScreenProps> = ({ onMenuClick }) =
           </p>
         </div>
       </div>
+
+      {/* Media & Tools Bottom Sheet */}
+      <MediaToolsSheet 
+        open={showMediaSheet}
+        onOpenChange={setShowMediaSheet}
+        onAction={handleMediaAction}
+      />
     </div>
   );
 };
