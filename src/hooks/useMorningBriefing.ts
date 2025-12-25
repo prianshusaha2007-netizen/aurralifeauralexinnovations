@@ -69,8 +69,11 @@ export const useMorningBriefing = () => {
     }
   }, [fetchBriefing]);
 
-  // Check if we should show morning briefing (disabled auto-trigger, called manually from CalmChatScreen)
+  // Keep useEffect to maintain hook count - auto-trigger disabled, called manually from CalmChatScreen
   // The automatic briefing was causing 401 errors when auth wasn't ready
+  useEffect(() => {
+    // No-op - briefing is now triggered manually in CalmChatScreen after auth check
+  }, []);
 
   return {
     briefing,
