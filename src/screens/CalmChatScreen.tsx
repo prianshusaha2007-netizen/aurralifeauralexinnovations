@@ -1,15 +1,17 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Send, Mic, Plus, Loader2 } from 'lucide-react';
+import { Send, Plus, Loader2, Download, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { CalmChatBubble } from '@/components/CalmChatBubble';
 import { MemorySavePrompt } from '@/components/MemorySavePrompt';
 import { MediaToolsSheet } from '@/components/MediaToolsSheet';
 import { ChatQuickActions } from '@/components/ChatQuickActions';
+import { VoiceInputButton } from '@/components/VoiceInputButton';
 import { useAura } from '@/contexts/AuraContext';
 import { useAuraChat } from '@/hooks/useAuraChat';
 import { useVoiceFeedback } from '@/hooks/useVoiceFeedback';
 import { useRotatingPlaceholder } from '@/hooks/useRotatingPlaceholder';
 import { useMorningBriefing } from '@/hooks/useMorningBriefing';
+import { useMediaActions } from '@/hooks/useMediaActions';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -46,12 +48,37 @@ const detectMemoryIntent = (message: string): boolean => {
   return patterns.some(p => p.test(message));
 };
 
+// Detect image generation intent
+const detectImageGenIntent = (message: string): boolean => {
+  const patterns = [
+    /generate (?:an? )?image/i,
+    /create (?:an? )?image/i,
+    /make (?:an? )?(?:picture|image)/i,
+    /draw (?:me )?/i,
+    /image (?:banao|banana|bana)/i,
+    /🎨.*(?:image|picture)/i,
+  ];
+  return patterns.some(p => p.test(message));
+};
+
+// Detect document creation intent
+const detectDocIntent = (message: string): boolean => {
+  const patterns = [
+    /create (?:a )?(?:document|doc|pdf)/i,
+    /make (?:a )?(?:document|doc|pdf)/i,
+    /write (?:a )?(?:document|doc)/i,
+    /draft (?:a )?(?:document|doc)/i,
+  ];
+  return patterns.some(p => p.test(message));
+};
+
 export const CalmChatScreen: React.FC<CalmChatScreenProps> = ({ onMenuClick }) => {
   const { chatMessages, addChatMessage, userProfile } = useAura();
   const { sendMessage, isThinking } = useAuraChat();
   const { speak, isSpeaking } = useVoiceFeedback();
   const { placeholder } = useRotatingPlaceholder(6000);
   const { briefing, isLoading: isBriefingLoading, fetchBriefing } = useMorningBriefing();
+  const { analyzeFile, generateImage, createDocument, downloadDocument, downloadImage, isUploading, isGenerating, isCreatingDoc } = useMediaActions();
   
   const [inputValue, setInputValue] = useState('');
   const [statusIndex, setStatusIndex] = useState(0);
@@ -59,6 +86,8 @@ export const CalmChatScreen: React.FC<CalmChatScreenProps> = ({ onMenuClick }) =
   const [showMorningFlow, setShowMorningFlow] = useState(false);
   const [showMediaSheet, setShowMediaSheet] = useState(false);
   const [showQuickActions, setShowQuickActions] = useState(true);
+  const [generatedImage, setGeneratedImage] = useState<{ url: string; prompt: string } | null>(null);
+  const [generatedDoc, setGeneratedDoc] = useState<{ title: string; html: string; text: string } | null>(null);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -138,10 +167,27 @@ export const CalmChatScreen: React.FC<CalmChatScreenProps> = ({ onMenuClick }) =
       inputRef.current.style.height = '44px';
     }
 
+    // Check for image generation intent
+    if (detectImageGenIntent(messageToSend)) {
+      addChatMessage({ content: messageToSend, sender: 'user' });
+      addChatMessage({ content: "Creating your image... 🎨", sender: 'aura' });
+      
+      const result = await generateImage(messageToSend);
+      if (result) {
+        setGeneratedImage({ url: result.imageUrl, prompt: result.prompt });
+        addChatMessage({ 
+          content: `Here's what I created! ${result.textContent}\n\n[Generated Image]`, 
+          sender: 'aura' 
+        });
+      } else {
+        addChatMessage({ content: "Sorry, I couldn't generate that image. Want to try again?", sender: 'aura' });
+      }
+      return;
+    }
+
     // Check for memory intent
     const noPrompts = localStorage.getItem('aura-no-memory-prompts') === 'true';
     if (!noPrompts && detectMemoryIntent(messageToSend)) {
-      // Save and show prompt after a delay
       setTimeout(() => {
         setMemoryPrompt({ content: messageToSend, show: true });
       }, 2000);
@@ -167,7 +213,41 @@ export const CalmChatScreen: React.FC<CalmChatScreenProps> = ({ onMenuClick }) =
     await handleSend(message);
   };
 
-  const currentStatus = isThinking ? 'Thinking...' : isSpeaking ? 'Speaking...' : STATUS_MESSAGES[statusIndex];
+  const handleFileSelect = async (file: File) => {
+    addChatMessage({ content: `Uploading ${file.name}...`, sender: 'user' });
+    addChatMessage({ content: `Analyzing your file... 📎`, sender: 'aura' });
+    
+    const result = await analyzeFile(file);
+    if (result) {
+      addChatMessage({ 
+        content: result.analysis, 
+        sender: 'aura' 
+      });
+    } else {
+      addChatMessage({ 
+        content: "I had trouble analyzing that file. Could you try again?", 
+        sender: 'aura' 
+      });
+    }
+  };
+
+  const handleVoiceTranscript = async (transcript: string) => {
+    if (transcript) {
+      setInputValue(transcript);
+      // Auto-send after a brief delay
+      setTimeout(() => {
+        handleSend(transcript);
+      }, 300);
+    }
+  };
+
+  const currentStatus = isThinking || isGenerating || isCreatingDoc 
+    ? 'Thinking...' 
+    : isSpeaking 
+    ? 'Speaking...' 
+    : isUploading 
+    ? 'Analyzing...'
+    : STATUS_MESSAGES[statusIndex];
 
   return (
     <div className="flex flex-col h-full bg-background relative overflow-hidden">
@@ -260,6 +340,49 @@ export const CalmChatScreen: React.FC<CalmChatScreenProps> = ({ onMenuClick }) =
             />
           ))}
 
+          {/* Generated Image Display */}
+          <AnimatePresence>
+            {generatedImage && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="flex gap-3"
+              >
+                <div className="w-9 h-9 rounded-full overflow-hidden ring-2 ring-primary/10 shrink-0">
+                  <img src={auraAvatar} alt="AURA" className="w-full h-full object-cover" />
+                </div>
+                <div className="bg-card/80 backdrop-blur-sm border border-border/40 p-4 rounded-2xl rounded-bl-sm max-w-sm">
+                  <img 
+                    src={generatedImage.url} 
+                    alt={generatedImage.prompt}
+                    className="rounded-lg w-full mb-3"
+                  />
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="rounded-full text-xs gap-1"
+                      onClick={() => downloadImage(generatedImage.url, 'aura-image.png')}
+                    >
+                      <Download className="w-3 h-3" />
+                      Download
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="rounded-full text-xs gap-1"
+                      onClick={() => handleSend(`Generate another image: ${generatedImage.prompt}`)}
+                    >
+                      <RefreshCw className="w-3 h-3" />
+                      Regenerate
+                    </Button>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
           {/* Quick Actions - Show when chat is empty or minimal */}
           <AnimatePresence>
             {showQuickActions && !showMorningFlow && chatMessages.length <= 1 && (
@@ -281,7 +404,7 @@ export const CalmChatScreen: React.FC<CalmChatScreenProps> = ({ onMenuClick }) =
           </AnimatePresence>
 
           {/* Typing Indicator */}
-          {isThinking && chatMessages[chatMessages.length - 1]?.sender === 'user' && (
+          {(isThinking || isGenerating || isCreatingDoc) && chatMessages[chatMessages.length - 1]?.sender === 'user' && (
             <motion.div 
               initial={{ opacity: 0, y: 10 }} 
               animate={{ opacity: 1, y: 0 }}
@@ -338,19 +461,16 @@ export const CalmChatScreen: React.FC<CalmChatScreenProps> = ({ onMenuClick }) =
                   placeholder={placeholder}
                   className="flex-1 bg-transparent border-0 resize-none py-3.5 px-5 text-[15px] focus:outline-none min-h-[48px] max-h-[120px] placeholder:text-muted-foreground/50"
                   style={{ height: '48px' }}
-                  disabled={isThinking}
+                  disabled={isThinking || isGenerating}
                   rows={1}
                 />
                 
-                {/* Mic button inside input */}
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-10 w-10 rounded-full mr-1 mb-1 text-muted-foreground hover:text-foreground"
-                  disabled={isThinking}
-                >
-                  <Mic className="w-5 h-5" />
-                </Button>
+                {/* Voice Input Button */}
+                <VoiceInputButton
+                  onTranscript={handleVoiceTranscript}
+                  disabled={isThinking || isGenerating}
+                  className="mr-1 mb-1"
+                />
               </div>
             </div>
 
@@ -364,9 +484,9 @@ export const CalmChatScreen: React.FC<CalmChatScreenProps> = ({ onMenuClick }) =
                   : "bg-muted text-muted-foreground"
               )}
               onClick={() => handleSend()}
-              disabled={!inputValue.trim() || isThinking}
+              disabled={!inputValue.trim() || isThinking || isGenerating}
             >
-              {isThinking ? (
+              {isThinking || isGenerating ? (
                 <Loader2 className="w-5 h-5 animate-spin" />
               ) : (
                 <Send className="w-5 h-5" />
@@ -386,6 +506,8 @@ export const CalmChatScreen: React.FC<CalmChatScreenProps> = ({ onMenuClick }) =
         open={showMediaSheet}
         onOpenChange={setShowMediaSheet}
         onAction={handleMediaAction}
+        onFileSelect={handleFileSelect}
+        isUploading={isUploading}
       />
     </div>
   );

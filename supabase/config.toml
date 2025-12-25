@@ -62,3 +62,12 @@ verify_jwt = true
 
 [functions.routine-notifications]
 verify_jwt = false
+
+[functions.analyze-file]
+verify_jwt = true
+
+[functions.aura-generate-image]
+verify_jwt = true
+
+[functions.create-document]
+verify_jwt = true
