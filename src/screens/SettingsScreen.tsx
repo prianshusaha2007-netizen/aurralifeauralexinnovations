@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { 
   Sun, 
   Moon, 
+  Monitor,
   User, 
   Globe, 
   MessageSquare, 
@@ -15,11 +16,13 @@ import {
   Bell,
   BellRing,
   Mic,
-  Shield
+  Shield,
+  FileText
 } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { useAura } from '@/contexts/AuraContext';
 import { useAuth } from '@/hooks/useAuth';
+import { useTheme } from '@/contexts/ThemeContext';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { WeeklyEmailSettings } from '@/components/WeeklyEmailSettings';
@@ -34,12 +37,11 @@ export const SettingsScreen: React.FC = () => {
   const navigate = useNavigate();
   const { signOut } = useAuth();
   const { 
-    theme, 
-    toggleTheme, 
     userProfile, 
     clearChatHistory, 
     clearAllMemories 
   } = useAura();
+  const { mode, activeTheme, setMode } = useTheme();
   const { toast } = useToast();
   const { subscribeToPush, unsubscribeFromPush, checkSubscription, isSupported } = usePushNotifications();
   const { showBriefingNotification } = useMorningBriefing();
@@ -110,20 +112,32 @@ export const SettingsScreen: React.FC = () => {
     });
   };
 
+  const cycleThemeMode = () => {
+    const modes = ['light', 'dark', 'auto'] as const;
+    const currentIndex = modes.indexOf(mode);
+    const nextIndex = (currentIndex + 1) % modes.length;
+    setMode(modes[nextIndex]);
+    toast({
+      title: `Theme: ${modes[nextIndex].charAt(0).toUpperCase() + modes[nextIndex].slice(1)}`,
+      description: modes[nextIndex] === 'auto' ? 'Adapts to time of day' : `${modes[nextIndex]} mode enabled`,
+    });
+  };
+
+  const getThemeIcon = () => {
+    if (mode === 'auto') return Monitor;
+    return activeTheme === 'dark' ? Moon : Sun;
+  };
+
   const settingsSections = [
     {
       title: 'APPEARANCE',
       items: [
         {
-          icon: theme === 'dark' ? Moon : Sun,
-          label: 'Dark Mode',
-          description: 'Switch between light and dark themes',
-          action: (
-            <Switch 
-              checked={theme === 'dark'} 
-              onCheckedChange={toggleTheme}
-            />
-          ),
+          icon: getThemeIcon(),
+          label: 'Theme Mode',
+          description: `${mode.charAt(0).toUpperCase() + mode.slice(1)} mode${mode === 'auto' ? ' (adapts to time)' : ''}`,
+          onClick: cycleThemeMode,
+          action: <ChevronRight className="w-5 h-5 text-muted-foreground" />,
         },
       ],
     },
@@ -229,6 +243,25 @@ export const SettingsScreen: React.FC = () => {
           onClick: handleClearMemories,
           action: <ChevronRight className="w-5 h-5 text-destructive" />,
           destructive: true,
+        },
+      ],
+    },
+    {
+      title: 'LEGAL',
+      items: [
+        {
+          icon: FileText,
+          label: 'Privacy Policy',
+          description: 'How we handle your data',
+          onClick: () => navigate('/privacy'),
+          action: <ChevronRight className="w-5 h-5 text-muted-foreground" />,
+        },
+        {
+          icon: FileText,
+          label: 'Terms of Service',
+          description: 'Usage terms and conditions',
+          onClick: () => navigate('/terms'),
+          action: <ChevronRight className="w-5 h-5 text-muted-foreground" />,
         },
       ],
     },

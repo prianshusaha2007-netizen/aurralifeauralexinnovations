@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
 import { AuraOrb } from '@/components/AuraOrb';
 import { toast } from 'sonner';
 import { z } from 'zod';
@@ -19,6 +20,7 @@ const Auth: React.FC = () => {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
@@ -58,6 +60,12 @@ const Auth: React.FC = () => {
     e.preventDefault();
     if (!validateForm()) return;
 
+    // Check terms agreement for signup
+    if (!isLogin && !agreedToTerms) {
+      toast.error('Please agree to the Privacy Policy and Terms of Service');
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -78,6 +86,9 @@ const Auth: React.FC = () => {
           password,
           options: {
             emailRedirectTo: `${window.location.origin}/`,
+            data: {
+              terms_accepted_at: new Date().toISOString(),
+            },
           },
         });
         if (error) {
@@ -137,27 +148,64 @@ const Auth: React.FC = () => {
             )}
           </div>
 
+          {/* Terms checkbox for signup */}
+          {!isLogin && (
+            <div className="flex items-start space-x-3 p-4 rounded-xl bg-muted/50">
+              <Checkbox
+                id="terms"
+                checked={agreedToTerms}
+                onCheckedChange={(checked) => setAgreedToTerms(checked === true)}
+                disabled={loading}
+                className="mt-1"
+              />
+              <label htmlFor="terms" className="text-sm text-muted-foreground leading-relaxed">
+                I agree to the{' '}
+                <Link to="/privacy" className="text-primary hover:underline">
+                  Privacy Policy
+                </Link>{' '}
+                and{' '}
+                <Link to="/terms" className="text-primary hover:underline">
+                  Terms of Service
+                </Link>
+              </label>
+            </div>
+          )}
+
           <Button
             type="submit"
             size="lg"
-            disabled={loading}
+            disabled={loading || (!isLogin && !agreedToTerms)}
             className="w-full rounded-full aura-gradient text-lg py-6"
           >
             {loading ? 'Please wait...' : isLogin ? 'Sign In' : 'Create Account'}
           </Button>
         </form>
 
-        <div className="text-center">
+        <div className="text-center space-y-2">
           <button
             type="button"
             onClick={() => {
               setIsLogin(!isLogin);
               setErrors({});
+              setAgreedToTerms(false);
             }}
             className="text-primary hover:underline"
           >
             {isLogin ? "Don't have an account? Sign up" : 'Already have an account? Sign in'}
           </button>
+
+          {isLogin && (
+            <div className="text-xs text-muted-foreground pt-2">
+              By signing in, you agree to our{' '}
+              <Link to="/privacy" className="text-primary hover:underline">
+                Privacy Policy
+              </Link>{' '}
+              and{' '}
+              <Link to="/terms" className="text-primary hover:underline">
+                Terms of Service
+              </Link>
+            </div>
+          )}
         </div>
       </div>
     </div>
