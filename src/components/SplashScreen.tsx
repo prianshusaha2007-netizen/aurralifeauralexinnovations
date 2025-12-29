@@ -50,24 +50,24 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete }) => {
               duration: 0.8 
             }}
           >
-            {/* Outer glow ring - gentle, not flashy */}
+            {/* Outer glow ring - pulsing teal aura */}
             <motion.div
-              className="absolute inset-0 rounded-full"
+              className="absolute inset-0 rounded-3xl"
               animate={{ 
-                scale: [1, 1.15, 1],
-                opacity: [0.3, 0.5, 0.3]
+                scale: [1, 1.12, 1],
+                opacity: [0.4, 0.7, 0.4]
               }}
               transition={{ 
-                duration: 3, 
+                duration: 2.5, 
                 repeat: Infinity,
                 ease: "easeInOut"
               }}
               style={{ 
-                background: 'radial-gradient(circle, hsl(174 60% 50% / 0.3) 0%, transparent 70%)',
-                filter: 'blur(20px)',
-                width: 180, 
-                height: 180, 
-                margin: -20 
+                background: 'radial-gradient(circle, hsl(174 60% 50% / 0.4) 0%, transparent 70%)',
+                filter: 'blur(25px)',
+                width: 200, 
+                height: 200, 
+                margin: -34 
               }}
             />
             

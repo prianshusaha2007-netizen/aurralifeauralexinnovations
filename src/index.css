@@ -210,6 +210,68 @@
   }
 }
 
+/* Robot eye glow animation - warm, friendly */
+@keyframes eye-glow {
+  0%, 100% {
+    box-shadow: 
+      0 0 8px hsl(45 80% 55% / 0.6),
+      0 0 20px hsl(45 80% 55% / 0.3),
+      inset 0 0 12px hsl(45 80% 60% / 0.4);
+    opacity: 0.8;
+  }
+  50% {
+    box-shadow: 
+      0 0 15px hsl(45 85% 60% / 0.9),
+      0 0 35px hsl(45 85% 55% / 0.5),
+      inset 0 0 20px hsl(45 85% 65% / 0.6);
+    opacity: 1;
+  }
+}
+
+/* Eye blink animation */
+@keyframes eye-blink {
+  0%, 45%, 55%, 100% {
+    transform: scaleY(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scaleY(0.1);
+    opacity: 0.8;
+  }
+}
+
+/* Intense thinking eye pulse */
+@keyframes eye-thinking {
+  0%, 100% {
+    box-shadow: 
+      0 0 12px hsl(var(--aura-glow) / 0.7),
+      0 0 25px hsl(var(--aura-glow) / 0.4),
+      inset 0 0 15px hsl(var(--aura-glow) / 0.5);
+    opacity: 0.7;
+  }
+  50% {
+    box-shadow: 
+      0 0 20px hsl(var(--aura-glow) / 1),
+      0 0 45px hsl(var(--aura-glow) / 0.6),
+      inset 0 0 25px hsl(var(--aura-glow) / 0.7);
+    opacity: 1;
+  }
+}
+
+/* Teal aura ring pulse */
+@keyframes aura-ring-pulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.4;
+    box-shadow: 0 0 30px hsl(var(--aura-glow) / 0.3);
+  }
+  50% {
+    transform: scale(1.08);
+    opacity: 0.6;
+    box-shadow: 0 0 50px hsl(var(--aura-glow) / 0.5);
+  }
+}
+
 /* Slide up - gentle entrance */
 @keyframes slide-up {
   from {
@@ -258,6 +320,22 @@
 
 .animate-thinking {
   animation: thinking 1.8s ease-in-out infinite;
+}
+
+.animate-eye-glow {
+  animation: eye-glow 3s ease-in-out infinite;
+}
+
+.animate-eye-blink {
+  animation: eye-blink 4s ease-in-out infinite;
+}
+
+.animate-eye-thinking {
+  animation: eye-thinking 1.2s ease-in-out infinite;
+}
+
+.animate-aura-ring-pulse {
+  animation: aura-ring-pulse 3s ease-in-out infinite;
 }
 
 .animate-slide-up {

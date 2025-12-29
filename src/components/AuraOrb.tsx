@@ -22,34 +22,44 @@ const glowSizes = {
   xl: 'w-56 h-56 -m-8',
 };
 
+// Eye position and size relative to orb
+const eyeConfigs = {
+  sm: { size: 6, left: 8, right: 8, top: 14 },
+  md: { size: 10, left: 14, right: 14, top: 24 },
+  lg: { size: 14, left: 20, right: 20, top: 34 },
+  xl: { size: 20, left: 28, right: 28, top: 48 },
+};
+
 export const AuraOrb: React.FC<AuraOrbProps> = ({ 
   size = 'lg', 
   isThinking = false,
   className 
 }) => {
+  const eyeConfig = eyeConfigs[size];
+
   return (
     <div className={cn('relative flex items-center justify-center', className)}>
-      {/* Outer glow ring */}
+      {/* Outer teal aura ring - pulsing glow */}
       <div 
         className={cn(
-          'absolute rounded-full opacity-40',
+          'absolute rounded-full',
           glowSizes[size],
-          'bg-gradient-to-br from-primary/50 to-accent/50',
+          'bg-gradient-to-br from-primary/40 to-primary/20',
           'blur-xl',
-          isThinking ? 'animate-pulse' : 'animate-breathe'
+          isThinking ? 'animate-eye-thinking' : 'animate-aura-ring-pulse'
         )}
       />
       
-      {/* Middle glow */}
+      {/* Middle glow layer */}
       <div 
         className={cn(
-          'absolute rounded-full opacity-50',
+          'absolute rounded-full opacity-60',
           sizeClasses[size],
-          'bg-gradient-to-br from-primary/40 via-accent/30 to-primary/40',
+          'bg-gradient-to-br from-primary/30 via-accent/20 to-primary/30',
           'blur-md',
           isThinking ? 'animate-pulse' : 'animate-breathe'
         )}
-        style={{ transform: 'scale(1.15)', animationDelay: '0.2s' }}
+        style={{ transform: 'scale(1.2)', animationDelay: '0.15s' }}
       />
       
       {/* Main orb with logo */}
@@ -57,7 +67,7 @@ export const AuraOrb: React.FC<AuraOrbProps> = ({
         className={cn(
           'relative rounded-full overflow-hidden',
           sizeClasses[size],
-          'shadow-lg ring-2 ring-primary/20',
+          'shadow-lg ring-2 ring-primary/30',
           isThinking ? 'animate-pulse' : 'animate-breathe animate-pulse-glow'
         )}
         style={{ animationDelay: '0.1s' }}
@@ -68,18 +78,49 @@ export const AuraOrb: React.FC<AuraOrbProps> = ({
           className="w-full h-full object-cover"
         />
         
-        {/* Subtle overlay for glow effect */}
+        {/* Eye glow overlays - positioned over robot's eyes */}
         <div 
           className={cn(
-            "absolute inset-0 bg-gradient-to-br from-white/10 to-transparent",
+            "absolute rounded-full",
+            isThinking ? "animate-eye-thinking" : "animate-eye-glow"
+          )}
+          style={{
+            width: eyeConfig.size,
+            height: eyeConfig.size,
+            left: eyeConfig.left,
+            top: eyeConfig.top,
+            background: 'radial-gradient(circle, hsl(45 80% 60% / 0.6) 0%, transparent 70%)',
+            mixBlendMode: 'screen',
+          }}
+        />
+        <div 
+          className={cn(
+            "absolute rounded-full",
+            isThinking ? "animate-eye-thinking" : "animate-eye-glow"
+          )}
+          style={{
+            width: eyeConfig.size,
+            height: eyeConfig.size,
+            right: eyeConfig.right,
+            top: eyeConfig.top,
+            background: 'radial-gradient(circle, hsl(45 80% 60% / 0.6) 0%, transparent 70%)',
+            mixBlendMode: 'screen',
+            animationDelay: '0.1s',
+          }}
+        />
+        
+        {/* Subtle shine overlay */}
+        <div 
+          className={cn(
+            "absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-transparent",
             isThinking && "animate-pulse"
           )}
         />
       </div>
 
-      {/* Thinking indicator */}
+      {/* Thinking indicator dots */}
       {isThinking && (
-        <div className="absolute -bottom-8 flex gap-1">
+        <div className="absolute -bottom-8 flex gap-1.5">
           <span className="w-2 h-2 rounded-full bg-primary animate-thinking" style={{ animationDelay: '0s' }} />
           <span className="w-2 h-2 rounded-full bg-primary animate-thinking" style={{ animationDelay: '0.2s' }} />
           <span className="w-2 h-2 rounded-full bg-primary animate-thinking" style={{ animationDelay: '0.4s' }} />
