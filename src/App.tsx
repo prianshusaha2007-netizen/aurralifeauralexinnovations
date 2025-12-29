@@ -11,6 +11,7 @@ import NotFound from "./pages/NotFound";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsOfService from "./pages/TermsOfService";
 import { ImageGalleryScreen } from "./screens/ImageGalleryScreen";
+import { ChatHistoryScreen } from "./screens/ChatHistoryScreen";
 
 const queryClient = new QueryClient();
 
@@ -26,6 +27,7 @@ const App = () => (
               <Route path="/" element={<Index />} />
               <Route path="/auth" element={<Auth />} />
               <Route path="/gallery" element={<ImageGalleryScreen />} />
+              <Route path="/chat-history" element={<ChatHistoryScreen />} />
               <Route path="/privacy" element={<PrivacyPolicy />} />
               <Route path="/terms" element={<TermsOfService />} />
               <Route path="*" element={<NotFound />} />
