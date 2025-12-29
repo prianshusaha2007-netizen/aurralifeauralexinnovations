@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Send, Sparkles, Menu, Volume2, Mic, Radio, Camera, ImagePlus, X, Loader2, Ghost, Timer, ChevronDown, GraduationCap, Gamepad2, Search, Pin } from 'lucide-react';
+import { Send, Sparkles, Menu, Volume2, Mic, Radio, Camera, ImagePlus, X, Loader2, Ghost, Timer, ChevronDown, GraduationCap, Gamepad2, Search, Pin, History } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { AuraOrb } from '@/components/AuraOrb';
+import { AuraAvatar } from '@/components/AuraAvatar';
 import { ChatBubble } from '@/components/ChatBubble';
 import { AutomationModal } from '@/components/AutomationModal';
 import { ActionsBar } from '@/components/ActionsBar';
@@ -19,10 +19,12 @@ import { useVoiceFeedback } from '@/hooks/useVoiceFeedback';
 import { useWakeWord } from '@/hooks/useWakeWord';
 import { useHotkeys } from '@/hooks/useHotkeys';
 import { useWelcomeBack, updateLastActive } from '@/hooks/useWelcomeBack';
+import { usePersonaContext } from '@/contexts/PersonaContext';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 
 interface ChatScreenProps {
   onMenuClick?: () => void;
@@ -36,8 +38,10 @@ interface ExtendedMessage extends ChatMessage {
 }
 
 export const ChatScreen: React.FC<ChatScreenProps> = ({ onMenuClick, onVoiceModeClick }) => {
+  const navigate = useNavigate();
   const { chatMessages, addChatMessage, updateChatMessage, deleteChatMessage, userProfile } = useAura();
   const { sendMessage, isThinking } = useAuraChat();
+  const { avatarStyle, autoSwitchPersona } = usePersonaContext();
   const { processCommand } = useVoiceCommands({
     name: userProfile.name,
     wakeTime: userProfile.wakeTime,
@@ -702,14 +706,28 @@ ${data.improvements?.length > 0 ? `**Tips:** ${data.improvements.join(', ')}` : 
       {/* Fixed Header - Sticky on Scroll */}
       <div className="sticky top-0 z-50 bg-background/95 backdrop-blur-md border-b border-border/50">
         <div className="flex items-center justify-between px-3 py-2 pl-14">
-          {/* Center - Title */}
+          {/* Center - Title with Avatar */}
           <div className="flex items-center gap-2">
-            <AuraOrb size="sm" isThinking={isThinking || isVoiceFeedbackSpeaking} />
-            <span className="font-semibold text-sm">AURA</span>
+            <AuraAvatar 
+              style={avatarStyle as any}
+              size="sm" 
+              isThinking={isThinking || isVoiceFeedbackSpeaking} 
+              isSpeaking={isVoiceFeedbackSpeaking}
+            />
+            <span className="font-semibold text-sm">AURRA</span>
           </div>
           
           {/* Right - Actions */}
           <div className="flex items-center gap-0.5">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 rounded-full"
+              onClick={() => navigate('/chat-history')}
+              title="Chat History"
+            >
+              <History className="w-4 h-4" />
+            </Button>
             <Button
               variant="ghost"
               size="icon"
