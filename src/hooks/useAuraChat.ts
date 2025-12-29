@@ -6,6 +6,7 @@ import { useReminders } from './useReminders';
 import { useStorytellingMode } from './useStorytellingMode';
 import { useMoodCheckIn } from './useMoodCheckIn';
 import { useLifeMemoryGraph } from './useLifeMemoryGraph';
+import { useMemoryPersistence } from './useMemoryPersistence';
 import { supabase } from '@/integrations/supabase/client';
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/aura-chat`;
@@ -40,6 +41,13 @@ export const useAuraChat = () => {
     getMemoryContext,
     triggerSummarization,
   } = useLifeMemoryGraph();
+  const {
+    processMessageForMemories,
+    getRelevantMemories,
+    pendingMemory,
+    confirmPendingMemory,
+    dismissPendingMemory,
+  } = useMemoryPersistence();
   
   const messageCountRef = useRef(0);
 
@@ -117,6 +125,13 @@ export const useAuraChat = () => {
       saveMood(detectedMood, userMessage);
     }
 
+    // Process message for important memories (auto-save in background)
+    processMessageForMemories(userMessage).then(({ savedCount, pendingPermission }) => {
+      if (savedCount > 0) {
+        console.log(`[Memory] Auto-saved ${savedCount} memories from message`);
+      }
+    });
+
     // Regular chat flow (or story continuation)
     addChatMessage({ content: userMessage, sender: 'user' });
     setIsThinking(true);
@@ -136,6 +151,15 @@ export const useAuraChat = () => {
       systemPrompt.push({
         role: 'system',
         content: memoryContext
+      });
+    }
+
+    // Also fetch persisted memories from database
+    const persistedMemories = await getRelevantMemories();
+    if (persistedMemories && !storyState.isActive) {
+      systemPrompt.push({
+        role: 'system',
+        content: persistedMemories
       });
     }
 
@@ -365,5 +389,15 @@ export const useAuraChat = () => {
     }
   };
 
-  return { sendMessage, isThinking, storyState, endStory, shouldAskMood, markMoodAsked };
+  return { 
+    sendMessage, 
+    isThinking, 
+    storyState, 
+    endStory, 
+    shouldAskMood, 
+    markMoodAsked,
+    pendingMemory,
+    confirmPendingMemory,
+    dismissPendingMemory,
+  };
 };
