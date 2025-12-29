@@ -219,7 +219,7 @@ export const ChatBubble: React.FC<ChatBubbleProps> = ({
           <div className="w-8 h-8 rounded-full overflow-hidden shadow-lg shadow-primary/20 ring-2 ring-primary/20">
             <img 
               src={auraAvatar} 
-              alt="AURA" 
+              alt="Auralex" 
               className="w-full h-full object-cover"
             />
           </div>

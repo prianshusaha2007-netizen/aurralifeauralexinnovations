@@ -170,7 +170,7 @@ export const EnhancedChatBubble: React.FC<EnhancedChatBubbleProps> = ({
       {!isUser && (
         <div className="flex-shrink-0 mt-auto">
           <div className="w-9 h-9 rounded-full overflow-hidden shadow-lg shadow-primary/20 ring-2 ring-primary/30">
-            <img src={auraAvatar} alt="AURA" className="w-full h-full object-cover" />
+            <img src={auraAvatar} alt="Auralex" className="w-full h-full object-cover" />
           </div>
         </div>
       )}
