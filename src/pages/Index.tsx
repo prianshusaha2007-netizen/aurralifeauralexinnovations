@@ -27,6 +27,7 @@ import { ProgressDashboardScreen } from '@/screens/ProgressDashboardScreen';
 import { RemindersScreen } from '@/screens/RemindersScreen';
 import { SmartServicesScreen } from '@/screens/SmartServicesScreen';
 import { DailyRoutineScreen } from '@/screens/DailyRoutineScreen';
+import DailyPlanScreen from '@/screens/DailyPlanScreen';
 import { AuraOrb } from '@/components/AuraOrb';
 import { DailyMoodPopup } from '@/components/DailyMoodPopup';
 import { SplashScreen } from '@/components/SplashScreen';
@@ -113,6 +114,7 @@ const AppContent: React.FC = () => {
       case 'progress': return <ProgressDashboardScreen />;
       case 'reminders': return <RemindersScreen onMenuClick={() => setSidebarOpen(true)} />;
       case 'services': return <SmartServicesScreen onMenuClick={() => setSidebarOpen(true)} />;
+      case 'daily-plan': return <DailyPlanScreen onBack={() => setActiveTab('chat')} />;
       default: return <CalmChatScreen onMenuClick={() => setSidebarOpen(true)} />;
     }
   };
