@@ -6,6 +6,7 @@ export class AudioRecorder {
   private processor: ScriptProcessorNode | null = null;
   private source: MediaStreamAudioSourceNode | null = null;
   private analyser: AnalyserNode | null = null;
+  private isMuted: boolean = false;
 
   constructor(private onAudioData: (audioData: Float32Array) => void) {}
 
@@ -33,6 +34,7 @@ export class AudioRecorder {
       this.analyser.fftSize = 256;
       
       this.processor.onaudioprocess = (e) => {
+        if (this.isMuted) return; // Don't send audio if muted
         const inputData = e.inputBuffer.getChannelData(0);
         this.onAudioData(new Float32Array(inputData));
       };
@@ -48,6 +50,20 @@ export class AudioRecorder {
 
   getAnalyser(): AnalyserNode | null {
     return this.analyser;
+  }
+
+  setMuted(muted: boolean) {
+    this.isMuted = muted;
+    // Also mute the actual audio track for visual feedback
+    if (this.stream) {
+      this.stream.getAudioTracks().forEach(track => {
+        track.enabled = !muted;
+      });
+    }
+  }
+
+  isMutedState(): boolean {
+    return this.isMuted;
   }
 
   stop() {
@@ -352,6 +368,14 @@ export class RealtimeChat {
 
     this.dc.send(JSON.stringify(event));
     this.dc.send(JSON.stringify({ type: 'response.create' }));
+  }
+
+  setMuted(muted: boolean) {
+    this.recorder?.setMuted(muted);
+  }
+
+  isMuted(): boolean {
+    return this.recorder?.isMutedState() || false;
   }
 
   disconnect() {
