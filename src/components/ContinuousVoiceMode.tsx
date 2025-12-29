@@ -4,6 +4,7 @@ import { Mic, MicOff, Phone, Volume2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AuraOrb } from './AuraOrb';
 import { AudioWaveform } from './AudioWaveform';
+import { VolumeIndicator } from './VolumeIndicator';
 import { RealtimeChat } from '@/utils/RealtimeAudio';
 import { toast } from 'sonner';
 
@@ -25,6 +26,7 @@ export const ContinuousVoiceMode: React.FC<ContinuousVoiceModeProps> = ({
   const [transcript, setTranscript] = useState('');
   const [auraResponse, setAuraResponse] = useState('');
   const [analyser, setAnalyser] = useState<AnalyserNode | null>(null);
+  const [inputAnalyser, setInputAnalyser] = useState<AnalyserNode | null>(null);
   const chatRef = useRef<RealtimeChat | null>(null);
 
   const handleMessage = (event: any) => {
@@ -67,7 +69,9 @@ export const ContinuousVoiceMode: React.FC<ContinuousVoiceModeProps> = ({
       // Set initial analyser for input visualization
       setTimeout(() => {
         if (chatRef.current) {
-          setAnalyser(chatRef.current.getInputAnalyser());
+          const inputAn = chatRef.current.getInputAnalyser();
+          setAnalyser(inputAn);
+          setInputAnalyser(inputAn);
         }
       }, 500);
       toast.success('Voice mode ready — just speak naturally');
@@ -87,6 +91,7 @@ export const ContinuousVoiceMode: React.FC<ContinuousVoiceModeProps> = ({
     setTranscript('');
     setAuraResponse('');
     setAnalyser(null);
+    setInputAnalyser(null);
   };
 
   const toggleMute = () => {
@@ -172,15 +177,27 @@ export const ContinuousVoiceMode: React.FC<ContinuousVoiceModeProps> = ({
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.3 }}
             >
-              <AudioWaveform 
-                analyser={analyser} 
-                isActive={isConnected} 
-                mode={isSpeaking ? 'speaking' : 'listening'}
-                className="mx-auto"
-              />
-              <p className="text-xs text-center text-muted-foreground mt-2">
-                {isSpeaking ? '🔊 AURA is responding' : '🎤 Listening to you'}
-              </p>
+              <div className="flex items-center justify-center gap-6">
+                {/* Volume Indicator */}
+                <VolumeIndicator
+                  analyser={inputAnalyser}
+                  isActive={isConnected && !isSpeaking}
+                  showLabel={true}
+                />
+                
+                {/* Audio Waveform */}
+                <div className="flex-1">
+                  <AudioWaveform 
+                    analyser={analyser} 
+                    isActive={isConnected} 
+                    mode={isSpeaking ? 'speaking' : 'listening'}
+                    className="mx-auto"
+                  />
+                  <p className="text-xs text-center text-muted-foreground mt-2">
+                    {isSpeaking ? '🔊 AURA is responding' : '🎤 Listening to you'}
+                  </p>
+                </div>
+              </div>
             </motion.div>
           )}
 
