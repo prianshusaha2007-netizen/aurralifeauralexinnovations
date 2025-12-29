@@ -91,10 +91,12 @@ export const CalmChatScreen: React.FC<CalmChatScreenProps> = ({ onMenuClick }) =
   const [generatedImage, setGeneratedImage] = useState<{ url: string; prompt: string } | null>(null);
   const [generatedDoc, setGeneratedDoc] = useState<{ title: string; html: string; text: string } | null>(null);
   const [showFloatingVoice, setShowFloatingVoice] = useState(false);
+  const [shouldPulse, setShouldPulse] = useState(false);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
+  const lastActivityRef = useRef<number>(Date.now());
 
   // Rotate status message
   useEffect(() => {
@@ -146,11 +148,33 @@ export const CalmChatScreen: React.FC<CalmChatScreenProps> = ({ onMenuClick }) =
 
     const handleScroll = () => {
       setShowFloatingVoice(container.scrollTop > 100);
+      // Reset activity timer on scroll
+      lastActivityRef.current = Date.now();
+      setShouldPulse(false);
     };
 
     container.addEventListener('scroll', handleScroll);
     return () => container.removeEventListener('scroll', handleScroll);
   }, []);
+
+  // Pulse animation after inactivity (30 seconds)
+  useEffect(() => {
+    const checkInactivity = setInterval(() => {
+      const inactiveTime = Date.now() - lastActivityRef.current;
+      // Start pulsing after 30 seconds of inactivity, only if floating button is visible
+      if (inactiveTime > 30000 && showFloatingVoice && !showVoiceMode) {
+        setShouldPulse(true);
+      }
+    }, 5000);
+
+    return () => clearInterval(checkInactivity);
+  }, [showFloatingVoice, showVoiceMode]);
+
+  // Reset activity on user interaction
+  useEffect(() => {
+    lastActivityRef.current = Date.now();
+    setShouldPulse(false);
+  }, [chatMessages, inputValue]);
 
   // Initial greeting - simple, human, not overwhelming
   useEffect(() => {
@@ -464,13 +488,28 @@ export const CalmChatScreen: React.FC<CalmChatScreenProps> = ({ onMenuClick }) =
             exit={{ opacity: 0, scale: 0.8, y: 20 }}
             className="fixed bottom-28 right-6 z-40"
           >
-            <Button
-              size="icon"
-              className="h-14 w-14 rounded-full aura-gradient shadow-lg shadow-primary/30 hover:shadow-primary/40 transition-shadow"
-              onClick={() => setShowVoiceMode(true)}
-            >
-              <Headphones className="w-6 h-6 text-primary-foreground" />
-            </Button>
+            <div className="relative">
+              {/* Pulse ring animation */}
+              {shouldPulse && (
+                <motion.div
+                  className="absolute inset-0 rounded-full bg-primary/30"
+                  initial={{ scale: 1, opacity: 0.6 }}
+                  animate={{ scale: 1.8, opacity: 0 }}
+                  transition={{ duration: 2, repeat: Infinity, ease: "easeOut" }}
+                />
+              )}
+              <Button
+                size="icon"
+                className="h-14 w-14 rounded-full aura-gradient shadow-lg shadow-primary/30 hover:shadow-primary/40 transition-shadow relative"
+                onClick={() => {
+                  setShowVoiceMode(true);
+                  setShouldPulse(false);
+                  lastActivityRef.current = Date.now();
+                }}
+              >
+                <Headphones className="w-6 h-6 text-primary-foreground" />
+              </Button>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
