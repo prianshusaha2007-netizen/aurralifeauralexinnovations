@@ -1,10 +1,12 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
+import { motion, AnimatePresence } from 'framer-motion';
 import auraLogo from '@/assets/aura-logo.jpeg';
 
 interface AuraOrbProps {
   size?: 'sm' | 'md' | 'lg' | 'xl';
   isThinking?: boolean;
+  isActive?: boolean;
   className?: string;
 }
 
@@ -30,15 +32,84 @@ const eyeConfigs = {
   xl: { size: 20, left: 28, right: 28, top: 48 },
 };
 
+// Particle configuration
+const particleCount = 8;
+
+const Particle: React.FC<{ delay: number; size: 'sm' | 'md' | 'lg' | 'xl' }> = ({ delay, size }) => {
+  const orbSize = { sm: 48, md: 80, lg: 112, xl: 160 }[size];
+  const startX = Math.random() * orbSize - orbSize / 2;
+  
+  return (
+    <motion.div
+      className="absolute rounded-full bg-primary/60"
+      style={{
+        width: Math.random() * 4 + 2,
+        height: Math.random() * 4 + 2,
+        left: '50%',
+        bottom: '20%',
+      }}
+      initial={{ 
+        x: startX, 
+        y: 0, 
+        opacity: 0,
+        scale: 0 
+      }}
+      animate={{ 
+        x: [startX, startX + (Math.random() - 0.5) * 30],
+        y: [0, -80 - Math.random() * 40],
+        opacity: [0, 0.8, 0],
+        scale: [0, 1, 0.5]
+      }}
+      transition={{
+        duration: 2 + Math.random(),
+        delay,
+        repeat: Infinity,
+        repeatDelay: Math.random() * 0.5,
+        ease: "easeOut"
+      }}
+    />
+  );
+};
+
 export const AuraOrb: React.FC<AuraOrbProps> = ({ 
   size = 'lg', 
   isThinking = false,
+  isActive = false,
   className 
 }) => {
   const eyeConfig = eyeConfigs[size];
+  const [isBlinking, setIsBlinking] = useState(false);
+
+  // Random blink effect
+  useEffect(() => {
+    const scheduleNextBlink = () => {
+      const delay = 2000 + Math.random() * 4000; // 2-6 seconds
+      return setTimeout(() => {
+        setIsBlinking(true);
+        setTimeout(() => setIsBlinking(false), 150); // Blink duration
+        scheduleNextBlink();
+      }, delay);
+    };
+
+    const timeoutId = scheduleNextBlink();
+    return () => clearTimeout(timeoutId);
+  }, []);
+
+  const showParticles = isThinking || isActive;
 
   return (
     <div className={cn('relative flex items-center justify-center', className)}>
+      {/* Floating particles during active state */}
+      <AnimatePresence>
+        {showParticles && (
+          <div className="absolute inset-0 pointer-events-none overflow-visible">
+            {Array.from({ length: particleCount }).map((_, i) => (
+              <Particle key={i} delay={i * 0.25} size={size} />
+            ))}
+          </div>
+        )}
+      </AnimatePresence>
+
       {/* Outer teal aura ring - pulsing glow */}
       <div 
         className={cn(
@@ -78,12 +149,17 @@ export const AuraOrb: React.FC<AuraOrbProps> = ({
           className="w-full h-full object-cover"
         />
         
-        {/* Eye glow overlays - positioned over robot's eyes */}
-        <div 
+        {/* Left eye glow overlay with blink */}
+        <motion.div 
           className={cn(
             "absolute rounded-full",
             isThinking ? "animate-eye-thinking" : "animate-eye-glow"
           )}
+          animate={{
+            scaleY: isBlinking ? 0.1 : 1,
+            opacity: isBlinking ? 0.4 : 1
+          }}
+          transition={{ duration: 0.1 }}
           style={{
             width: eyeConfig.size,
             height: eyeConfig.size,
@@ -91,13 +167,21 @@ export const AuraOrb: React.FC<AuraOrbProps> = ({
             top: eyeConfig.top,
             background: 'radial-gradient(circle, hsl(45 80% 60% / 0.6) 0%, transparent 70%)',
             mixBlendMode: 'screen',
+            transformOrigin: 'center',
           }}
         />
-        <div 
+        
+        {/* Right eye glow overlay with blink */}
+        <motion.div 
           className={cn(
             "absolute rounded-full",
             isThinking ? "animate-eye-thinking" : "animate-eye-glow"
           )}
+          animate={{
+            scaleY: isBlinking ? 0.1 : 1,
+            opacity: isBlinking ? 0.4 : 1
+          }}
+          transition={{ duration: 0.1 }}
           style={{
             width: eyeConfig.size,
             height: eyeConfig.size,
@@ -105,7 +189,7 @@ export const AuraOrb: React.FC<AuraOrbProps> = ({
             top: eyeConfig.top,
             background: 'radial-gradient(circle, hsl(45 80% 60% / 0.6) 0%, transparent 70%)',
             mixBlendMode: 'screen',
-            animationDelay: '0.1s',
+            transformOrigin: 'center',
           }}
         />
         
