@@ -92,11 +92,13 @@ export const CalmChatScreen: React.FC<CalmChatScreenProps> = ({ onMenuClick }) =
   const [generatedDoc, setGeneratedDoc] = useState<{ title: string; html: string; text: string } | null>(null);
   const [showFloatingVoice, setShowFloatingVoice] = useState(false);
   const [shouldPulse, setShouldPulse] = useState(false);
+  const [showVoiceTooltip, setShowVoiceTooltip] = useState(false);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const lastActivityRef = useRef<number>(Date.now());
+  const hasShownTooltipRef = useRef(localStorage.getItem('aura-voice-tooltip-shown') === 'true');
 
   // Rotate status message
   useEffect(() => {
@@ -164,6 +166,14 @@ export const CalmChatScreen: React.FC<CalmChatScreenProps> = ({ onMenuClick }) =
       // Start pulsing after 30 seconds of inactivity, only if floating button is visible
       if (inactiveTime > 30000 && showFloatingVoice && !showVoiceMode) {
         setShouldPulse(true);
+        // Show tooltip on first pulse only
+        if (!hasShownTooltipRef.current) {
+          setShowVoiceTooltip(true);
+          hasShownTooltipRef.current = true;
+          localStorage.setItem('aura-voice-tooltip-shown', 'true');
+          // Auto-hide tooltip after 6 seconds
+          setTimeout(() => setShowVoiceTooltip(false), 6000);
+        }
       }
     }, 5000);
 
@@ -174,6 +184,7 @@ export const CalmChatScreen: React.FC<CalmChatScreenProps> = ({ onMenuClick }) =
   useEffect(() => {
     lastActivityRef.current = Date.now();
     setShouldPulse(false);
+    setShowVoiceTooltip(false);
   }, [chatMessages, inputValue]);
 
   // Initial greeting - simple, human, not overwhelming
@@ -498,12 +509,35 @@ export const CalmChatScreen: React.FC<CalmChatScreenProps> = ({ onMenuClick }) =
                   transition={{ duration: 2, repeat: Infinity, ease: "easeOut" }}
                 />
               )}
+              
+              {/* Tooltip */}
+              <AnimatePresence>
+                {showVoiceTooltip && (
+                  <motion.div
+                    initial={{ opacity: 0, x: 10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: 10 }}
+                    className="absolute right-full mr-3 top-1/2 -translate-y-1/2 whitespace-nowrap"
+                  >
+                    <div className="bg-card border border-border/50 shadow-lg rounded-xl px-4 py-2.5">
+                      <p className="text-sm font-medium text-foreground">Try voice mode 🎧</p>
+                      <p className="text-xs text-muted-foreground">Talk naturally with AURRA</p>
+                    </div>
+                    {/* Arrow */}
+                    <div className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-full">
+                      <div className="border-8 border-transparent border-l-card" />
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+              
               <Button
                 size="icon"
                 className="h-14 w-14 rounded-full aura-gradient shadow-lg shadow-primary/30 hover:shadow-primary/40 transition-shadow relative"
                 onClick={() => {
                   setShowVoiceMode(true);
                   setShouldPulse(false);
+                  setShowVoiceTooltip(false);
                   lastActivityRef.current = Date.now();
                 }}
               >
