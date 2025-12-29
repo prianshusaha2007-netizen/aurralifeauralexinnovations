@@ -90,9 +90,11 @@ export const CalmChatScreen: React.FC<CalmChatScreenProps> = ({ onMenuClick }) =
   const [showVoiceMode, setShowVoiceMode] = useState(false);
   const [generatedImage, setGeneratedImage] = useState<{ url: string; prompt: string } | null>(null);
   const [generatedDoc, setGeneratedDoc] = useState<{ title: string; html: string; text: string } | null>(null);
+  const [showFloatingVoice, setShowFloatingVoice] = useState(false);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
 
   // Rotate status message
   useEffect(() => {
@@ -136,6 +138,19 @@ export const CalmChatScreen: React.FC<CalmChatScreenProps> = ({ onMenuClick }) =
   useEffect(() => {
     scrollToBottom();
   }, [chatMessages, scrollToBottom]);
+
+  // Show floating voice button when scrolled down
+  useEffect(() => {
+    const container = chatContainerRef.current;
+    if (!container) return;
+
+    const handleScroll = () => {
+      setShowFloatingVoice(container.scrollTop > 100);
+    };
+
+    container.addEventListener('scroll', handleScroll);
+    return () => container.removeEventListener('scroll', handleScroll);
+  }, []);
 
   // Initial greeting - simple, human, not overwhelming
   useEffect(() => {
@@ -340,7 +355,7 @@ export const CalmChatScreen: React.FC<CalmChatScreenProps> = ({ onMenuClick }) =
       </AnimatePresence>
 
       {/* Chat Messages */}
-      <div className="flex-1 overflow-y-auto px-4 py-6">
+      <div ref={chatContainerRef} className="flex-1 overflow-y-auto px-4 py-6">
         <div className="max-w-2xl mx-auto space-y-5">
           {chatMessages.map((message, index) => (
             <CalmChatBubble
@@ -439,6 +454,26 @@ export const CalmChatScreen: React.FC<CalmChatScreenProps> = ({ onMenuClick }) =
           <div ref={messagesEndRef} />
         </div>
       </div>
+
+      {/* Floating Voice Button */}
+      <AnimatePresence>
+        {showFloatingVoice && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.8, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.8, y: 20 }}
+            className="fixed bottom-28 right-6 z-40"
+          >
+            <Button
+              size="icon"
+              className="h-14 w-14 rounded-full aura-gradient shadow-lg shadow-primary/30 hover:shadow-primary/40 transition-shadow"
+              onClick={() => setShowVoiceMode(true)}
+            >
+              <Headphones className="w-6 h-6 text-primary-foreground" />
+            </Button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Input Area */}
       <div className="p-4 pb-6 bg-gradient-to-t from-background via-background to-transparent">
