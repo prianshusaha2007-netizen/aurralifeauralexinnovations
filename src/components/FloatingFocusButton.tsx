@@ -1,15 +1,36 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Focus, X, Clock } from 'lucide-react';
+import { Focus, X, Clock, Bell } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useRoutineBlocks } from '@/hooks/useRoutineBlocks';
+import { useRoutineNotifications } from '@/hooks/useRoutineNotifications';
 import { FocusModeOverlay } from './FocusModeOverlay';
 
 export const FloatingFocusButton: React.FC = () => {
-  const { activeBlock, focusModeActive, startFocusMode } = useRoutineBlocks();
+  const { activeBlock, focusModeActive, startFocusMode, blocks, createDefaultBlocks } = useRoutineBlocks();
+  const { getUpcomingBlocks } = useRoutineNotifications(blocks);
   const [showOverlay, setShowOverlay] = useState(false);
   const [isDismissed, setIsDismissed] = useState(false);
+  const [upcomingCount, setUpcomingCount] = useState(0);
+
+  // Create sample blocks if none exist (for testing)
+  useEffect(() => {
+    if (blocks.length === 0) {
+      createDefaultBlocks();
+    }
+  }, [blocks.length, createDefaultBlocks]);
+
+  // Check upcoming blocks
+  useEffect(() => {
+    const check = () => {
+      const upcoming = getUpcomingBlocks();
+      setUpcomingCount(upcoming.length);
+    };
+    check();
+    const interval = setInterval(check, 60000);
+    return () => clearInterval(interval);
+  }, [getUpcomingBlocks]);
 
   // Don't show if no active block or user dismissed
   if (!activeBlock || isDismissed) return null;
@@ -34,6 +55,13 @@ export const FloatingFocusButton: React.FC = () => {
         className="fixed bottom-24 right-4 z-40"
       >
         <div className="relative">
+          {/* Upcoming notifications badge */}
+          {upcomingCount > 0 && (
+            <div className="absolute -top-2 -left-2 w-6 h-6 rounded-full bg-amber-500 flex items-center justify-center z-10">
+              <Bell className="w-3 h-3 text-white" />
+            </div>
+          )}
+
           {/* Dismiss button */}
           <Button
             variant="ghost"

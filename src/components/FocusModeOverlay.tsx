@@ -2,13 +2,15 @@ import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   X, Pause, Play, Music, Timer, 
-  Focus, Volume2, VolumeX, Maximize2, Minimize2
+  Focus, Volume2, VolumeX, Maximize2, Minimize2,
+  ChevronDown
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
+import { Slider } from '@/components/ui/slider';
 import { cn } from '@/lib/utils';
 import { useFocusMode } from '@/hooks/useFocusMode';
-import { AuraOrb } from './AuraOrb';
+import { useFocusMusic, MusicMood } from '@/hooks/useFocusMusic';
 
 interface FocusModeOverlayProps {
   blockTitle?: string;
@@ -35,20 +37,31 @@ export const FocusModeOverlay: React.FC<FocusModeOverlayProps> = ({
     getTotalFocusTime
   } = useFocusMode();
 
+  const focusMusic = useFocusMusic();
+
   const [isMinimized, setIsMinimized] = useState(false);
   const [showDurationPicker, setShowDurationPicker] = useState(!isActive);
+  const [showMusicPicker, setShowMusicPicker] = useState(false);
 
   const durations = [15, 25, 45, 60, 90];
 
   const handleStartSession = (duration: number) => {
-    startSession(duration, blockType, true);
+    startSession(duration, blockType, false); // Don't use old music
     setShowDurationPicker(false);
   };
 
   const handleEndSession = () => {
     endSession(false);
+    focusMusic.stopMusic();
     onClose?.();
   };
+
+  // Stop music when overlay closes
+  useEffect(() => {
+    return () => {
+      focusMusic.stopMusic();
+    };
+  }, []);
 
   const progress = currentSession 
     ? ((currentSession.duration * 60 - remainingTime) / (currentSession.duration * 60)) * 100
@@ -153,7 +166,7 @@ export const FocusModeOverlay: React.FC<FocusModeOverlayProps> = ({
             <motion.div
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="text-center"
+              className="text-center w-full max-w-md"
             >
               {/* Timer Ring */}
               <div className="relative w-64 h-64 mx-auto mb-8">
@@ -198,18 +211,17 @@ export const FocusModeOverlay: React.FC<FocusModeOverlayProps> = ({
               </div>
 
               {/* Controls */}
-              <div className="flex items-center justify-center gap-4 mb-8">
+              <div className="flex items-center justify-center gap-4 mb-6">
                 <Button
                   variant="outline"
                   size="icon"
-                  onClick={toggleMusic}
-                  className="w-14 h-14 rounded-full"
-                >
-                  {musicPlaying ? (
-                    <Volume2 className="w-6 h-6" />
-                  ) : (
-                    <VolumeX className="w-6 h-6" />
+                  onClick={() => setShowMusicPicker(!showMusicPicker)}
+                  className={cn(
+                    "w-14 h-14 rounded-full",
+                    focusMusic.isPlaying && "ring-2 ring-primary"
                   )}
+                >
+                  <Music className="w-6 h-6" />
                 </Button>
 
                 <Button
@@ -234,6 +246,69 @@ export const FocusModeOverlay: React.FC<FocusModeOverlayProps> = ({
                 </Button>
               </div>
 
+              {/* Music Picker */}
+              <AnimatePresence>
+                {showMusicPicker && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="mb-6 overflow-hidden"
+                  >
+                    <div className="bg-muted/30 rounded-2xl p-4 space-y-4">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium">Ambient Music</span>
+                        {focusMusic.isPlaying && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={focusMusic.stopMusic}
+                            className="text-xs"
+                          >
+                            Stop
+                          </Button>
+                        )}
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-2">
+                        {focusMusic.tracks.map((track) => (
+                          <button
+                            key={track.id}
+                            onClick={() => focusMusic.playTrack(track)}
+                            className={cn(
+                              "p-3 rounded-xl text-left transition-all",
+                              "hover:bg-muted/50",
+                              focusMusic.currentTrack?.id === track.id && focusMusic.isPlaying
+                                ? "bg-primary/20 ring-2 ring-primary"
+                                : "bg-muted/20"
+                            )}
+                          >
+                            <span className="text-lg">{track.icon}</span>
+                            <p className="text-sm font-medium mt-1">{track.name}</p>
+                            <p className="text-xs text-muted-foreground">{track.description}</p>
+                          </button>
+                        ))}
+                      </div>
+
+                      {/* Volume slider */}
+                      {focusMusic.isPlaying && (
+                        <div className="flex items-center gap-3">
+                          <VolumeX className="w-4 h-4 text-muted-foreground" />
+                          <Slider
+                            value={[focusMusic.volume * 100]}
+                            onValueChange={([val]) => focusMusic.adjustVolume(val / 100)}
+                            max={100}
+                            step={5}
+                            className="flex-1"
+                          />
+                          <Volume2 className="w-4 h-4 text-muted-foreground" />
+                        </div>
+                      )}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
               {/* Stats */}
               <div className="text-center">
                 <p className="text-sm text-muted-foreground">
@@ -241,7 +316,7 @@ export const FocusModeOverlay: React.FC<FocusModeOverlayProps> = ({
                 </p>
               </div>
 
-              {/* Breathing Guide (optional subtle animation) */}
+              {/* Breathing Guide */}
               <motion.div
                 className="mt-8 text-muted-foreground/50 text-sm"
                 animate={{ opacity: [0.3, 0.7, 0.3] }}
