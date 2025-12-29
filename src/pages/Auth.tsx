@@ -99,7 +99,7 @@ const Auth: React.FC = () => {
           }
           return;
         }
-        toast.success('Account created! Welcome to AURA 💫');
+        toast.success('Account created! Welcome to AURRA 💫');
       }
     } catch {
       toast.error('Something went wrong. Please try again.');
@@ -113,7 +113,7 @@ const Auth: React.FC = () => {
       <div className="w-full max-w-md space-y-8 animate-fade-in">
         <div className="flex flex-col items-center">
           <AuraOrb size="xl" />
-          <h1 className="mt-6 text-3xl font-bold aura-gradient-text">AURA</h1>
+          <h1 className="mt-6 text-3xl font-bold aura-gradient-text">AURRA</h1>
           <p className="mt-2 text-muted-foreground text-center">
             {isLogin ? 'Welcome back, ready to continue?' : 'Create your account to begin'}
           </p>
