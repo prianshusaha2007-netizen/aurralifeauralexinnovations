@@ -143,6 +143,48 @@ export type Database = {
         }
         Relationships: []
       }
+      daily_focus_blocks: {
+        Row: {
+          completed: boolean | null
+          completed_at: string | null
+          created_at: string
+          date: string
+          description: string | null
+          duration_minutes: number | null
+          id: string
+          priority: number | null
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          completed?: boolean | null
+          completed_at?: string | null
+          created_at?: string
+          date?: string
+          description?: string | null
+          duration_minutes?: number | null
+          id?: string
+          priority?: number | null
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          completed?: boolean | null
+          completed_at?: string | null
+          created_at?: string
+          date?: string
+          description?: string | null
+          duration_minutes?: number | null
+          id?: string
+          priority?: number | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       friend_codes: {
         Row: {
           code: string

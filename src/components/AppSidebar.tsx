@@ -14,7 +14,8 @@ import {
   Image,
   ImageIcon,
   Bell,
-  MapPin
+  MapPin,
+  Target
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -39,7 +40,8 @@ export type TabId =
   | 'gallery'
   | 'progress'
   | 'reminders'
-  | 'services';
+  | 'services'
+  | 'daily-plan';
 
 interface MenuItem {
   id: TabId | 'new-chat';
@@ -56,8 +58,9 @@ const menuItems: MenuItem[] = [
   { id: 'history', icon: History, label: 'Chat History' },
   { id: 'reminders', icon: Bell, label: 'Reminders & Alarms' },
   { id: 'services', icon: MapPin, label: 'Smart Services', divider: true },
+  { id: 'daily-plan', icon: Target, label: "Today's Focus", section: 'Wellness' },
   { id: 'games', icon: Gamepad2, label: 'Play Games' },
-  { id: 'routine', icon: Calendar, label: 'Daily Routine', section: 'Wellness' },
+  { id: 'routine', icon: Calendar, label: 'Daily Routine' },
   { id: 'hydration', icon: Droplets, label: 'Hydration Tracker' },
   { id: 'progress', icon: BarChart3, label: 'Progress Dashboard' },
   { id: 'social', icon: Trophy, label: 'Social Leaderboard', divider: true },
@@ -113,7 +116,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
           <div className="flex items-center gap-3">
             <AuraOrb size="sm" />
             <div>
-              <h2 className="font-bold text-lg aura-gradient-text">AURA</h2>
+              <h2 className="font-bold text-lg aura-gradient-text">AURRA</h2>
               <p className="text-xs text-muted-foreground">Your AI Companion</p>
             </div>
           </div>
