@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input';
 import { motion, AnimatePresence } from 'framer-motion';
 import auraLogo from '@/assets/aura-logo.jpeg';
 import { useAura } from '@/contexts/AuraContext';
+import { ThemeToggle } from '@/components/ThemeToggle';
 import { format, isToday, isYesterday, isThisWeek } from 'date-fns';
 
 export type SidebarTab = 
@@ -243,18 +244,21 @@ export const AuraSidebar: React.FC<AuraSidebarProps> = ({
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl overflow-hidden shadow-lg">
-                <img src={auraLogo} alt="AURRA" className="w-full h-full object-cover" />
+                <img src={auraLogo} alt="Auralex" className="w-full h-full object-cover" />
               </div>
               <div>
                 <h1 className="font-bold text-lg bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-                  AURRA
+                  Auralex
                 </h1>
-                <p className="text-[10px] text-muted-foreground">Your AI Companion</p>
+                <p className="text-[10px] text-muted-foreground">Human-Centric AI</p>
               </div>
             </div>
-            <Button variant="ghost" size="icon" onClick={onClose} className="lg:hidden rounded-full">
-              <X className="w-5 h-5" />
-            </Button>
+            <div className="flex items-center gap-1">
+              <ThemeToggle />
+              <Button variant="ghost" size="icon" onClick={onClose} className="lg:hidden rounded-full">
+                <X className="w-5 h-5" />
+              </Button>
+            </div>
           </div>
 
           {/* Search */}

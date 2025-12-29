@@ -145,7 +145,7 @@ export const AuraOrb: React.FC<AuraOrbProps> = ({
       >
         <img 
           src={auraLogo} 
-          alt="AURRA" 
+          alt="Auralex" 
           className="w-full h-full object-cover"
         />
         
