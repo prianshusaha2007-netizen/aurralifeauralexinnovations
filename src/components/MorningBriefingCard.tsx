@@ -167,7 +167,7 @@ export const MorningBriefingCard: React.FC<MorningBriefingCardProps> = ({
 
           {/* Quick tip */}
           <p className="text-xs text-muted-foreground mt-3 italic">
-            💡 Tip: Say "Hey AURA" or tap the mic to talk hands-free!
+            💡 Tip: Say "Hey AURRA" or tap the mic to talk hands-free!
           </p>
         </div>
       </motion.div>

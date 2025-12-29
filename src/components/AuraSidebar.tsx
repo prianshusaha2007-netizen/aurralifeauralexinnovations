@@ -243,11 +243,11 @@ export const AuraSidebar: React.FC<AuraSidebarProps> = ({
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl overflow-hidden shadow-lg">
-                <img src={auraLogo} alt="AURA" className="w-full h-full object-cover" />
+                <img src={auraLogo} alt="AURRA" className="w-full h-full object-cover" />
               </div>
               <div>
                 <h1 className="font-bold text-lg bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-                  AURA
+                  AURRA
                 </h1>
                 <p className="text-[10px] text-muted-foreground">Your AI Companion</p>
               </div>
@@ -328,7 +328,7 @@ export const AuraSidebar: React.FC<AuraSidebarProps> = ({
               <div className="flex-1 min-w-0">
                 <p className="font-semibold text-sm truncate">{userProfile.name || 'User'}</p>
                 <p className="text-xs text-muted-foreground truncate">
-                  {userProfile.professions?.[0] || 'AURA User'}
+                  {userProfile.professions?.[0] || 'AURRA User'}
                 </p>
               </div>
             </div>

@@ -102,7 +102,7 @@ serve(async (req) => {
     }
 
     const conversationText = messages.map((m: ChatMessage) => 
-      `${m.sender === 'user' ? 'User' : 'AURA'}: ${m.content}`
+      `${m.sender === 'user' ? 'User' : 'AURRA'}: ${m.content}`
     ).join('\n');
 
     const timeRangeStart = messages[0].created_at;

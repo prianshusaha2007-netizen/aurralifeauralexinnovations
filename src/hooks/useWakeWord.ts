@@ -7,7 +7,7 @@ interface UseWakeWordOptions {
 }
 
 export const useWakeWord = ({ 
-  wakePhrase = 'hey aura', 
+  wakePhrase = 'hey aurra', 
   onWakeWord, 
   enabled = false 
 }: UseWakeWordOptions) => {

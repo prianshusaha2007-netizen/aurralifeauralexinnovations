@@ -149,7 +149,7 @@ serve(async (req) => {
         messages: [
           {
             role: "system",
-            content: `You are AURA, a friendly AI companion that analyzes images in a fun, supportive, human-like way.
+            content: `You are AURRA, a friendly AI companion that analyzes images in a fun, supportive, human-like way.
             
 When analyzing an image, you must return a JSON object with these exact fields:
 - confidence: number (0-100) - how confident/self-assured the person looks

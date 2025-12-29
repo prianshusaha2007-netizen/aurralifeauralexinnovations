@@ -70,7 +70,7 @@ const HIGH_IMPORTANCE_KEYWORDS = [
   'please remember', 'keep in mind', 'serious', 'life-changing', 'major',
 ];
 
-// Keywords that suggest user wants AURA to remember
+// Keywords that suggest user wants AURRA to remember
 const REMEMBER_TRIGGERS = [
   'remember', 'don\'t forget', 'keep this in mind', 'note this',
   'yaad rakhna', 'bhoolna mat', 'note kar', 'important hai',

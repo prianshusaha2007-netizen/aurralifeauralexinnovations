@@ -259,10 +259,10 @@ export const CalmChatScreen: React.FC<CalmChatScreenProps> = ({ onMenuClick }) =
         <div className="flex items-center justify-between px-4 py-3 pl-14">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full overflow-hidden ring-2 ring-primary/20 shadow-lg shadow-primary/10">
-              <img src={auraAvatar} alt="AURA" className="w-full h-full object-cover" />
+              <img src={auraAvatar} alt="AURRA" className="w-full h-full object-cover" />
             </div>
             <div>
-              <h1 className="font-semibold text-foreground">AURA</h1>
+              <h1 className="font-semibold text-foreground">AURRA</h1>
               <motion.p 
                 key={currentStatus}
                 initial={{ opacity: 0, y: 5 }}
@@ -350,7 +350,7 @@ export const CalmChatScreen: React.FC<CalmChatScreenProps> = ({ onMenuClick }) =
                 className="flex gap-3"
               >
                 <div className="w-9 h-9 rounded-full overflow-hidden ring-2 ring-primary/10 shrink-0">
-                  <img src={auraAvatar} alt="AURA" className="w-full h-full object-cover" />
+                  <img src={auraAvatar} alt="AURRA" className="w-full h-full object-cover" />
                 </div>
                 <div className="bg-card/80 backdrop-blur-sm border border-border/40 p-4 rounded-2xl rounded-bl-sm max-w-sm">
                   <img 
@@ -411,7 +411,7 @@ export const CalmChatScreen: React.FC<CalmChatScreenProps> = ({ onMenuClick }) =
               className="flex gap-3"
             >
               <div className="w-9 h-9 rounded-full overflow-hidden ring-2 ring-primary/10">
-                <img src={auraAvatar} alt="AURA" className="w-full h-full object-cover" />
+                <img src={auraAvatar} alt="AURRA" className="w-full h-full object-cover" />
               </div>
               <div className="bg-card/80 backdrop-blur-sm border border-border/40 px-4 py-3 rounded-2xl rounded-bl-sm">
                 <div className="flex gap-1.5">
