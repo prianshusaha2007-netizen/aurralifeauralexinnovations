@@ -27,16 +27,20 @@ export const AudioWaveform: React.FC<AudioWaveformProps> = ({
     if (!ctx) return;
 
     const getColor = () => {
+      // Get computed CSS variable value for canvas (CSS vars don't work directly in canvas)
+      const computedStyle = getComputedStyle(document.documentElement);
+      const primaryHsl = computedStyle.getPropertyValue('--primary').trim() || '262 83% 58%';
+      
       switch (mode) {
         case 'speaking':
           return 'hsl(142 76% 36%)'; // Green for AI speaking
         case 'listening':
         case 'recording':
-          return 'hsl(var(--primary))';
+          return `hsl(${primaryHsl})`;
         case 'playback':
           return 'hsl(142 76% 36%)';
         default:
-          return 'hsl(var(--primary))';
+          return `hsl(${primaryHsl})`;
       }
     };
 
