@@ -9,7 +9,7 @@ import { cn } from '@/lib/utils';
 const steps = [
   {
     id: 'welcome',
-    title: "Hi, I'm AURA",
+    title: "Hi, I'm AURRA",
     subtitle: "Your all-time AI companion. Let's get to know each other!",
     type: 'intro',
   },
@@ -165,9 +165,9 @@ export const OnboardingScreen: React.FC = () => {
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
-      {/* Progress */}
+      {/* Progress - subtle, not distracting */}
       <div className="p-4">
-        <div className="flex gap-1">
+        <div className="flex gap-1.5">
           {steps.map((_, index) => (
             <div
               key={index}
@@ -188,16 +188,16 @@ export const OnboardingScreen: React.FC = () => {
             <AuraOrb size={step.type === 'intro' ? 'xl' : 'lg'} />
           </div>
 
-          {/* Text */}
-          <div className="text-center mb-6">
+          {/* Text - clear, readable */}
+          <div className="text-center mb-8">
             <h1 className="text-2xl font-bold mb-2 aura-gradient-text">{step.title}</h1>
             <p className="text-muted-foreground">{step.subtitle}</p>
             {getMultiSelectHint() && (
-              <p className="text-xs text-primary mt-1">{getMultiSelectHint()}</p>
+              <p className="text-xs text-primary mt-2 font-medium">{getMultiSelectHint()}</p>
             )}
           </div>
 
-          {/* Input Area */}
+          {/* Input Area - large, easy to tap */}
           <div className="space-y-3">
             {step.type === 'text' && (
               <Input
@@ -205,7 +205,7 @@ export const OnboardingScreen: React.FC = () => {
                 onChange={(e) => setFormData({ ...formData, [step.field!]: e.target.value })}
                 placeholder={step.placeholder}
                 type={step.inputType || 'text'}
-                className="text-center text-lg py-6 rounded-xl"
+                className="text-center text-lg py-6 h-14"
               />
             )}
 
@@ -214,12 +214,12 @@ export const OnboardingScreen: React.FC = () => {
                 type="time"
                 value={formData[step.field as keyof typeof formData] as string}
                 onChange={(e) => setFormData({ ...formData, [step.field!]: e.target.value })}
-                className="text-center text-lg py-6 rounded-xl"
+                className="text-center text-lg py-6 h-14"
               />
             )}
 
             {(step.type === 'options' || step.type === 'multiSelect') && (
-              <div className="grid gap-2 max-h-[40vh] overflow-y-auto pr-1">
+              <div className="grid gap-3 max-h-[40vh] overflow-y-auto pr-1">
                 {step.options?.map((option) => {
                   const isSelected = step.type === 'multiSelect'
                     ? (formData[step.field as keyof typeof formData] as string[]).includes(option)
@@ -230,15 +230,15 @@ export const OnboardingScreen: React.FC = () => {
                       key={option}
                       onClick={() => handleOptionSelect(option)}
                       className={cn(
-                        'p-3 rounded-xl border-2 transition-all duration-200 text-left',
+                        'p-4 rounded-2xl border-2 transition-all duration-200 text-left active:scale-[0.98]',
                         isSelected
-                          ? 'border-primary bg-primary/10'
-                          : 'border-border hover:border-primary/50'
+                          ? 'border-primary bg-primary/8'
+                          : 'border-border hover:border-primary/30 hover:bg-muted/50'
                       )}
                     >
                       <div className="flex items-center justify-between">
-                        <span className="font-medium text-sm">{option}</span>
-                        {isSelected && <Check className="w-4 h-4 text-primary" />}
+                        <span className="font-medium">{option}</span>
+                        {isSelected && <Check className="w-5 h-5 text-primary" />}
                       </div>
                     </button>
                   );
@@ -249,14 +249,14 @@ export const OnboardingScreen: React.FC = () => {
         </div>
       </div>
 
-      {/* Navigation */}
+      {/* Navigation - large, thumb-friendly */}
       <div className="p-6 flex gap-3">
         {!isFirstStep && (
           <Button
             variant="outline"
             size="lg"
             onClick={handleBack}
-            className="rounded-full px-6"
+            className="px-6"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back
@@ -268,14 +268,14 @@ export const OnboardingScreen: React.FC = () => {
           onClick={handleNext}
           disabled={!canProceed()}
           className={cn(
-            'flex-1 rounded-full aura-gradient',
+            'flex-1',
             !canProceed() && 'opacity-50'
           )}
         >
           {isLastStep ? (
             <>
               <Sparkles className="w-4 h-4 mr-2" />
-              Start with AURA
+              Start with AURRA
             </>
           ) : (
             <>

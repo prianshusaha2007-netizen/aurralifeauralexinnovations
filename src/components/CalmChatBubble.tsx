@@ -30,14 +30,14 @@ export const CalmChatBubble: React.FC<CalmChatBubbleProps> = ({
     try {
       await navigator.clipboard.writeText(content);
       setCopied(true);
-      toast.success('Copied 📋', { duration: 1500 });
+      toast.success('Copied', { duration: 1500 });
       setTimeout(() => setCopied(false), 2000);
     } catch {
       toast.error('Could not copy');
     }
   };
 
-  // Parse basic markdown for AURA responses
+  // Parse basic markdown for AURRA responses
   const renderContent = (text: string) => {
     if (isUser) return text;
     
@@ -53,37 +53,38 @@ export const CalmChatBubble: React.FC<CalmChatBubbleProps> = ({
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 8 }}
+      initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.25, ease: 'easeOut' }}
+      transition={{ duration: 0.2, ease: 'easeOut' }}
       className={cn(
         'flex w-full gap-3 group',
         isUser ? 'justify-end' : 'justify-start'
       )}
       onMouseEnter={() => setShowActions(true)}
       onMouseLeave={() => setShowActions(false)}
+      onTouchStart={() => setShowActions(true)}
     >
-      {/* AURA Avatar */}
+      {/* AURRA Avatar - Friendly, approachable */}
       {!isUser && (
         <div className="flex-shrink-0 mt-auto">
-          <div className="w-9 h-9 rounded-full overflow-hidden shadow-md ring-2 ring-primary/10">
+          <div className="w-10 h-10 rounded-2xl overflow-hidden shadow-sm ring-1 ring-border/30">
             <img 
               src={auraAvatar} 
-              alt="AURA" 
+              alt="AURRA" 
               className="w-full h-full object-cover"
             />
           </div>
         </div>
       )}
 
-      <div className="flex flex-col max-w-[85%] sm:max-w-[75%]">
-        {/* Message Bubble */}
+      <div className="flex flex-col max-w-[88%] sm:max-w-[78%]">
+        {/* Message Bubble - Soft, rounded, warm */}
         <div 
           className={cn(
-            'relative px-4 py-3',
+            'relative px-4 py-3.5',
             isUser 
-              ? 'bg-primary text-primary-foreground rounded-2xl rounded-br-sm' 
-              : 'bg-card/80 backdrop-blur-sm border border-border/40 text-foreground rounded-2xl rounded-bl-sm'
+              ? 'bg-primary text-primary-foreground rounded-3xl rounded-br-lg shadow-sm' 
+              : 'bg-card border border-border/50 text-foreground rounded-3xl rounded-bl-lg shadow-sm'
           )}
         >
           <p className="text-[15px] leading-relaxed whitespace-pre-wrap">
@@ -91,33 +92,33 @@ export const CalmChatBubble: React.FC<CalmChatBubbleProps> = ({
           </p>
         </div>
 
-        {/* Meta & Actions */}
+        {/* Meta & Actions - Minimal, non-intrusive */}
         <div className={cn(
-          "flex items-center gap-2 mt-1.5 px-1",
+          "flex items-center gap-2 mt-1.5 px-2",
           isUser ? "justify-end" : "justify-start"
         )}>
-          {/* Timestamp */}
-          <span className="text-[11px] text-muted-foreground/60">
+          {/* Timestamp - Subtle */}
+          <span className="text-[11px] text-muted-foreground/50 font-medium">
             {format(new Date(timestamp), 'h:mm a')}
           </span>
 
-          {/* Actions - show on hover for AURA messages */}
+          {/* Actions - appear on interaction */}
           {!isUser && (
             <motion.div 
               initial={{ opacity: 0 }}
               animate={{ opacity: showActions ? 1 : 0 }}
-              className="flex items-center gap-1"
+              className="flex items-center gap-0.5"
             >
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={handleCopy}
-                className="h-6 w-6 rounded-full hover:bg-muted/80"
+                className="h-7 w-7 rounded-xl hover:bg-muted/60"
               >
                 {copied ? (
-                  <Check className="w-3 h-3 text-green-500" />
+                  <Check className="w-3.5 h-3.5 text-primary" />
                 ) : (
-                  <Copy className="w-3 h-3 text-muted-foreground" />
+                  <Copy className="w-3.5 h-3.5 text-muted-foreground" />
                 )}
               </Button>
               {onSpeak && (
@@ -125,9 +126,9 @@ export const CalmChatBubble: React.FC<CalmChatBubbleProps> = ({
                   variant="ghost"
                   size="icon"
                   onClick={() => onSpeak(content)}
-                  className="h-6 w-6 rounded-full hover:bg-muted/80"
+                  className="h-7 w-7 rounded-xl hover:bg-muted/60"
                 >
-                  <Volume2 className="w-3 h-3 text-muted-foreground" />
+                  <Volume2 className="w-3.5 h-3.5 text-muted-foreground" />
                 </Button>
               )}
             </motion.div>
