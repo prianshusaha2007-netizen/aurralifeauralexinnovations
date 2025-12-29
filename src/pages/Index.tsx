@@ -2,11 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
 import { AuraProvider, useAura } from '@/contexts/AuraContext';
 import { useAuth } from '@/hooks/useAuth';
+import { useTheme } from '@/contexts/ThemeContext';
 import { AppSidebar, TabId } from '@/components/AppSidebar';
 import { GlobalBottomNav } from '@/components/GlobalBottomNav';
 import { ReminderPopup } from '@/components/ReminderPopup';
 import { CalmChatScreen } from '@/screens/CalmChatScreen';
-import { MemoriesScreen } from '@/screens/MemoriesScreen';
+import { LifeMemoriesScreen } from '@/screens/LifeMemoriesScreen';
 import { RoutineScreen } from '@/screens/RoutineScreen';
 import { SettingsScreen } from '@/screens/SettingsScreen';
 import { OnboardingScreen } from '@/screens/OnboardingScreen';
@@ -37,6 +38,7 @@ import { useMorningBriefing } from '@/hooks/useMorningBriefing';
 
 const AppContent: React.FC = () => {
   const { userProfile, isLoading, clearChatHistory } = useAura();
+  const { setUserSchedule } = useTheme();
   const [activeTab, setActiveTab] = useState<TabId>('chat');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [voiceModeOpen, setVoiceModeOpen] = useState(false);
@@ -47,6 +49,16 @@ const AppContent: React.FC = () => {
   const { activeReminder, snoozeReminder, completeReminder, dismissActiveReminder } = useReminders();
   
   useMorningBriefing();
+
+  // Sync user schedule to theme context for auto dark/light mode
+  useEffect(() => {
+    if (userProfile.wakeTime && userProfile.sleepTime) {
+      setUserSchedule({
+        wakeTime: userProfile.wakeTime,
+        sleepTime: userProfile.sleepTime,
+      });
+    }
+  }, [userProfile.wakeTime, userProfile.sleepTime, setUserSchedule]);
 
   const handlePermissionsComplete = () => {
     localStorage.setItem('aura-permissions-complete', 'true');
@@ -85,7 +97,7 @@ const AppContent: React.FC = () => {
     switch (activeTab) {
       case 'chat': return <CalmChatScreen onMenuClick={() => setSidebarOpen(true)} />;
       case 'games': return <PlayLearnScreen />;
-      case 'memories': return <MemoriesScreen />;
+      case 'memories': return <LifeMemoriesScreen />;
       case 'routine': return <DailyRoutineScreen onMenuClick={() => setSidebarOpen(true)} />;
       case 'habits': return <HabitTrackerScreen />;
       case 'hydration': return <HydrationScreen />;

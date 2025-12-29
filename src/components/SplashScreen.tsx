@@ -124,7 +124,7 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete }) => {
               animate={{ opacity: phase === 'text' ? 1 : 0 }}
               transition={{ duration: 0.3, delay: 0.4 }}
             >
-              Your AI Companion 💫
+              Your all-time AI companion
             </motion.p>
           </motion.div>
 
