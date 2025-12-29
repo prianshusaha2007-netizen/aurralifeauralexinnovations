@@ -125,10 +125,6 @@ export const useReminders = () => {
     toast(`${reminder.icon} ${reminder.title}`, {
       description: "Time for your reminder!",
       duration: 10000,
-      action: {
-        label: "Done",
-        onClick: () => completeReminder(reminder.id),
-      },
     });
   }, [showNotification]);
 
