@@ -1,11 +1,13 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Mic, MicOff, Phone, Volume2 } from 'lucide-react';
+import { Mic, MicOff, Phone, Volume2, History } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AuraOrb } from './AuraOrb';
 import { AudioWaveform } from './AudioWaveform';
 import { VolumeIndicator } from './VolumeIndicator';
+import { VoiceHistorySheet } from './VoiceHistorySheet';
 import { RealtimeChat } from '@/utils/RealtimeAudio';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 interface ContinuousVoiceModeProps {
@@ -28,15 +30,48 @@ export const ContinuousVoiceMode: React.FC<ContinuousVoiceModeProps> = ({
   const [auraResponse, setAuraResponse] = useState('');
   const [analyser, setAnalyser] = useState<AnalyserNode | null>(null);
   const [inputAnalyser, setInputAnalyser] = useState<AnalyserNode | null>(null);
+  const [showHistory, setShowHistory] = useState(false);
   const chatRef = useRef<RealtimeChat | null>(null);
+  const conversationIdRef = useRef<string>(crypto.randomUUID());
+  const pendingUserTranscriptRef = useRef<string>('');
+  const pendingAuraTranscriptRef = useRef<string>('');
 
   const handleVoiceActivity = useCallback((isActive: boolean) => {
     setIsUserSpeaking(isActive);
   }, []);
 
-  const handleMessage = (event: any) => {
+  // Save transcript to database
+  const saveTranscript = useCallback(async (role: 'user' | 'assistant', content: string) => {
+    if (!content.trim()) return;
+    
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      await supabase.from('voice_transcripts').insert({
+        user_id: user.id,
+        conversation_id: conversationIdRef.current,
+        role,
+        content: content.trim()
+      });
+    } catch (error) {
+      console.error('Error saving transcript:', error);
+    }
+  }, []);
+
+  const handleMessage = useCallback((event: any) => {
     console.log('Voice mode event:', event.type);
-  };
+    
+    // Capture user's speech transcription
+    if (event.type === 'conversation.item.input_audio_transcription.completed') {
+      const userText = event.transcript || '';
+      if (userText.trim()) {
+        pendingUserTranscriptRef.current = userText;
+        setTranscript(userText);
+        saveTranscript('user', userText);
+      }
+    }
+  }, [saveTranscript]);
 
   const handleSpeakingChange = useCallback((speaking: boolean) => {
     setIsSpeaking(speaking);
@@ -48,18 +83,26 @@ export const ContinuousVoiceMode: React.FC<ContinuousVoiceModeProps> = ({
         setAnalyser(chatRef.current.getInputAnalyser());
       }
     }
-  }, []);
-
-  const handleTranscript = (text: string, isFinal: boolean) => {
-    if (isFinal) {
-      setAuraResponse(prev => prev + text);
-    } else {
-      setAuraResponse(prev => prev + text);
+    
+    // When AI stops speaking, save the accumulated response
+    if (!speaking && pendingAuraTranscriptRef.current.trim()) {
+      saveTranscript('assistant', pendingAuraTranscriptRef.current);
+      pendingAuraTranscriptRef.current = '';
     }
-  };
+  }, [saveTranscript]);
+
+  const handleTranscript = useCallback((text: string, isFinal: boolean) => {
+    pendingAuraTranscriptRef.current += text;
+    setAuraResponse(prev => prev + text);
+  }, []);
 
   const startConversation = async () => {
     setIsConnecting(true);
+    // Generate new conversation ID for this session
+    conversationIdRef.current = crypto.randomUUID();
+    pendingUserTranscriptRef.current = '';
+    pendingAuraTranscriptRef.current = '';
+    
     try {
       chatRef.current = new RealtimeChat(
         handleMessage,
@@ -281,17 +324,31 @@ export const ContinuousVoiceMode: React.FC<ContinuousVoiceModeProps> = ({
             )}
           </motion.div>
 
-          {/* Close button */}
-          <Button
-            variant="ghost"
-            className="absolute top-4 right-4"
-            onClick={() => {
-              if (isConnected) endConversation();
-              onClose();
-            }}
-          >
-            Close
-          </Button>
+          {/* History and Close buttons */}
+          <div className="absolute top-4 right-4 flex gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setShowHistory(true)}
+            >
+              <History className="w-5 h-5" />
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={() => {
+                if (isConnected) endConversation();
+                onClose();
+              }}
+            >
+              Close
+            </Button>
+          </div>
+
+          {/* Voice History Sheet */}
+          <VoiceHistorySheet 
+            open={showHistory} 
+            onOpenChange={setShowHistory} 
+          />
         </div>
       </motion.div>
     </AnimatePresence>
