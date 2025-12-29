@@ -17,9 +17,14 @@ import {
   BellRing,
   Mic,
   Shield,
-  FileText
+  FileText,
+  Clock,
+  Sunrise,
+  Sunset
 } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 import { useAura } from '@/contexts/AuraContext';
 import { useAuth } from '@/hooks/useAuth';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -29,7 +34,7 @@ import { WeeklyEmailSettings } from '@/components/WeeklyEmailSettings';
 import { VoiceSettingsPanel } from '@/components/VoiceSettingsPanel';
 import { MicrophoneTest } from '@/components/MicrophoneTest';
 import { ResetPermissionsGuide } from '@/components/ResetPermissionsGuide';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { useMorningBriefing } from '@/hooks/useMorningBriefing';
 
@@ -38,13 +43,19 @@ export const SettingsScreen: React.FC = () => {
   const { signOut } = useAuth();
   const { 
     userProfile, 
+    updateUserProfile,
     clearChatHistory, 
     clearAllMemories 
   } = useAura();
-  const { mode, activeTheme, setMode } = useTheme();
+  const { mode, activeTheme, setMode, setUserSchedule } = useTheme();
   const { toast } = useToast();
   const { subscribeToPush, unsubscribeFromPush, checkSubscription, isSupported } = usePushNotifications();
   const { showBriefingNotification } = useMorningBriefing();
+  
+  // Schedule state
+  const [wakeTime, setWakeTime] = useState(userProfile.wakeTime || '07:00');
+  const [sleepTime, setSleepTime] = useState(userProfile.sleepTime || '23:00');
+  const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
   
   // Voice settings state
   const [voiceSettings, setVoiceSettings] = useState(() => {
@@ -119,13 +130,39 @@ export const SettingsScreen: React.FC = () => {
     setMode(modes[nextIndex]);
     toast({
       title: `Theme: ${modes[nextIndex].charAt(0).toUpperCase() + modes[nextIndex].slice(1)}`,
-      description: modes[nextIndex] === 'auto' ? 'Adapts to time of day' : `${modes[nextIndex]} mode enabled`,
+      description: modes[nextIndex] === 'auto' ? 'Adapts to your schedule' : `${modes[nextIndex]} mode enabled`,
+    });
+  };
+
+  const handleSaveSchedule = () => {
+    // Update the theme context
+    setUserSchedule({ wakeTime, sleepTime });
+    
+    // Also update the user profile so it persists
+    updateUserProfile({ 
+      wakeTime, 
+      sleepTime,
+      onboardingComplete: true // Ensure profile saves
+    });
+    
+    setScheduleDialogOpen(false);
+    toast({
+      title: "Schedule Updated",
+      description: `Wake: ${wakeTime}, Sleep: ${sleepTime}`,
     });
   };
 
   const getThemeIcon = () => {
     if (mode === 'auto') return Monitor;
     return activeTheme === 'dark' ? Moon : Sun;
+  };
+
+  const formatTime = (time: string) => {
+    const [hours, minutes] = time.split(':');
+    const h = parseInt(hours);
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    const h12 = h % 12 || 12;
+    return `${h12}:${minutes} ${ampm}`;
   };
 
   const settingsSections = [
@@ -135,8 +172,15 @@ export const SettingsScreen: React.FC = () => {
         {
           icon: getThemeIcon(),
           label: 'Theme Mode',
-          description: `${mode.charAt(0).toUpperCase() + mode.slice(1)} mode${mode === 'auto' ? ' (adapts to time)' : ''}`,
+          description: `${mode.charAt(0).toUpperCase() + mode.slice(1)} mode${mode === 'auto' ? ' (adapts to schedule)' : ''}`,
           onClick: cycleThemeMode,
+          action: <ChevronRight className="w-5 h-5 text-muted-foreground" />,
+        },
+        {
+          icon: Clock,
+          label: 'Daily Schedule',
+          description: `Wake ${formatTime(userProfile.wakeTime || '07:00')} • Sleep ${formatTime(userProfile.sleepTime || '23:00')}`,
+          isScheduleSettings: true,
           action: <ChevronRight className="w-5 h-5 text-muted-foreground" />,
         },
       ],
@@ -282,11 +326,65 @@ export const SettingsScreen: React.FC = () => {
 
   return (
     <div className="flex flex-col h-full p-4 pb-24">
+      {/* Schedule Settings Dialog */}
+      <Dialog open={scheduleDialogOpen} onOpenChange={setScheduleDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Daily Schedule</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-6 py-4">
+            <p className="text-sm text-muted-foreground">
+              Set your wake and sleep times. In auto mode, the theme will switch to dark during your sleep hours.
+            </p>
+            
+            <div className="space-y-4">
+              <div className="flex items-center gap-4">
+                <div className="p-2 rounded-xl bg-amber-500/10">
+                  <Sunrise className="w-5 h-5 text-amber-500" />
+                </div>
+                <div className="flex-1">
+                  <label className="text-sm font-medium mb-1.5 block">Wake Time</label>
+                  <Input
+                    type="time"
+                    value={wakeTime}
+                    onChange={(e) => setWakeTime(e.target.value)}
+                    className="rounded-xl"
+                  />
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-4">
+                <div className="p-2 rounded-xl bg-indigo-500/10">
+                  <Sunset className="w-5 h-5 text-indigo-500" />
+                </div>
+                <div className="flex-1">
+                  <label className="text-sm font-medium mb-1.5 block">Sleep Time</label>
+                  <Input
+                    type="time"
+                    value={sleepTime}
+                    onChange={(e) => setSleepTime(e.target.value)}
+                    className="rounded-xl"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setScheduleDialogOpen(false)} className="rounded-xl">
+              Cancel
+            </Button>
+            <Button onClick={handleSaveSchedule} className="rounded-xl">
+              Save Schedule
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Header */}
       <div className="mb-6">
         <h1 className="text-2xl font-bold aura-gradient-text">Settings</h1>
         <p className="text-sm text-muted-foreground mt-1">
-          Customize your AURA experience
+          Customize your AURRA experience
         </p>
       </div>
 
@@ -297,12 +395,12 @@ export const SettingsScreen: React.FC = () => {
             <Sparkles className="w-6 h-6 text-primary" />
           </div>
           <div>
-            <h2 className="font-semibold">AURA</h2>
-            <p className="text-xs text-muted-foreground">Your All-Time AI Companion</p>
+            <h2 className="font-semibold">AURRA</h2>
+            <p className="text-xs text-muted-foreground">Your all-time AI companion</p>
           </div>
         </div>
         <p className="text-xs text-muted-foreground mt-3">
-          Version 1.0 • Made with 💜
+          Version 1.0
         </p>
       </div>
 
@@ -319,6 +417,30 @@ export const SettingsScreen: React.FC = () => {
               ) : (
                 'items' in section && section.items?.map((item: any, index: number) => {
                   const Icon = item.icon;
+                  
+                  // Schedule settings
+                  if (item.isScheduleSettings) {
+                    return (
+                      <button
+                        key={item.label}
+                        onClick={() => setScheduleDialogOpen(true)}
+                        className={cn(
+                          'flex items-center gap-4 w-full p-4 text-left -mx-4',
+                          'hover:bg-muted/50 transition-colors',
+                          index !== (section.items?.length ?? 0) - 1 && 'border-b border-border/50'
+                        )}
+                      >
+                        <div className="p-2 rounded-lg bg-muted text-foreground">
+                          <Icon className="w-4 h-4" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium">{item.label}</p>
+                          <p className="text-xs text-muted-foreground truncate">{item.description}</p>
+                        </div>
+                        {item.action}
+                      </button>
+                    );
+                  }
                   
                   // Voice settings with dialog
                   if (item.isVoiceSettings) {
