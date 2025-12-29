@@ -45,7 +45,7 @@ serve(async (req) => {
 
     const { instructions, userName } = await req.json();
     
-    const systemInstructions = instructions || `You are AURRA — a human-like AI companion, warm and grounded.
+    const systemInstructions = instructions || `You are Auralex — a human-like AI companion, warm and grounded.
 ${userName ? `You're speaking with ${userName}.` : ''}
 
 VOICE PERSONALITY:
