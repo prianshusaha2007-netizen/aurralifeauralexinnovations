@@ -2,13 +2,14 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Mic, MicOff, Phone, Volume2, History } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { AuraOrb } from './AuraOrb';
+import { AuraAvatar } from './AuraAvatar';
 import { AudioWaveform } from './AudioWaveform';
 import { VolumeIndicator } from './VolumeIndicator';
 import { VoiceHistorySheet } from './VoiceHistorySheet';
 import { RealtimeChat } from '@/utils/RealtimeAudio';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { usePersonaContext } from '@/contexts/PersonaContext';
 
 interface ContinuousVoiceModeProps {
   isOpen: boolean;
@@ -21,6 +22,7 @@ export const ContinuousVoiceMode: React.FC<ContinuousVoiceModeProps> = ({
   onClose,
   userName = 'there'
 }) => {
+  const { avatarStyle } = usePersonaContext();
   const [isConnected, setIsConnected] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
@@ -208,16 +210,18 @@ export const ContinuousVoiceMode: React.FC<ContinuousVoiceModeProps> = ({
             </p>
           </motion.div>
 
-          {/* Main orb */}
+          {/* Main avatar */}
           <motion.div
             initial={{ scale: 0.8, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ type: "spring", stiffness: 200, damping: 20 }}
           >
-            <AuraOrb 
+            <AuraAvatar 
+              style={avatarStyle as any}
               size="xl" 
               isThinking={isConnecting} 
-              className={isSpeaking ? 'animate-pulse-glow' : ''}
+              isSpeaking={isSpeaking}
+              showBreathing={true}
             />
           </motion.div>
 
