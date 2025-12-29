@@ -70,7 +70,7 @@ export const CalmChatBubble: React.FC<CalmChatBubbleProps> = ({
           <div className="w-10 h-10 rounded-2xl overflow-hidden shadow-sm ring-1 ring-border/30">
             <img 
               src={auraAvatar} 
-              alt="AURRA" 
+              alt="Auralex" 
               className="w-full h-full object-cover"
             />
           </div>
