@@ -9,6 +9,7 @@ import { VoiceInputButton } from '@/components/VoiceInputButton';
 import { VoiceModal } from '@/components/VoiceModal';
 import { WeeklyReflectionModal } from '@/components/WeeklyReflectionModal';
 import { CodingMentorBanner, CodingMentorMode } from '@/components/CodingMentorMode';
+import { RoutineVisualCard, RoutineVisualButton } from '@/components/RoutineVisualCard';
 import { useAura } from '@/contexts/AuraContext';
 import { useAuraChat } from '@/hooks/useAuraChat';
 import { useVoiceFeedback } from '@/hooks/useVoiceFeedback';
@@ -17,6 +18,7 @@ import { useMorningBriefing } from '@/hooks/useMorningBriefing';
 import { useMediaActions } from '@/hooks/useMediaActions';
 import { useWeeklyReflection } from '@/hooks/useWeeklyReflection';
 import { useRoutineBlocks } from '@/hooks/useRoutineBlocks';
+import { useRoutineVisualization } from '@/hooks/useRoutineVisualization';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -85,7 +87,17 @@ export const CalmChatScreen: React.FC<CalmChatScreenProps> = ({ onMenuClick }) =
   const { briefing, isLoading: isBriefingLoading, fetchBriefing } = useMorningBriefing();
   const { analyzeFile, generateImage, createDocument, downloadDocument, downloadImage, isUploading, isGenerating, isCreatingDoc } = useMediaActions();
   const { showReflectionPrompt, lastWeekStats, saveReflection, dismissReflection } = useWeeklyReflection();
-  const { activeBlock } = useRoutineBlocks();
+  const { activeBlock, blocks } = useRoutineBlocks();
+  const { 
+    routineVisual, 
+    isGenerating: isGeneratingVisual, 
+    showVisual, 
+    detectRoutineConfirmation, 
+    generateRoutineVisual, 
+    dismissVisual, 
+    openVisual, 
+    getVisualMessage 
+  } = useRoutineVisualization();
   
   const [inputValue, setInputValue] = useState('');
   const [statusIndex, setStatusIndex] = useState(0);
@@ -248,6 +260,17 @@ export const CalmChatScreen: React.FC<CalmChatScreenProps> = ({ onMenuClick }) =
       return;
     }
 
+    // Check for routine confirmation intent - auto-generate visual
+    if (detectRoutineConfirmation(messageToSend) && blocks.length > 0) {
+      // Generate the routine visual in the background
+      generateRoutineVisual(blocks).then((visual) => {
+        if (visual) {
+          const message = getVisualMessage();
+          addChatMessage({ content: message, sender: 'aura' });
+        }
+      });
+    }
+
     // Check for memory intent
     const noPrompts = localStorage.getItem('aura-no-memory-prompts') === 'true';
     if (!noPrompts && detectMemoryIntent(messageToSend)) {
@@ -337,15 +360,25 @@ export const CalmChatScreen: React.FC<CalmChatScreenProps> = ({ onMenuClick }) =
             </div>
           </div>
           
-          {/* Voice Mode Button */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="rounded-full h-10 w-10 text-muted-foreground hover:text-primary hover:bg-primary/10"
-            onClick={() => setShowVoiceMode(true)}
-          >
-            <Headphones className="w-5 h-5" />
-          </Button>
+          <div className="flex items-center gap-2">
+            {/* Routine Visual Button - shows when visual exists but is hidden */}
+            {routineVisual && !showVisual && (
+              <RoutineVisualButton
+                hasVisual={!!routineVisual}
+                onClick={openVisual}
+              />
+            )}
+            
+            {/* Voice Mode Button */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="rounded-full h-10 w-10 text-muted-foreground hover:text-primary hover:bg-primary/10"
+              onClick={() => setShowVoiceMode(true)}
+            >
+              <Headphones className="w-5 h-5" />
+            </Button>
+          </div>
         </div>
       </header>
 
@@ -462,6 +495,18 @@ export const CalmChatScreen: React.FC<CalmChatScreenProps> = ({ onMenuClick }) =
               </motion.div>
             )}
           </AnimatePresence>
+
+          {/* Routine Visual Display */}
+          {routineVisual && (
+            <RoutineVisualCard
+              imageUrl={routineVisual.imageUrl}
+              isVisible={showVisual}
+              isGenerating={isGeneratingVisual}
+              onDismiss={dismissVisual}
+              onRegenerate={() => generateRoutineVisual(blocks)}
+              className="max-w-sm"
+            />
+          )}
 
           {/* Quick Actions - Show when chat is empty or minimal */}
           <AnimatePresence>
