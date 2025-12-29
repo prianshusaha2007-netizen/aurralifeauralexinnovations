@@ -3,8 +3,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { toast } from 'sonner';
 
-// VAPID public key - in production, generate your own
-const VAPID_PUBLIC_KEY = 'BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjBJuBkr3qBUYIHBQFLXYp5Nksh8U';
+// VAPID public key from environment variable
+const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY || '';
 
 export const usePushNotifications = () => {
   const { user } = useAuth();
@@ -36,6 +36,13 @@ export const usePushNotifications = () => {
 
   const subscribeToPush = useCallback(async (): Promise<boolean> => {
     if (!user) return false;
+
+    // Validate VAPID key is configured
+    if (!VAPID_PUBLIC_KEY) {
+      console.warn('VAPID public key not configured. Push notifications unavailable.');
+      toast.error('Push notifications not configured');
+      return false;
+    }
 
     try {
       const hasPermission = await requestPermission();
