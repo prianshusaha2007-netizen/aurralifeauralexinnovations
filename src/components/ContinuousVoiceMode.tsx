@@ -23,11 +23,16 @@ export const ContinuousVoiceMode: React.FC<ContinuousVoiceModeProps> = ({
   const [isConnecting, setIsConnecting] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
+  const [isUserSpeaking, setIsUserSpeaking] = useState(false);
   const [transcript, setTranscript] = useState('');
   const [auraResponse, setAuraResponse] = useState('');
   const [analyser, setAnalyser] = useState<AnalyserNode | null>(null);
   const [inputAnalyser, setInputAnalyser] = useState<AnalyserNode | null>(null);
   const chatRef = useRef<RealtimeChat | null>(null);
+
+  const handleVoiceActivity = useCallback((isActive: boolean) => {
+    setIsUserSpeaking(isActive);
+  }, []);
 
   const handleMessage = (event: any) => {
     console.log('Voice mode event:', event.type);
@@ -95,8 +100,10 @@ export const ContinuousVoiceMode: React.FC<ContinuousVoiceModeProps> = ({
   };
 
   const toggleMute = () => {
-    setIsMuted(!isMuted);
-    // In a full implementation, you would mute the audio track
+    const newMuteState = !isMuted;
+    setIsMuted(newMuteState);
+    chatRef.current?.setMuted(newMuteState);
+    toast(newMuteState ? 'Microphone muted' : 'Microphone unmuted');
   };
 
   useEffect(() => {
@@ -151,7 +158,9 @@ export const ContinuousVoiceMode: React.FC<ContinuousVoiceModeProps> = ({
           >
             <p className="text-sm text-muted-foreground">
               {isConnecting ? 'Connecting...' : 
-               isConnected ? (isSpeaking ? 'AURA is speaking...' : 'Listening...') : 
+               isMuted ? '🔇 Microphone muted' :
+               isConnected ? (isSpeaking ? 'AURA is speaking...' : 
+                 isUserSpeaking ? '🎙️ You are speaking...' : 'Listening...') : 
                'Voice Conversation Mode'}
             </p>
           </motion.div>
@@ -178,11 +187,13 @@ export const ContinuousVoiceMode: React.FC<ContinuousVoiceModeProps> = ({
               transition={{ delay: 0.3 }}
             >
               <div className="flex items-center justify-center gap-6">
-                {/* Volume Indicator */}
+                {/* Volume Indicator with VAD */}
                 <VolumeIndicator
                   analyser={inputAnalyser}
-                  isActive={isConnected && !isSpeaking}
+                  isActive={isConnected && !isSpeaking && !isMuted}
                   showLabel={true}
+                  onVoiceActivity={handleVoiceActivity}
+                  vadThreshold={15}
                 />
                 
                 {/* Audio Waveform */}
@@ -194,7 +205,9 @@ export const ContinuousVoiceMode: React.FC<ContinuousVoiceModeProps> = ({
                     className="mx-auto"
                   />
                   <p className="text-xs text-center text-muted-foreground mt-2">
-                    {isSpeaking ? '🔊 AURA is responding' : '🎤 Listening to you'}
+                    {isMuted ? '🔇 Muted' : 
+                     isSpeaking ? '🔊 AURA is responding' : 
+                     isUserSpeaking ? '🎙️ Hearing you...' : '🎤 Listening...'}
                   </p>
                 </div>
               </div>
