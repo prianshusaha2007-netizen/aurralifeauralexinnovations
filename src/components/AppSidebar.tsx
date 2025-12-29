@@ -20,6 +20,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { AuraOrb } from '@/components/AuraOrb';
+import { ThemeToggle } from '@/components/ThemeToggle';
 import { cn } from '@/lib/utils';
 
 export type TabId = 
@@ -116,13 +117,16 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
           <div className="flex items-center gap-3">
             <AuraOrb size="sm" />
             <div>
-              <h2 className="font-bold text-lg aura-gradient-text">AURRA</h2>
-              <p className="text-xs text-muted-foreground">Your AI Companion</p>
+              <h2 className="font-bold text-lg aura-gradient-text">Auralex</h2>
+              <p className="text-xs text-muted-foreground">Human-Centric AI</p>
             </div>
           </div>
-          <Button variant="ghost" size="icon" onClick={onClose} className="rounded-full">
-            <X className="w-5 h-5" />
-          </Button>
+          <div className="flex items-center gap-1">
+            <ThemeToggle />
+            <Button variant="ghost" size="icon" onClick={onClose} className="rounded-full">
+              <X className="w-5 h-5" />
+            </Button>
+          </div>
         </div>
 
         {/* Menu Items */}

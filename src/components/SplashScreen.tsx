@@ -89,7 +89,7 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete }) => {
             >
               <motion.img 
                 src={auraLogo} 
-                alt="AURRA" 
+                alt="Auralex" 
                 className="w-full h-full object-cover"
                 animate={{
                   scale: [1, 1.02, 1],
@@ -116,7 +116,7 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete }) => {
             <motion.h1 
               className="text-3xl font-bold tracking-wide aura-gradient-text"
             >
-              AURRA
+              Auralex
             </motion.h1>
             <motion.p
               className="mt-2 text-sm font-medium text-muted-foreground"
@@ -124,7 +124,7 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete }) => {
               animate={{ opacity: phase === 'text' ? 1 : 0 }}
               transition={{ duration: 0.3, delay: 0.4 }}
             >
-              Your all-time AI companion
+              Human-Centric AI
             </motion.p>
           </motion.div>
 
