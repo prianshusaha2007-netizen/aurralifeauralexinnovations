@@ -616,6 +616,48 @@ export type Database = {
         }
         Relationships: []
       }
+      weekly_reflections: {
+        Row: {
+          challenges: string | null
+          created_at: string
+          focus_blocks_completed: number | null
+          gratitude: string | null
+          highlights: string | null
+          id: string
+          next_week_intention: string | null
+          overall_feeling: string | null
+          user_id: string
+          week_end: string
+          week_start: string
+        }
+        Insert: {
+          challenges?: string | null
+          created_at?: string
+          focus_blocks_completed?: number | null
+          gratitude?: string | null
+          highlights?: string | null
+          id?: string
+          next_week_intention?: string | null
+          overall_feeling?: string | null
+          user_id: string
+          week_end: string
+          week_start: string
+        }
+        Update: {
+          challenges?: string | null
+          created_at?: string
+          focus_blocks_completed?: number | null
+          gratitude?: string | null
+          highlights?: string | null
+          id?: string
+          next_week_intention?: string | null
+          overall_feeling?: string | null
+          user_id?: string
+          week_end?: string
+          week_start?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

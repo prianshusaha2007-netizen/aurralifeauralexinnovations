@@ -7,12 +7,14 @@ import { MediaToolsSheet } from '@/components/MediaToolsSheet';
 import { ChatQuickActions } from '@/components/ChatQuickActions';
 import { VoiceInputButton } from '@/components/VoiceInputButton';
 import { VoiceModal } from '@/components/VoiceModal';
+import { WeeklyReflectionModal } from '@/components/WeeklyReflectionModal';
 import { useAura } from '@/contexts/AuraContext';
 import { useAuraChat } from '@/hooks/useAuraChat';
 import { useVoiceFeedback } from '@/hooks/useVoiceFeedback';
 import { useRotatingPlaceholder } from '@/hooks/useRotatingPlaceholder';
 import { useMorningBriefing } from '@/hooks/useMorningBriefing';
 import { useMediaActions } from '@/hooks/useMediaActions';
+import { useWeeklyReflection } from '@/hooks/useWeeklyReflection';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -80,6 +82,7 @@ export const CalmChatScreen: React.FC<CalmChatScreenProps> = ({ onMenuClick }) =
   const { placeholder } = useRotatingPlaceholder(6000);
   const { briefing, isLoading: isBriefingLoading, fetchBriefing } = useMorningBriefing();
   const { analyzeFile, generateImage, createDocument, downloadDocument, downloadImage, isUploading, isGenerating, isCreatingDoc } = useMediaActions();
+  const { showReflectionPrompt, lastWeekStats, saveReflection, dismissReflection } = useWeeklyReflection();
   
   const [inputValue, setInputValue] = useState('');
   const [statusIndex, setStatusIndex] = useState(0);
@@ -635,6 +638,15 @@ export const CalmChatScreen: React.FC<CalmChatScreenProps> = ({ onMenuClick }) =
       <VoiceModal
         isOpen={showVoiceMode}
         onClose={() => setShowVoiceMode(false)}
+        userName={userProfile.name}
+      />
+
+      {/* Weekly Reflection Modal */}
+      <WeeklyReflectionModal
+        isOpen={showReflectionPrompt}
+        onClose={dismissReflection}
+        onSave={saveReflection}
+        stats={lastWeekStats}
         userName={userProfile.name}
       />
     </div>
