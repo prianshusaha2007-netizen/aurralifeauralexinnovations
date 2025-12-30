@@ -1,8 +1,9 @@
 import React from 'react';
-import { Rocket, Brain, PenLine, FileText, Laugh, Wand2 } from 'lucide-react';
+import { Rocket, Brain, PenLine, FileText, Laugh, Wand2, Dumbbell, Target } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import { useNavigate } from 'react-router-dom';
 
 interface ChatQuickActionsProps {
   onAction: (action: string, message: string) => void;
@@ -23,6 +24,22 @@ const QUICK_ACTIONS = [
     icon: Brain, 
     message: "I want to be productive. What should I focus on right now? 🧠",
     gradient: 'from-violet-500 to-purple-500'
+  },
+  { 
+    id: 'workout', 
+    label: 'Start workout', 
+    icon: Dumbbell, 
+    message: "I want to work out today - help me with my gym routine 💪",
+    gradient: 'from-red-500 to-orange-500'
+  },
+  { 
+    id: 'skills', 
+    label: 'My skills', 
+    icon: Target, 
+    message: "Show my skills and progress",
+    gradient: 'from-teal-500 to-cyan-500',
+    isNavigation: true,
+    path: '/skills'
   },
   { 
     id: 'write', 
@@ -55,6 +72,16 @@ const QUICK_ACTIONS = [
 ];
 
 export const ChatQuickActions: React.FC<ChatQuickActionsProps> = ({ onAction, className }) => {
+  const navigate = useNavigate();
+
+  const handleClick = (action: typeof QUICK_ACTIONS[0]) => {
+    if ('isNavigation' in action && action.isNavigation && 'path' in action) {
+      navigate(action.path as string);
+    } else {
+      onAction(action.id, action.message);
+    }
+  };
+
   return (
     <motion.div 
       initial={{ opacity: 0, y: 20 }}
@@ -79,7 +106,7 @@ export const ChatQuickActions: React.FC<ChatQuickActionsProps> = ({ onAction, cl
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => onAction(action.id, action.message)}
+                onClick={() => handleClick(action)}
                 className={cn(
                   "rounded-full px-4 h-10 gap-2 text-sm font-medium",
                   "border-border/60 hover:border-primary/50",
