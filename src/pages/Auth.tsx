@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { AuraOrb } from '@/components/AuraOrb';
+import { PasswordStrengthIndicator } from '@/components/PasswordStrengthIndicator';
 import { toast } from 'sonner';
 import { z } from 'zod';
 
@@ -179,6 +180,9 @@ const Auth: React.FC = () => {
               <p className="text-sm text-destructive mt-1 text-center">{errors.password}</p>
             )}
           </div>
+
+          {/* Password strength indicator for signup */}
+          {!isLogin && <PasswordStrengthIndicator password={password} />}
 
           {/* Terms checkbox for signup */}
           {!isLogin && (
