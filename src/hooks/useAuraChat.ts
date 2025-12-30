@@ -223,6 +223,9 @@ export const useAuraChat = () => {
             wakeTime: userProfile.wakeTime,
             sleepTime: userProfile.sleepTime,
             aiName: userProfile.aiName || 'AURRA',
+            preferredPersona: userProfile.preferredPersona || 'companion',
+            responseStyle: userProfile.responseStyle || 'balanced',
+            askBeforeJoking: userProfile.askBeforeJoking !== false,
           },
         }),
       });

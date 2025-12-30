@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Send, Sparkles, Menu, Volume2, Mic, Radio, Camera, ImagePlus, X, Loader2, Ghost, Timer, ChevronDown, GraduationCap, Gamepad2, Search, Pin, History, Crown } from 'lucide-react';
+import { Send, Sparkles, Menu, Volume2, Mic, Radio, Camera, ImagePlus, X, Loader2, Ghost, Timer, ChevronDown, GraduationCap, Gamepad2, Search, Pin, History, Crown, Settings2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AuraAvatar } from '@/components/AuraAvatar';
 import { ChatBubble } from '@/components/ChatBubble';
@@ -14,6 +14,7 @@ import { TutorMode } from '@/components/TutorMode';
 import { ChatGames, GameType, getGameSystemPrompt } from '@/components/ChatGames';
 import { CreditWarning } from '@/components/CreditWarning';
 import { UpgradeSheet } from '@/components/UpgradeSheet';
+import { ChatSettingsSheet } from '@/components/ChatSettingsSheet';
 import { useAura, ChatMessage } from '@/contexts/AuraContext';
 import { useAuraChat } from '@/hooks/useAuraChat';
 import { useVoiceCommands } from '@/hooks/useVoiceCommands';
@@ -72,6 +73,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ onMenuClick, onVoiceMode
   const [activeGame, setActiveGame] = useState<GameType | null>(null);
   const [replyingTo, setReplyingTo] = useState<ExtendedMessage | null>(null);
   const [showUpgradeSheet, setShowUpgradeSheet] = useState(false);
+  const [showChatSettings, setShowChatSettings] = useState(false);
   const [creditWarningShown, setCreditWarningShown] = useState(false);
   const [messageReactions, setMessageReactions] = useState<Record<string, string[]>>(() => {
     try {
@@ -736,7 +738,10 @@ ${data.improvements?.length > 0 ? `**Tips:** ${data.improvements.join(', ')}` : 
               isThinking={isThinking || isVoiceFeedbackSpeaking} 
               isSpeaking={isVoiceFeedbackSpeaking}
             />
-            <span className="font-semibold text-sm">AURRA</span>
+            <span className="font-semibold text-sm">{aiName}</span>
+            {creditStatus.isPremium && (
+              <Crown className="w-3 h-3 text-primary" />
+            )}
           </div>
           
           {/* Right - Actions */}
@@ -789,6 +794,15 @@ ${data.improvements?.length > 0 ? `**Tips:** ${data.improvements.join(', ')}` : 
               onClick={onVoiceModeClick}
             >
               <Mic className="w-4 h-4" />
+            </Button>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="h-8 w-8 rounded-full" 
+              onClick={() => setShowChatSettings(true)}
+              title="Chat Settings"
+            >
+              <Settings2 className="w-4 h-4" />
             </Button>
           </div>
         </div>
@@ -1163,6 +1177,9 @@ ${data.improvements?.length > 0 ? `**Tips:** ${data.improvements.join(', ')}` : 
       
       {/* Upgrade Sheet */}
       <UpgradeSheet open={showUpgradeSheet} onOpenChange={setShowUpgradeSheet} />
+      
+      {/* Chat Settings Sheet */}
+      <ChatSettingsSheet open={showChatSettings} onOpenChange={setShowChatSettings} />
     </div>
   );
 };

@@ -3,6 +3,12 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 
+export interface MemoryPermissions {
+  goals: boolean;
+  preferences: boolean;
+  emotional: boolean;
+}
+
 export interface UserProfile {
   name: string;
   age: string;
@@ -17,6 +23,10 @@ export interface UserProfile {
   preferredModel: string;
   onboardingComplete: boolean;
   aiName: string; // Custom name for AURRA
+  preferredPersona: string; // companion, mentor, thinking-partner, creative, coach
+  responseStyle: string; // short, balanced, detailed
+  askBeforeJoking: boolean;
+  memoryPermissions: MemoryPermissions;
 }
 
 export interface Memory {
@@ -88,6 +98,14 @@ const defaultUserProfile: UserProfile = {
   preferredModel: 'gemini-flash',
   onboardingComplete: false,
   aiName: 'AURRA',
+  preferredPersona: 'companion',
+  responseStyle: 'balanced',
+  askBeforeJoking: true,
+  memoryPermissions: {
+    goals: true,
+    preferences: true,
+    emotional: true,
+  },
 };
 
 const AuraContext = createContext<AuraContextType | undefined>(undefined);
@@ -131,8 +149,20 @@ export const AuraProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           .maybeSingle();
 
         if (profile) {
-          // Load AI name from localStorage (user preference)
+          // Load AI name and chat settings from localStorage
           const storedAiName = localStorage.getItem('aurra-ai-name') || 'AURRA';
+          const storedChatSettings = localStorage.getItem('aurra-chat-settings');
+          let chatSettings = {
+            preferredPersona: 'companion',
+            responseStyle: 'balanced',
+            askBeforeJoking: true,
+            memoryPermissions: { goals: true, preferences: true, emotional: true },
+          };
+          if (storedChatSettings) {
+            try {
+              chatSettings = { ...chatSettings, ...JSON.parse(storedChatSettings) };
+            } catch {}
+          }
           
           setUserProfile({
             name: profile.name || '',
@@ -148,6 +178,10 @@ export const AuraProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             preferredModel: (profile as any).preferred_model || 'gemini-flash',
             onboardingComplete: true,
             aiName: storedAiName,
+            preferredPersona: chatSettings.preferredPersona,
+            responseStyle: chatSettings.responseStyle,
+            askBeforeJoking: chatSettings.askBeforeJoking,
+            memoryPermissions: chatSettings.memoryPermissions,
           });
         } else {
           setUserProfile(defaultUserProfile);

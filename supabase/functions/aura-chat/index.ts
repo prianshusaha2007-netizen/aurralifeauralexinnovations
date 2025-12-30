@@ -253,7 +253,7 @@ function detectEmotionalState(message: string): string {
   return 'neutral';
 }
 
-// Detect persona layer based on context
+// Detect persona layer based on context + user preference
 type PersonaLayer = 'companion' | 'mentor' | 'cofounder' | 'coach' | 'creative';
 
 function detectPersonaLayer(
@@ -261,7 +261,8 @@ function detectPersonaLayer(
   emotionalState: string,
   timeOfDay: string,
   skillMode: SkillMode,
-  isCodingMode: boolean
+  isCodingMode: boolean,
+  preferredPersona?: string // User's preference (soft bias)
 ): PersonaLayer {
   const lowerMessage = message.toLowerCase();
   
@@ -295,6 +296,20 @@ function detectPersonaLayer(
   // Night time tends toward companion
   if (timeOfDay === 'night') {
     return 'companion';
+  }
+  
+  // Apply user's preferred persona as soft bias (only when context is neutral)
+  if (preferredPersona) {
+    const personaMap: Record<string, PersonaLayer> = {
+      'companion': 'companion',
+      'mentor': 'mentor',
+      'thinking-partner': 'cofounder',
+      'creative': 'creative',
+      'coach': 'coach',
+    };
+    if (personaMap[preferredPersona]) {
+      return personaMap[preferredPersona];
+    }
   }
   
   // Default: companion (warm, casual)
@@ -353,6 +368,10 @@ function validateInput(data: any): { valid: boolean; error?: string; sanitized?:
       wakeTime: typeof userProfile.wakeTime === 'string' ? userProfile.wakeTime : undefined,
       sleepTime: typeof userProfile.sleepTime === 'string' ? userProfile.sleepTime : undefined,
       aiName: typeof userProfile.aiName === 'string' ? userProfile.aiName.slice(0, 50) : 'AURRA',
+      // Chat settings for persona & response style
+      preferredPersona: typeof userProfile.preferredPersona === 'string' ? userProfile.preferredPersona.slice(0, 30) : 'companion',
+      responseStyle: typeof userProfile.responseStyle === 'string' ? userProfile.responseStyle.slice(0, 20) : 'balanced',
+      askBeforeJoking: typeof userProfile.askBeforeJoking === 'boolean' ? userProfile.askBeforeJoking : true,
     };
   }
 
@@ -446,14 +465,19 @@ serve(async (req) => {
     const timeOfDay = currentHour < 12 ? 'morning' : currentHour < 17 ? 'afternoon' : currentHour < 21 ? 'evening' : 'night';
     const dayOfWeek = now.toLocaleDateString('en-US', { weekday: 'long' });
     
-    // Detect active persona layer
-    const personaLayer = detectPersonaLayer(lastMessage, emotionalState, timeOfDay, skillMode, isCodingMode);
+    // Detect active persona layer (with user preference as soft bias)
+    const preferredPersona = userProfile?.preferredPersona || 'companion';
+    const responseStyle = userProfile?.responseStyle || 'balanced';
+    const askBeforeJoking = userProfile?.askBeforeJoking !== false;
+    const personaLayer = detectPersonaLayer(lastMessage, emotionalState, timeOfDay, skillMode, isCodingMode, preferredPersona);
     const aiName = userProfile?.aiName || 'AURRA';
     
     console.log("Processing chat request");
     console.log("Selected model:", selectedModel);
     console.log("Emotional state:", emotionalState);
     console.log("Persona layer:", personaLayer);
+    console.log("Preferred persona:", preferredPersona);
+    console.log("Response style:", responseStyle);
     console.log("AI Name:", aiName);
     console.log("Message count:", messages?.length || 0);
     console.log("Needs real-time:", realTimeCheck.needsRealTime, realTimeCheck.queryType);
