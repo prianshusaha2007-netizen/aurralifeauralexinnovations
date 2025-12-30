@@ -16,6 +16,7 @@ export interface UserProfile {
   tonePreference: string;
   preferredModel: string;
   onboardingComplete: boolean;
+  aiName: string; // Custom name for AURRA
 }
 
 export interface Memory {
@@ -86,6 +87,7 @@ const defaultUserProfile: UserProfile = {
   tonePreference: 'mixed',
   preferredModel: 'gemini-flash',
   onboardingComplete: false,
+  aiName: 'AURRA',
 };
 
 const AuraContext = createContext<AuraContextType | undefined>(undefined);
@@ -129,6 +131,9 @@ export const AuraProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           .maybeSingle();
 
         if (profile) {
+          // Load AI name from localStorage (user preference)
+          const storedAiName = localStorage.getItem('aurra-ai-name') || 'AURRA';
+          
           setUserProfile({
             name: profile.name || '',
             age: profile.age?.toString() || '',
@@ -142,6 +147,7 @@ export const AuraProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             tonePreference: profile.tone_preference || 'mixed',
             preferredModel: (profile as any).preferred_model || 'gemini-flash',
             onboardingComplete: true,
+            aiName: storedAiName,
           });
         } else {
           setUserProfile(defaultUserProfile);

@@ -222,6 +222,7 @@ export const useAuraChat = () => {
             tonePreference: userProfile.tonePreference,
             wakeTime: userProfile.wakeTime,
             sleepTime: userProfile.sleepTime,
+            aiName: userProfile.aiName || 'AURRA',
           },
         }),
       });
