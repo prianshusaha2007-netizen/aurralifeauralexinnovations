@@ -22,7 +22,8 @@ import {
   Sunrise,
   Sunset,
   Bot,
-  Edit3
+  Edit3,
+  Crown
 } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { Input } from '@/components/ui/input';
@@ -30,6 +31,7 @@ import { Button } from '@/components/ui/button';
 import { useAura } from '@/contexts/AuraContext';
 import { useAuth } from '@/hooks/useAuth';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useCredits } from '@/hooks/useCredits';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { WeeklyEmailSettings } from '@/components/WeeklyEmailSettings';
@@ -37,6 +39,7 @@ import { VoiceSettingsPanel } from '@/components/VoiceSettingsPanel';
 import { MicrophoneTest } from '@/components/MicrophoneTest';
 import { ResetPermissionsGuide } from '@/components/ResetPermissionsGuide';
 import { PersonaSettings } from '@/components/PersonaSettings';
+import { UpgradeSheet } from '@/components/UpgradeSheet';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { useMorningBriefing } from '@/hooks/useMorningBriefing';
@@ -54,6 +57,13 @@ export const SettingsScreen: React.FC = () => {
   const { toast } = useToast();
   const { subscribeToPush, unsubscribeFromPush, checkSubscription, isSupported } = usePushNotifications();
   const { showBriefingNotification } = useMorningBriefing();
+  const { getCreditStatus } = useCredits();
+  
+  // Credit status
+  const creditStatus = getCreditStatus();
+  
+  // Upgrade sheet state
+  const [showUpgradeSheet, setShowUpgradeSheet] = useState(false);
   
   // Schedule state
   const [wakeTime, setWakeTime] = useState(userProfile.wakeTime || '07:00');
@@ -186,6 +196,20 @@ export const SettingsScreen: React.FC = () => {
   };
 
   const settingsSections = [
+    // Upgrade section (only for non-premium users)
+    ...(!creditStatus.isPremium ? [{
+      title: 'CHAT & PRESENCE',
+      items: [
+        {
+          icon: Crown,
+          label: `${aiName} Plus`,
+          description: 'Stay longer · Go deeper · Build consistency',
+          isUpgradeSettings: true,
+          action: <ChevronRight className="w-5 h-5 text-primary" />,
+          highlight: true,
+        },
+      ],
+    }] : []),
     {
       title: 'PERSONA & AVATAR',
       items: [
@@ -508,6 +532,31 @@ export const SettingsScreen: React.FC = () => {
                 'items' in section && section.items?.map((item: any, index: number) => {
                   const Icon = item.icon;
                   
+                  // Upgrade settings
+                  if (item.isUpgradeSettings) {
+                    return (
+                      <button
+                        key={item.label}
+                        onClick={() => setShowUpgradeSheet(true)}
+                        className={cn(
+                          'flex items-center gap-4 w-full p-4 text-left -mx-4',
+                          'hover:bg-primary/5 transition-colors',
+                          'bg-gradient-to-r from-primary/5 to-accent/5',
+                          index !== (section.items?.length ?? 0) - 1 && 'border-b border-border/50'
+                        )}
+                      >
+                        <div className="p-2 rounded-lg bg-primary/20 text-primary">
+                          <Icon className="w-4 h-4" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-primary">{item.label}</p>
+                          <p className="text-xs text-muted-foreground truncate">{item.description}</p>
+                        </div>
+                        {item.action}
+                      </button>
+                    );
+                  }
+                  
                   // AI Name settings
                   if (item.isAiNameSettings) {
                     return (
@@ -724,6 +773,9 @@ export const SettingsScreen: React.FC = () => {
           </div>
         ))}
       </div>
+      
+      {/* Upgrade Sheet */}
+      <UpgradeSheet open={showUpgradeSheet} onOpenChange={setShowUpgradeSheet} />
     </div>
   );
 };

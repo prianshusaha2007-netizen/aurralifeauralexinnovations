@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Send, Sparkles, Menu, Volume2, Mic, Radio, Camera, ImagePlus, X, Loader2, Ghost, Timer, ChevronDown, GraduationCap, Gamepad2, Search, Pin, History } from 'lucide-react';
+import { Send, Sparkles, Menu, Volume2, Mic, Radio, Camera, ImagePlus, X, Loader2, Ghost, Timer, ChevronDown, GraduationCap, Gamepad2, Search, Pin, History, Crown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AuraAvatar } from '@/components/AuraAvatar';
 import { ChatBubble } from '@/components/ChatBubble';
@@ -12,6 +12,8 @@ import { MorningBriefingCard } from '@/components/MorningBriefingCard';
 import { QuickActions } from '@/components/QuickActions';
 import { TutorMode } from '@/components/TutorMode';
 import { ChatGames, GameType, getGameSystemPrompt } from '@/components/ChatGames';
+import { CreditWarning } from '@/components/CreditWarning';
+import { UpgradeSheet } from '@/components/UpgradeSheet';
 import { useAura, ChatMessage } from '@/contexts/AuraContext';
 import { useAuraChat } from '@/hooks/useAuraChat';
 import { useVoiceCommands } from '@/hooks/useVoiceCommands';
@@ -20,6 +22,7 @@ import { useWakeWord } from '@/hooks/useWakeWord';
 import { useHotkeys } from '@/hooks/useHotkeys';
 import { useWelcomeBack, updateLastActive } from '@/hooks/useWelcomeBack';
 import { usePersonaContext } from '@/contexts/PersonaContext';
+import { useCredits } from '@/hooks/useCredits';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -42,6 +45,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ onMenuClick, onVoiceMode
   const { chatMessages, addChatMessage, updateChatMessage, deleteChatMessage, userProfile } = useAura();
   const { sendMessage, isThinking } = useAuraChat();
   const { avatarStyle, autoSwitchPersona } = usePersonaContext();
+  const { getCreditStatus, useCreditsForAction } = useCredits();
   const { processCommand } = useVoiceCommands({
     name: userProfile.name,
     wakeTime: userProfile.wakeTime,
@@ -67,6 +71,8 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ onMenuClick, onVoiceMode
   const [showChatGames, setShowChatGames] = useState(false);
   const [activeGame, setActiveGame] = useState<GameType | null>(null);
   const [replyingTo, setReplyingTo] = useState<ExtendedMessage | null>(null);
+  const [showUpgradeSheet, setShowUpgradeSheet] = useState(false);
+  const [creditWarningShown, setCreditWarningShown] = useState(false);
   const [messageReactions, setMessageReactions] = useState<Record<string, string[]>>(() => {
     try {
       const saved = localStorage.getItem('aura-message-reactions');
@@ -95,6 +101,10 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ onMenuClick, onVoiceMode
   const [vanishMessages, setVanishMessages] = useState<ChatMessage[]>([]);
   const [vanishTimer, setVanishTimer] = useState<number | null>(null);
   const [showVanishOptions, setShowVanishOptions] = useState(false);
+  
+  // Credit status
+  const creditStatus = getCreditStatus();
+  const aiName = userProfile.aiName || 'AURRA';
   const vanishTimersRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -225,8 +235,19 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ onMenuClick, onVoiceMode
   const handleSend = async () => {
     if ((!inputValue.trim() && !selectedImage) || isThinking || isGeneratingImage) return;
 
+    // Check credit status before sending
+    if (!creditStatus.canUseCredits && !creditStatus.allowFinalReply) {
+      setShowUpgradeSheet(true);
+      return;
+    }
+
     const userMessage = inputValue.trim();
     setInputValue('');
+    
+    // Use credits for normal chat
+    if (!vanishMode && !selectedImage && !isImageGenRequest(userMessage)) {
+      await useCreditsForAction('normal_chat');
+    }
     
     if (selectedImage && showImagePrompt) {
       await handleImageAnalysis(imagePrompt || userMessage || 'Analyze this image');
@@ -234,6 +255,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ onMenuClick, onVoiceMode
       setShowImagePrompt(true);
       return;
     } else if (isImageGenRequest(userMessage)) {
+      await useCreditsForAction('image_generation');
       await handleImageGeneration(userMessage);
     } else if (vanishMode) {
       addVanishMessage({ content: userMessage, sender: 'user' });
@@ -928,6 +950,26 @@ ${data.improvements?.length > 0 ? `**Tips:** ${data.improvements.join(', ')}` : 
               </div>
             </motion.div>
           )}
+
+          {/* Credit Soft Warning */}
+          {creditStatus.showSoftWarning && !creditWarningShown && !creditStatus.isPremium && (
+            <CreditWarning
+              type="soft"
+              aiName={aiName}
+              onContinueTomorrow={() => setCreditWarningShown(true)}
+              onUpgrade={() => setShowUpgradeSheet(true)}
+            />
+          )}
+
+          {/* Credit Limit Reached Warning */}
+          {creditStatus.isLimitReached && !creditStatus.isPremium && (
+            <CreditWarning
+              type="limit"
+              aiName={aiName}
+              onContinueTomorrow={() => {}}
+              onUpgrade={() => setShowUpgradeSheet(true)}
+            />
+          )}
           
           <div ref={messagesEndRef} />
         </div>
@@ -1118,6 +1160,9 @@ ${data.improvements?.length > 0 ? `**Tips:** ${data.improvements.join(', ')}` : 
       </div>
       
       <AutomationModal isOpen={showAutomation} onClose={() => setShowAutomation(false)} />
+      
+      {/* Upgrade Sheet */}
+      <UpgradeSheet open={showUpgradeSheet} onOpenChange={setShowUpgradeSheet} />
     </div>
   );
 };
