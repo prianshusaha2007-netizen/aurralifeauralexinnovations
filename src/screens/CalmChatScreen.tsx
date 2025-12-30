@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Send, Plus, Loader2, Download, RefreshCw, Headphones, ChevronDown } from 'lucide-react';
+import { Send, Plus, Loader2, Download, RefreshCw, Headphones, ChevronDown, Target } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { CalmChatBubble } from '@/components/CalmChatBubble';
 import { ThinkingIndicator } from '@/components/ThinkingIndicator';
@@ -12,6 +12,7 @@ import { WeeklyReflectionModal } from '@/components/WeeklyReflectionModal';
 import { CodingMentorBanner, CodingMentorMode } from '@/components/CodingMentorMode';
 import { RoutineVisualCard, RoutineVisualButton } from '@/components/RoutineVisualCard';
 import { RoutineWidget } from '@/components/RoutineWidget';
+import { SkillsWidget } from '@/components/SkillsWidget';
 import { useAura } from '@/contexts/AuraContext';
 import { useAuraChat } from '@/hooks/useAuraChat';
 import { useVoiceFeedback } from '@/hooks/useVoiceFeedback';
@@ -21,9 +22,11 @@ import { useMediaActions } from '@/hooks/useMediaActions';
 import { useWeeklyReflection } from '@/hooks/useWeeklyReflection';
 import { useRoutineBlocks } from '@/hooks/useRoutineBlocks';
 import { useRoutineVisualization } from '@/hooks/useRoutineVisualization';
+import { useSkillsProgress } from '@/hooks/useSkillsProgress';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import auraAvatar from '@/assets/aura-avatar.jpeg';
 
 interface CalmChatScreenProps {
@@ -82,6 +85,7 @@ const detectDocIntent = (message: string): boolean => {
 };
 
 export const CalmChatScreen: React.FC<CalmChatScreenProps> = ({ onMenuClick }) => {
+  const navigate = useNavigate();
   const { chatMessages, addChatMessage, userProfile } = useAura();
   const { sendMessage, isThinking } = useAuraChat();
   const { speak, isSpeaking } = useVoiceFeedback();
@@ -90,6 +94,7 @@ export const CalmChatScreen: React.FC<CalmChatScreenProps> = ({ onMenuClick }) =
   const { analyzeFile, generateImage, createDocument, downloadDocument, downloadImage, isUploading, isGenerating, isCreatingDoc } = useMediaActions();
   const { showReflectionPrompt, lastWeekStats, saveReflection, dismissReflection } = useWeeklyReflection();
   const { activeBlock, blocks } = useRoutineBlocks();
+  const { hasActiveSkills, getActiveSkills } = useSkillsProgress();
   const { 
     routineVisual, 
     isGenerating: isGeneratingVisual, 
@@ -387,6 +392,19 @@ export const CalmChatScreen: React.FC<CalmChatScreenProps> = ({ onMenuClick }) =
           </div>
           
           <div className="flex items-center gap-2">
+            {/* Skills Button - shows when user has active skills */}
+            {hasActiveSkills() && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="rounded-full h-10 w-10 text-muted-foreground hover:text-primary hover:bg-primary/10 relative"
+                onClick={() => navigate('/skills')}
+              >
+                <Target className="w-5 h-5" />
+                <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-primary rounded-full" />
+              </Button>
+            )}
+            
             {/* Routine Visual Button - shows when visual exists but is hidden */}
             {routineVisual && !showVisual && (
               <RoutineVisualButton
@@ -498,13 +516,17 @@ export const CalmChatScreen: React.FC<CalmChatScreenProps> = ({ onMenuClick }) =
 
       {/* Routine Widget - shows when not in morning flow and has blocks */}
       {!showMorningFlow && chatMessages.length <= 1 && (
-        <div className="px-4 pb-2">
+        <div className="px-4 pb-2 space-y-2">
           <RoutineWidget 
             onViewVisual={openVisual}
             onViewRoutine={() => {
               // Navigate to routine screen would happen via parent
             }}
           />
+          {/* Skills Widget - compact view in header area */}
+          {hasActiveSkills() && (
+            <SkillsWidget onNavigate={() => navigate('/skills')} />
+          )}
         </div>
       )}
 
