@@ -121,10 +121,24 @@ export const useReminders = () => {
       prev.map(r => r.id === reminder.id ? { ...r, status: 'fired' as ReminderStatus } : r)
     );
 
-    // Show in-app toast as additional fallback
+    // Show in-app toast as additional fallback with snooze option
     toast(`${reminder.icon} ${reminder.title}`, {
       description: "Time for your reminder!",
       duration: 10000,
+      action: {
+        label: "Snooze 5 min",
+        onClick: () => {
+          // Inline snooze logic to avoid circular dependency
+          const snoozedUntil = new Date();
+          snoozedUntil.setMinutes(snoozedUntil.getMinutes() + 5);
+          firedRemindersRef.current.delete(reminder.id);
+          setReminders(prev => 
+            prev.map(r => r.id === reminder.id ? { ...r, time: snoozedUntil, snoozedUntil, status: 'snoozed' as ReminderStatus } : r)
+          );
+          setActiveReminder(null);
+          toast.success('Snoozed for 5 minutes');
+        },
+      },
     });
   }, [showNotification]);
 
