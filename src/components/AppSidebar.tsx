@@ -15,7 +15,9 @@ import {
   ImageIcon,
   Bell,
   MapPin,
-  Target
+  Target,
+  BookHeart,
+  Heart
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -31,6 +33,7 @@ export type TabId =
   | 'habits'
   | 'hydration'
   | 'mood' 
+  | 'mood-journal'
   | 'profile' 
   | 'search' 
   | 'games' 
@@ -60,6 +63,8 @@ const menuItems: MenuItem[] = [
   { id: 'reminders', icon: Bell, label: 'Reminders & Alarms' },
   { id: 'services', icon: MapPin, label: 'Smart Services', divider: true },
   { id: 'daily-plan', icon: Target, label: "Today's Focus", section: 'Wellness' },
+  { id: 'mood', icon: Heart, label: 'Daily Check-In' },
+  { id: 'mood-journal', icon: BookHeart, label: 'Mood Journal' },
   { id: 'games', icon: Gamepad2, label: 'Play Games' },
   { id: 'routine', icon: Calendar, label: 'Daily Routine' },
   { id: 'hydration', icon: Droplets, label: 'Hydration Tracker' },

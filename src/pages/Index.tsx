@@ -14,6 +14,7 @@ import { SettingsScreen } from '@/screens/SettingsScreen';
 import { OnboardingScreen } from '@/screens/OnboardingScreen';
 import { PlayLearnScreen } from '@/screens/PlayLearnScreen';
 import { MoodCheckInScreen } from '@/screens/MoodCheckInScreen';
+import { MoodJournalScreen } from '@/screens/MoodJournalScreen';
 import { PersonalityProfileScreen } from '@/screens/PersonalityProfileScreen';
 import { SmartSearchScreen } from '@/screens/SmartSearchScreen';
 import { ChatHistoryScreen } from '@/screens/ChatHistoryScreen';
@@ -110,6 +111,7 @@ const AppContent: React.FC = () => {
       case 'hydration': return <HydrationScreen />;
       case 'settings': return <SettingsScreen />;
       case 'mood': return <MoodCheckInScreen />;
+      case 'mood-journal': return <MoodJournalScreen />;
       case 'profile': return <PersonalityProfileScreen />;
       case 'search': return <SmartSearchScreen />;
       case 'history': return <ChatHistoryScreen />;

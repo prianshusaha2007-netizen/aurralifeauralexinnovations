@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Send, Plus, Loader2, Download, RefreshCw, Headphones, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { CalmChatBubble } from '@/components/CalmChatBubble';
+import { ThinkingIndicator } from '@/components/ThinkingIndicator';
 import { MemorySavePrompt } from '@/components/MemorySavePrompt';
 import { MediaToolsSheet } from '@/components/MediaToolsSheet';
 import { ChatQuickActions } from '@/components/ChatQuickActions';
@@ -598,22 +599,7 @@ export const CalmChatScreen: React.FC<CalmChatScreenProps> = ({ onMenuClick }) =
 
           {/* Typing Indicator */}
           {(isThinking || isGenerating || isCreatingDoc) && chatMessages[chatMessages.length - 1]?.sender === 'user' && (
-            <motion.div 
-              initial={{ opacity: 0, y: 10 }} 
-              animate={{ opacity: 1, y: 0 }}
-              className="flex gap-3"
-            >
-              <div className="w-9 h-9 rounded-full overflow-hidden ring-2 ring-primary/10">
-                <img src={auraAvatar} alt="AURRA" className="w-full h-full object-cover" />
-              </div>
-              <div className="bg-card/80 backdrop-blur-sm border border-border/40 px-4 py-3 rounded-2xl rounded-bl-sm">
-                <div className="flex gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-primary/50 animate-bounce" style={{ animationDelay: '0ms' }} />
-                  <span className="w-2 h-2 rounded-full bg-primary/50 animate-bounce" style={{ animationDelay: '150ms' }} />
-                  <span className="w-2 h-2 rounded-full bg-primary/50 animate-bounce" style={{ animationDelay: '300ms' }} />
-                </div>
-              </div>
-            </motion.div>
+            <ThinkingIndicator />
           )}
           
           <div ref={messagesEndRef} />
