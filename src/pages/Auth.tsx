@@ -8,6 +8,7 @@ import { AuraOrb } from '@/components/AuraOrb';
 import { PasswordStrengthIndicator } from '@/components/PasswordStrengthIndicator';
 import { toast } from 'sonner';
 import { z } from 'zod';
+import { Eye, EyeOff } from 'lucide-react';
 
 // Common passwords list (top 100 most common)
 const commonPasswords = new Set([
@@ -50,6 +51,10 @@ const Auth: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
   const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotLoading, setForgotLoading] = useState(false);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
@@ -141,6 +146,83 @@ const Auth: React.FC = () => {
     }
   };
 
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!forgotEmail) {
+      toast.error('Please enter your email address');
+      return;
+    }
+
+    setForgotLoading(true);
+
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(forgotEmail, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+
+      if (error) {
+        toast.error(error.message);
+        return;
+      }
+
+      toast.success('Check your email for the password reset link!');
+      setShowForgotPassword(false);
+      setForgotEmail('');
+    } catch {
+      toast.error('Something went wrong. Please try again.');
+    } finally {
+      setForgotLoading(false);
+    }
+  };
+
+  // Forgot password view
+  if (showForgotPassword) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-background">
+        <div className="w-full max-w-md space-y-8 animate-fade-in">
+          <div className="flex flex-col items-center">
+            <AuraOrb size="xl" />
+            <h1 className="mt-6 text-3xl font-bold aura-gradient-text">Reset Password</h1>
+            <p className="mt-2 text-muted-foreground text-center">
+              Enter your email and we'll send you a reset link
+            </p>
+          </div>
+
+          <form onSubmit={handleForgotPassword} className="space-y-4">
+            <Input
+              type="email"
+              placeholder="Email"
+              value={forgotEmail}
+              onChange={(e) => setForgotEmail(e.target.value)}
+              className="text-center text-lg py-6 rounded-xl"
+              disabled={forgotLoading}
+            />
+
+            <Button
+              type="submit"
+              size="lg"
+              disabled={forgotLoading || !forgotEmail}
+              className="w-full rounded-full aura-gradient text-lg py-6"
+            >
+              {forgotLoading ? 'Sending...' : 'Send Reset Link'}
+            </Button>
+          </form>
+
+          <div className="text-center">
+            <button
+              type="button"
+              onClick={() => setShowForgotPassword(false)}
+              className="text-primary hover:underline"
+            >
+              Back to Sign In
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-background">
       <div className="w-full max-w-md space-y-8 animate-fade-in">
@@ -167,15 +249,22 @@ const Auth: React.FC = () => {
             )}
           </div>
 
-          <div>
+          <div className="relative">
             <Input
-              type="password"
+              type={showPassword ? 'text' : 'password'}
               placeholder="Password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="text-center text-lg py-6 rounded-xl"
+              className="text-center text-lg py-6 rounded-xl pr-12"
               disabled={loading}
             />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+            >
+              {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+            </button>
             {errors.password && (
               <p className="text-sm text-destructive mt-1 text-center">{errors.password}</p>
             )}
@@ -231,16 +320,27 @@ const Auth: React.FC = () => {
           </button>
 
           {isLogin && (
-            <div className="text-xs text-muted-foreground pt-2">
-              By signing in, you agree to our{' '}
-              <Link to="/privacy" className="text-primary hover:underline">
-                Privacy Policy
-              </Link>{' '}
-              and{' '}
-              <Link to="/terms" className="text-primary hover:underline">
-                Terms of Service
-              </Link>
-            </div>
+            <>
+              <div>
+                <button
+                  type="button"
+                  onClick={() => setShowForgotPassword(true)}
+                  className="text-sm text-muted-foreground hover:text-primary hover:underline"
+                >
+                  Forgot your password?
+                </button>
+              </div>
+              <div className="text-xs text-muted-foreground pt-2">
+                By signing in, you agree to our{' '}
+                <Link to="/privacy" className="text-primary hover:underline">
+                  Privacy Policy
+                </Link>{' '}
+                and{' '}
+                <Link to="/terms" className="text-primary hover:underline">
+                  Terms of Service
+                </Link>
+              </div>
+            </>
           )}
         </div>
       </div>
