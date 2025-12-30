@@ -1,12 +1,10 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
-
-// VAPID keys would be stored as secrets in production
-// For now, we'll generate a simple notification payload
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -14,9 +12,34 @@ serve(async (req) => {
   }
 
   try {
+    // Authentication check
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      console.log('Unauthorized: No authorization header');
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } }
+    });
+
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      console.log('Unauthorized: Invalid user token', authError?.message);
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     const { subscription, title, body, icon, data } = await req.json();
     
-    console.log('Sending push notification:', { title, body });
+    console.log('Sending push notification for user:', user.id, { title, body });
 
     if (!subscription || !title) {
       return new Response(
@@ -25,8 +48,29 @@ serve(async (req) => {
       );
     }
 
-    // In a full implementation, you would use web-push library
-    // For now, we'll return success and let the frontend handle local notifications
+    // Verify subscription belongs to authenticated user
+    if (subscription.endpoint) {
+      const { data: userSub, error: subError } = await supabase
+        .from('push_subscriptions')
+        .select('user_id')
+        .eq('endpoint', subscription.endpoint)
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (subError) {
+        console.error('Subscription lookup error:', subError.message);
+      }
+
+      if (!userSub) {
+        console.log('Forbidden: Subscription does not belong to user');
+        return new Response(
+          JSON.stringify({ error: 'Invalid subscription' }),
+          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
+    // Create notification payload
     const notificationPayload = {
       title,
       body: body || '',
@@ -35,7 +79,7 @@ serve(async (req) => {
       timestamp: new Date().toISOString(),
     };
 
-    console.log('Notification payload created:', notificationPayload);
+    console.log('Notification payload created for user:', user.id, notificationPayload);
 
     return new Response(
       JSON.stringify({ 
