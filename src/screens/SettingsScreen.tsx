@@ -21,7 +21,8 @@ import {
   Clock,
   Sunrise,
   Sunset,
-  Bot
+  Bot,
+  Edit3
 } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { Input } from '@/components/ui/input';
@@ -58,6 +59,11 @@ export const SettingsScreen: React.FC = () => {
   const [wakeTime, setWakeTime] = useState(userProfile.wakeTime || '07:00');
   const [sleepTime, setSleepTime] = useState(userProfile.sleepTime || '23:00');
   const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
+  
+  // AI Name customization state
+  const [aiName, setAiName] = useState(userProfile.aiName || 'AURRA');
+  const [aiNameDialogOpen, setAiNameDialogOpen] = useState(false);
+  const [tempAiName, setTempAiName] = useState(aiName);
   
   // Voice settings state
   const [voiceSettings, setVoiceSettings] = useState(() => {
@@ -154,6 +160,18 @@ export const SettingsScreen: React.FC = () => {
     });
   };
 
+  const handleSaveAiName = () => {
+    const name = tempAiName.trim() || 'AURRA';
+    setAiName(name);
+    localStorage.setItem('aurra-ai-name', name);
+    updateUserProfile({ aiName: name });
+    setAiNameDialogOpen(false);
+    toast({
+      title: name === 'AURRA' ? 'Name Reset' : 'Name Updated',
+      description: name === 'AURRA' ? 'I\'ll go by AURRA again' : `You can now call me ${name}`,
+    });
+  };
+
   const getThemeIcon = () => {
     if (mode === 'auto') return Monitor;
     return activeTheme === 'dark' ? Moon : Sun;
@@ -172,8 +190,15 @@ export const SettingsScreen: React.FC = () => {
       title: 'PERSONA & AVATAR',
       items: [
         {
+          icon: Edit3,
+          label: `My AI's Name`,
+          description: aiName === 'AURRA' ? 'Default: AURRA' : `Custom: ${aiName}`,
+          isAiNameSettings: true,
+          action: <ChevronRight className="w-5 h-5 text-muted-foreground" />,
+        },
+        {
           icon: Bot,
-          label: 'AURRA Persona',
+          label: `${aiName} Persona`,
           description: 'Avatar style & communication preferences',
           isPersonaSettings: true,
           action: <ChevronRight className="w-5 h-5 text-muted-foreground" />,
@@ -394,11 +419,62 @@ export const SettingsScreen: React.FC = () => {
         </DialogContent>
       </Dialog>
 
+      {/* AI Name Dialog */}
+      <Dialog open={aiNameDialogOpen} onOpenChange={setAiNameDialogOpen}>
+        <DialogContent className="rounded-2xl max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Name Your AI</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Give me a custom name, or keep the default "AURRA". I'll respond to whatever you choose.
+            </p>
+            
+            <div className="space-y-2">
+              <label className="text-sm font-medium">AI Name</label>
+              <Input
+                value={tempAiName}
+                onChange={(e) => setTempAiName(e.target.value)}
+                placeholder="e.g., Nova, Alex, Buddy..."
+                className="rounded-xl"
+                maxLength={20}
+              />
+              <p className="text-xs text-muted-foreground">
+                Leave empty to reset to AURRA
+              </p>
+            </div>
+
+            {/* Quick suggestions */}
+            <div className="flex flex-wrap gap-2">
+              {['AURRA', 'Nova', 'Alex', 'Sage', 'Echo'].map((name) => (
+                <Button
+                  key={name}
+                  variant={tempAiName === name ? 'default' : 'outline'}
+                  size="sm"
+                  className="rounded-full text-xs"
+                  onClick={() => setTempAiName(name)}
+                >
+                  {name}
+                </Button>
+              ))}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAiNameDialogOpen(false)} className="rounded-xl">
+              Cancel
+            </Button>
+            <Button onClick={handleSaveAiName} className="rounded-xl">
+              Save Name
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Header */}
       <div className="mb-6">
         <h1 className="text-2xl font-bold aura-gradient-text">Settings</h1>
         <p className="text-sm text-muted-foreground mt-1">
-          Customize your AURRA experience
+          Customize your {aiName} experience
         </p>
       </div>
 
@@ -409,7 +485,7 @@ export const SettingsScreen: React.FC = () => {
             <Sparkles className="w-6 h-6 text-primary" />
           </div>
           <div>
-            <h2 className="font-semibold">AURRA</h2>
+            <h2 className="font-semibold">{aiName}</h2>
             <p className="text-xs text-muted-foreground">Your all-time AI companion</p>
           </div>
         </div>
@@ -431,6 +507,33 @@ export const SettingsScreen: React.FC = () => {
               ) : (
                 'items' in section && section.items?.map((item: any, index: number) => {
                   const Icon = item.icon;
+                  
+                  // AI Name settings
+                  if (item.isAiNameSettings) {
+                    return (
+                      <button
+                        key={item.label}
+                        onClick={() => {
+                          setTempAiName(aiName);
+                          setAiNameDialogOpen(true);
+                        }}
+                        className={cn(
+                          'flex items-center gap-4 w-full p-4 text-left -mx-4',
+                          'hover:bg-muted/50 transition-colors',
+                          index !== (section.items?.length ?? 0) - 1 && 'border-b border-border/50'
+                        )}
+                      >
+                        <div className="p-2 rounded-lg bg-primary/10 text-primary">
+                          <Icon className="w-4 h-4" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium">{item.label}</p>
+                          <p className="text-xs text-muted-foreground truncate">{item.description}</p>
+                        </div>
+                        {item.action}
+                      </button>
+                    );
+                  }
                   
                   // Schedule settings
                   if (item.isScheduleSettings) {
