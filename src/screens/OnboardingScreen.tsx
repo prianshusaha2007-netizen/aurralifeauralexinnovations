@@ -1,11 +1,12 @@
-import React, { useState, useEffect } from 'react';
-import { ArrowRight, ArrowLeft, Sparkles, MessageCircle } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { ArrowRight, ArrowLeft, Sparkles, MessageCircle, Volume2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { AuraOrb } from '@/components/AuraOrb';
 import { useAura } from '@/contexts/AuraContext';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useVoiceGreeting, getOnboardingNamingGreeting } from '@/hooks/useVoiceGreeting';
 
 type StepType = 'intro' | 'text' | 'options' | 'multiSelect' | 'time' | 'chat' | 'aiNaming';
 
@@ -118,6 +119,8 @@ export const OnboardingScreen: React.FC = () => {
   const { updateUserProfile } = useAura();
   const [currentStep, setCurrentStep] = useState(0);
   const [showAuraMessage, setShowAuraMessage] = useState(false);
+  const { playGreeting, isPlaying } = useVoiceGreeting();
+  const hasPlayedNamingGreeting = useRef(false);
   const [formData, setFormData] = useState({
     name: '',
     age: '',
@@ -137,6 +140,18 @@ export const OnboardingScreen: React.FC = () => {
   const step = steps[currentStep];
   const isLastStep = currentStep === steps.length - 1;
   const isFirstStep = currentStep === 0;
+
+  // Play voice greeting on AI naming step
+  useEffect(() => {
+    if (step.id === 'ai_name' && !hasPlayedNamingGreeting.current) {
+      hasPlayedNamingGreeting.current = true;
+      // Small delay to let the UI render first
+      const timer = setTimeout(() => {
+        playGreeting(getOnboardingNamingGreeting());
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [step.id, playGreeting]);
 
   // Show AURRA's message after a delay
   useEffect(() => {
