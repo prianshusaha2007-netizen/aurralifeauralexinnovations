@@ -8,9 +8,37 @@ import { AuraOrb } from '@/components/AuraOrb';
 import { toast } from 'sonner';
 import { z } from 'zod';
 
-const authSchema = z.object({
+// Common passwords list (top 100 most common)
+const commonPasswords = new Set([
+  'password', '123456', '12345678', 'qwerty', 'abc123', 'monkey', '1234567',
+  'letmein', 'trustno1', 'dragon', 'baseball', 'iloveyou', 'master', 'sunshine',
+  'ashley', 'bailey', 'shadow', '123123', '654321', 'superman', 'qazwsx',
+  'michael', 'football', 'password1', 'password123', 'batman', 'login',
+  'admin', 'welcome', 'hello', 'charlie', 'donald', 'password!', 'qwerty123',
+  '1234567890', '123456789', 'princess', 'azerty', '000000', 'access',
+  'passw0rd', 'starwars', 'whatever', 'freedom', 'lovely', 'nicole', 'pepper',
+  'joshua', 'maggie', 'matthew', 'jordan', 'daniel', 'hannah', 'summer',
+]);
+
+const passwordSchema = z.string()
+  .min(8, 'Password must be at least 8 characters')
+  .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
+  .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
+  .regex(/[0-9]/, 'Password must contain at least one number')
+  .regex(/[^A-Za-z0-9]/, 'Password must contain at least one special character (!@#$%^&*)')
+  .refine(
+    (password) => !commonPasswords.has(password.toLowerCase()),
+    'This password is too common. Please choose a stronger password.'
+  );
+
+const loginSchema = z.object({
   email: z.string().email('Please enter a valid email'),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
+  password: z.string().min(1, 'Password is required'),
+});
+
+const signupSchema = z.object({
+  email: z.string().email('Please enter a valid email'),
+  password: passwordSchema,
 });
 
 const Auth: React.FC = () => {
@@ -40,7 +68,8 @@ const Auth: React.FC = () => {
 
   const validateForm = () => {
     try {
-      authSchema.parse({ email, password });
+      const schema = isLogin ? loginSchema : signupSchema;
+      schema.parse({ email, password });
       setErrors({});
       return true;
     } catch (error) {
@@ -48,7 +77,10 @@ const Auth: React.FC = () => {
         const fieldErrors: { email?: string; password?: string } = {};
         error.errors.forEach((err) => {
           if (err.path[0] === 'email') fieldErrors.email = err.message;
-          if (err.path[0] === 'password') fieldErrors.password = err.message;
+          if (err.path[0] === 'password') {
+            // Show only the first password error for cleaner UX
+            if (!fieldErrors.password) fieldErrors.password = err.message;
+          }
         });
         setErrors(fieldErrors);
       }
