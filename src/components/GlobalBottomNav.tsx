@@ -10,6 +10,7 @@ interface GlobalBottomNavProps {
   onTabChange: (tab: string) => void;
   onMenuClick: () => void;
   className?: string;
+  upcomingRemindersCount?: number;
 }
 
 const navItems: { id: QuickNavTab; icon: React.ElementType; label: string }[] = [
@@ -24,6 +25,7 @@ export const GlobalBottomNav: React.FC<GlobalBottomNavProps> = ({
   onTabChange,
   onMenuClick,
   className,
+  upcomingRemindersCount = 0,
 }) => {
   const handleClick = (id: QuickNavTab) => {
     if (id === 'menu') {
@@ -72,10 +74,21 @@ export const GlobalBottomNav: React.FC<GlobalBottomNavProps> = ({
                   transition={{ type: 'spring', damping: 30, stiffness: 400 }}
                 />
               )}
-              <Icon className={cn(
-                'w-5 h-5 relative z-10 transition-transform duration-200',
-                isActive && 'scale-110'
-              )} />
+              <div className="relative">
+                <Icon className={cn(
+                  'w-5 h-5 relative z-10 transition-transform duration-200',
+                  isActive && 'scale-110'
+                )} />
+                {item.id === 'reminders' && upcomingRemindersCount > 0 && (
+                  <motion.span
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-1 flex items-center justify-center bg-primary text-primary-foreground text-[10px] font-bold rounded-full z-20"
+                  >
+                    {upcomingRemindersCount > 9 ? '9+' : upcomingRemindersCount}
+                  </motion.span>
+                )}
+              </div>
               <span className={cn(
                 'text-[11px] font-semibold relative z-10 tracking-wide',
                 isActive && 'text-primary'

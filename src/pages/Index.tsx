@@ -48,7 +48,12 @@ const AppContent: React.FC = () => {
     return localStorage.getItem('aura-permissions-complete') === 'true';
   });
   
-  const { activeReminder, snoozeReminder, completeReminder, dismissActiveReminder } = useReminders();
+  const { reminders, activeReminder, snoozeReminder, completeReminder, dismissActiveReminder } = useReminders();
+  
+  // Count upcoming reminders (scheduled and active)
+  const upcomingRemindersCount = reminders.filter(r => 
+    r.isActive && r.status === 'scheduled' && new Date(r.time) > new Date()
+  ).length;
   
   useMorningBriefing();
 
@@ -159,6 +164,7 @@ const AppContent: React.FC = () => {
         activeTab={activeTab}
         onTabChange={(tab) => setActiveTab(tab as TabId)}
         onMenuClick={() => setSidebarOpen(true)}
+        upcomingRemindersCount={upcomingRemindersCount}
       />
     </div>
   );
