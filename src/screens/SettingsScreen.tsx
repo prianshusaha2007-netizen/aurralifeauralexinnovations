@@ -24,7 +24,8 @@ import {
   Bot,
   Edit3,
   Crown,
-  MessageCircle
+  MessageCircle,
+  Cake
 } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { Input } from '@/components/ui/input';
@@ -99,6 +100,11 @@ export const SettingsScreen: React.FC = () => {
   const [greetingFreq, setGreetingFreq] = useState<GreetingFrequency>(getGreetingFrequency());
   const [greetingDialogOpen, setGreetingDialogOpen] = useState(false);
   
+  // Birthday state
+  const [birthday, setBirthday] = useState(userProfile.birthday || '');
+  const [birthdayDialogOpen, setBirthdayDialogOpen] = useState(false);
+  const [tempBirthday, setTempBirthday] = useState(birthday);
+  
   const handleGreetingFrequencyChange = (value: GreetingFrequency) => {
     setGreetingFreq(value);
     setGreetingFrequency(value);
@@ -117,6 +123,30 @@ export const SettingsScreen: React.FC = () => {
       case 'daily': return 'Once daily';
       case 'off': return 'Off';
     }
+  };
+
+  // Sync birthday state with userProfile
+  useEffect(() => {
+    if (userProfile.birthday) {
+      setBirthday(userProfile.birthday);
+      setTempBirthday(userProfile.birthday);
+    }
+  }, [userProfile.birthday]);
+
+  const handleSaveBirthday = () => {
+    setBirthday(tempBirthday);
+    updateUserProfile({ birthday: tempBirthday, onboardingComplete: true });
+    setBirthdayDialogOpen(false);
+    toast({
+      title: tempBirthday ? 'Birthday Saved' : 'Birthday Cleared',
+      description: tempBirthday ? `I'll remember your special day!` : 'Birthday removed from profile',
+    });
+  };
+
+  const formatBirthdayDisplay = () => {
+    if (!birthday) return 'Not set';
+    const date = new Date(birthday + 'T00:00:00');
+    return date.toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
   };
 
   useEffect(() => {
@@ -347,6 +377,13 @@ export const SettingsScreen: React.FC = () => {
           action: <ChevronRight className="w-5 h-5 text-muted-foreground" />,
         },
         {
+          icon: Cake,
+          label: 'Birthday',
+          description: formatBirthdayDisplay(),
+          isBirthdaySettings: true,
+          action: <ChevronRight className="w-5 h-5 text-muted-foreground" />,
+        },
+        {
           icon: Globe,
           label: 'Language Settings',
           description: userProfile.languages.join(', ') || 'Not set',
@@ -573,6 +610,41 @@ export const SettingsScreen: React.FC = () => {
         </DialogContent>
       </Dialog>
 
+      {/* Birthday Dialog */}
+      <Dialog open={birthdayDialogOpen} onOpenChange={setBirthdayDialogOpen}>
+        <DialogContent className="rounded-2xl max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Set Your Birthday</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Share your birthday so I can give you a special greeting on your day!
+            </p>
+            
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Birthday</label>
+              <Input
+                type="date"
+                value={tempBirthday}
+                onChange={(e) => setTempBirthday(e.target.value)}
+                className="rounded-xl"
+              />
+              <p className="text-xs text-muted-foreground">
+                Only the month and day are used for birthday greetings
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBirthdayDialogOpen(false)} className="rounded-xl">
+              Cancel
+            </Button>
+            <Button onClick={handleSaveBirthday} className="rounded-xl">
+              Save Birthday
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Header */}
       <div className="mb-6">
         <h1 className="text-2xl font-bold aura-gradient-text">Settings</h1>
@@ -693,6 +765,33 @@ export const SettingsScreen: React.FC = () => {
                       <button
                         key={item.label}
                         onClick={() => setGreetingDialogOpen(true)}
+                        className={cn(
+                          'flex items-center gap-4 w-full p-4 text-left -mx-4',
+                          'hover:bg-muted/50 transition-colors',
+                          index !== (section.items?.length ?? 0) - 1 && 'border-b border-border/50'
+                        )}
+                      >
+                        <div className="p-2 rounded-lg bg-muted text-foreground">
+                          <Icon className="w-4 h-4" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium">{item.label}</p>
+                          <p className="text-xs text-muted-foreground truncate">{item.description}</p>
+                        </div>
+                        {item.action}
+                      </button>
+                    );
+                  }
+                  
+                  // Birthday settings
+                  if (item.isBirthdaySettings) {
+                    return (
+                      <button
+                        key={item.label}
+                        onClick={() => {
+                          setTempBirthday(birthday);
+                          setBirthdayDialogOpen(true);
+                        }}
                         className={cn(
                           'flex items-center gap-4 w-full p-4 text-left -mx-4',
                           'hover:bg-muted/50 transition-colors',
