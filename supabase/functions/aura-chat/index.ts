@@ -92,6 +92,50 @@ function detectWebsiteIntent(message: string): boolean {
   return websitePatterns.some(p => p.test(lowerMessage));
 }
 
+// Detect coding mentor mode triggers
+function detectCodingMode(message: string): boolean {
+  const lowerMessage = message.toLowerCase();
+  const codingPatterns = [
+    /\b(?:coding|programming|code|debug|error|bug|syntax|compile|runtime)\b/i,
+    /\b(?:function|variable|class|method|api|javascript|typescript|python|react|node)\b/i,
+    /\b(?:fix|solve|explain|review)\s+(?:this\s+)?(?:code|error|bug)/i,
+  ];
+  return codingPatterns.some(p => p.test(lowerMessage));
+}
+
+// Detect humor request from user
+function detectHumorRequest(message: string): { isRequest: boolean; isConfirmation: boolean } {
+  const lowerMessage = message.toLowerCase().trim();
+  
+  // User confirming they want a joke
+  const confirmationPatterns = [
+    /^(?:yes|yeah|yep|yup|sure|ok|okay|go|go ahead|tell me|please|haan|ha|bol|bolo)$/i,
+    /^(?:yes please|sure thing|go on|let's hear it|tell me a joke)$/i,
+  ];
+  const isConfirmation = confirmationPatterns.some(p => p.test(lowerMessage));
+  
+  // User explicitly asking for a joke
+  const jokeRequestPatterns = [
+    /(?:tell|give|share)\s+(?:me\s+)?(?:a\s+)?(?:joke|something funny|something light)/i,
+    /(?:make me laugh|cheer me up|lighten the mood)/i,
+    /(?:joke|mazak|funny)\s+(?:sunao|batao|karo)/i,
+  ];
+  const isRequest = jokeRequestPatterns.some(p => p.test(lowerMessage));
+  
+  return { isRequest, isConfirmation };
+}
+
+// Detect routine editing intent
+function detectRoutineEditIntent(message: string): boolean {
+  const lowerMessage = message.toLowerCase();
+  const routinePatterns = [
+    /(?:change|edit|update|modify|pause|stop|adjust)\s+(?:my\s+)?routine/i,
+    /(?:edit|change|update)\s+(?:my\s+)?(?:schedule|gym time|wake time|sleep time)/i,
+    /routine\s+(?:badlo|change karo|update karo)/i,
+  ];
+  return routinePatterns.some(p => p.test(lowerMessage));
+}
+
 // Detect emotional state from message
 function detectEmotionalState(message: string): string {
   const lowerMessage = message.toLowerCase();
@@ -238,12 +282,18 @@ serve(async (req) => {
     
     const realTimeCheck = detectRealTimeQuery(lastMessage);
     const isWebsiteRequest = detectWebsiteIntent(lastMessage);
+    const isCodingMode = detectCodingMode(lastMessage);
+    const humorCheck = detectHumorRequest(lastMessage);
+    const isRoutineEdit = detectRoutineEditIntent(lastMessage);
     
     console.log("Processing chat request");
     console.log("Selected model:", selectedModel);
     console.log("Emotional state:", emotionalState);
     console.log("Message count:", messages?.length || 0);
     console.log("Needs real-time:", realTimeCheck.needsRealTime, realTimeCheck.queryType);
+    console.log("Coding mode:", isCodingMode);
+    console.log("Humor check:", humorCheck);
+    console.log("Routine edit:", isRoutineEdit);
 
     // Build time context
     const now = new Date();
@@ -269,6 +319,124 @@ End with ONE actionable suggestion if appropriate.
 WEBSITE BUILDER MODE:
 Ask at most 3 questions: purpose, name/brand, style preference.
 Then create page structure, copy, and clean HTML/CSS code.
+`;
+    }
+
+    // Coding Mentor Mode context
+    if (isCodingMode) {
+      additionalContext += `
+
+====================================
+🧑‍🏫 CODING MENTOR MODE ACTIVE
+====================================
+You are now in Coding Mentor Mode. Behavior rules:
+
+RESPONSE STRUCTURE:
+- Acknowledge confusion or the problem first
+- Explain the ROOT CAUSE before the fix
+- Suggest ONE fix at a time
+- Ask if user wants deeper explanation
+- Keep code blocks clearly separated
+- Explanations go BELOW code, not inside
+
+TEACHING STYLE:
+- "This error happens because..."
+- "Let's fix this first, then move on..."
+- "Want me to explain why this works?"
+
+HARD LIMITS:
+- No publishing or deploying websites/apps
+- No executing code
+- Only preview, explanation, debugging
+- Never assume — ask if unsure about the codebase
+
+EXAMPLE:
+"I see the issue — the variable is undefined at this point.
+
+\`\`\`javascript
+const user = await getUser(); // This returns undefined
+\`\`\`
+
+The problem is the async function isn't being awaited properly. Let's fix that first."
+`;
+    }
+
+    // Humor consent system
+    if (humorCheck.isRequest) {
+      additionalContext += `
+
+====================================
+🎭 HUMOR MODE — USER REQUESTED JOKE
+====================================
+User explicitly asked for something funny. You may deliver ONE joke.
+
+JOKE STYLE RULES:
+- Simple, clean, short
+- 1 joke maximum
+- No sarcasm, no dark humor, no cringe
+- After the joke: STOP. Return to normal conversation.
+
+DELIVERY FORMAT:
+"Alright 😄
+[Setup line]
+[Punchline]"
+
+Then wait. Don't chain jokes.
+`;
+    } else if (emotionalState === 'neutral' || emotionalState === 'excited' || emotionalState === 'motivated') {
+      // Only consider offering humor in positive/neutral states
+      additionalContext += `
+
+====================================
+🎭 HUMOR SYSTEM (CONSENT-BASED)
+====================================
+CRITICAL: Humor is OPT-IN, not default.
+
+🚫 NEVER:
+- Crack jokes randomly
+- Insert jokes into serious or neutral replies
+- Assume the user wants humor
+
+✅ HOW TO OFFER (2-STEP FLOW):
+STEP 1 — If context allows light humor (casual chat, relaxed mood), you MAY ask:
+- "Want to hear something light or should we stay focused?"
+- "Feel like a quick joke or nah?"
+- "Can I make this lighter with a small joke?"
+
+STEP 2 — Wait for user response. Only if they say yes/sure/go ahead:
+THEN deliver ONE simple, clean, short joke. Stop after.
+
+CURRENT STATE: Humor NOT confirmed. Do not tell jokes unless user confirms.
+`;
+    }
+
+    // Routine editing context
+    if (isRoutineEdit) {
+      additionalContext += `
+
+====================================
+📅 ROUTINE EDITING MODE
+====================================
+User wants to modify their routine/schedule.
+
+RESPONSE BEHAVIOR:
+- Acknowledge the request calmly
+- Ask what they want to change (if not clear)
+- Confirm the change before making it
+- Offer to regenerate:
+  - Routine logic
+  - Alarms/reminders
+  - Visual routine image (if applicable)
+
+EXAMPLES:
+- "Sure, let's update that. What time works better for you?"
+- "Got it — I'll adjust your gym time. Want me to update the reminders too?"
+- "Routine paused. Just say 'resume routine' when you're ready."
+
+User can always:
+- Change their routine anytime
+- Pause/resume routine
+- Update specific times (wake, gym, work, etc.)
 `;
     }
 
