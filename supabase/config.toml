@@ -34,7 +34,7 @@ verify_jwt = true
 verify_jwt = true
 
 [functions.send-notification]
-verify_jwt = false
+verify_jwt = true
 
 [functions.send-mood-summary]
 verify_jwt = true
