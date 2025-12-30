@@ -7,7 +7,7 @@ import { useAura } from '@/contexts/AuraContext';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 
-type StepType = 'intro' | 'text' | 'options' | 'multiSelect' | 'time' | 'chat';
+type StepType = 'intro' | 'text' | 'options' | 'multiSelect' | 'time' | 'chat' | 'aiNaming';
 
 interface Step {
   id: string;
@@ -69,6 +69,14 @@ const steps: Step[] = [
     options: ['Calm & gentle', 'Playful & fun', 'Direct & clear', 'Adapt to my mood'],
     auraMessage: "This isn't set in stone — I'll learn how you like to communicate over time.",
   },
+  {
+    id: 'ai_name',
+    title: "What should I call myself?",
+    subtitle: "This is completely optional",
+    type: 'aiNaming',
+    field: 'aiName',
+    auraMessage: "Giving me a name can make our conversations feel more personal. I'll use it gently — only in emotional or reassuring moments.",
+  },
 ];
 
 // Typing effect component
@@ -121,6 +129,9 @@ export const OnboardingScreen: React.FC = () => {
     wakeTime: '07:00',
     sleepTime: '23:00',
     tonePreference: '',
+    aiName: 'AURRA',
+    useCustomAiName: false,
+    customAiName: '',
   });
 
   const step = steps[currentStep];
@@ -160,10 +171,16 @@ export const OnboardingScreen: React.FC = () => {
       
       const mappedProfessions = professionMapping[formData.profession] || [];
       
+      // Determine final AI name
+      const finalAiName = formData.useCustomAiName && formData.customAiName 
+        ? formData.customAiName 
+        : 'AURRA';
+      
       updateUserProfile({ 
         ...formData,
         goals: mappedGoals,
         professions: mappedProfessions,
+        aiName: finalAiName,
         onboardingComplete: true 
       });
       
@@ -198,6 +215,7 @@ export const OnboardingScreen: React.FC = () => {
 
   const canProceed = () => {
     if (step.type === 'intro') return true;
+    if (step.type === 'aiNaming') return true; // Always can proceed, it's optional
     if (step.optional) return true;
     if (step.type === 'multiSelect') {
       return (formData[step.field as keyof typeof formData] as string[]).length > 0;
@@ -350,6 +368,81 @@ export const OnboardingScreen: React.FC = () => {
                       </motion.button>
                     );
                   })}
+                </motion.div>
+              )}
+
+              {step.type === 'aiNaming' && (
+                <motion.div 
+                  className="space-y-3"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.4 }}
+                >
+                  <motion.button
+                    onClick={() => setFormData({ ...formData, useCustomAiName: false, aiName: 'AURRA' })}
+                    className={cn(
+                      'w-full p-4 rounded-2xl border transition-all duration-200 text-left',
+                      'hover:bg-muted/30 active:scale-[0.98]',
+                      !formData.useCustomAiName
+                        ? 'border-primary/50 bg-primary/5'
+                        : 'border-border/50'
+                    )}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.4 }}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    <span className={cn(
+                      'font-medium',
+                      !formData.useCustomAiName && 'text-primary'
+                    )}>Stay as AURRA</span>
+                  </motion.button>
+
+                  <motion.button
+                    onClick={() => setFormData({ ...formData, useCustomAiName: true })}
+                    className={cn(
+                      'w-full p-4 rounded-2xl border transition-all duration-200 text-left',
+                      'hover:bg-muted/30 active:scale-[0.98]',
+                      formData.useCustomAiName
+                        ? 'border-primary/50 bg-primary/5'
+                        : 'border-border/50'
+                    )}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.5 }}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    <span className={cn(
+                      'font-medium',
+                      formData.useCustomAiName && 'text-primary'
+                    )}>Give me a custom name</span>
+                  </motion.button>
+
+                  {formData.useCustomAiName && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="pt-2"
+                    >
+                      <Input
+                        value={formData.customAiName}
+                        onChange={(e) => {
+                          const value = e.target.value.slice(0, 15);
+                          setFormData({ ...formData, customAiName: value, aiName: value || 'AURRA' });
+                        }}
+                        placeholder="Enter a name (max 15 characters)"
+                        className="text-center text-lg py-6 h-14 border-muted/50 focus:border-primary/50"
+                        autoFocus
+                        maxLength={15}
+                      />
+                      <p className="text-xs text-muted-foreground text-center mt-2">
+                        {formData.customAiName.length}/15 characters
+                      </p>
+                    </motion.div>
+                  )}
                 </motion.div>
               )}
             </div>
