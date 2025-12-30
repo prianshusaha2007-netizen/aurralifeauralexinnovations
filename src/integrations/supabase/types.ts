@@ -490,6 +490,7 @@ export type Database = {
           preferred_model: string | null
           profession: string | null
           professions: string[] | null
+          public_profile: boolean | null
           sleep_time: string | null
           stress_level: string | null
           tone_preference: string | null
@@ -507,6 +508,7 @@ export type Database = {
           preferred_model?: string | null
           profession?: string | null
           professions?: string[] | null
+          public_profile?: boolean | null
           sleep_time?: string | null
           stress_level?: string | null
           tone_preference?: string | null
@@ -524,6 +526,7 @@ export type Database = {
           preferred_model?: string | null
           profession?: string | null
           professions?: string[] | null
+          public_profile?: boolean | null
           sleep_time?: string | null
           stress_level?: string | null
           tone_preference?: string | null
