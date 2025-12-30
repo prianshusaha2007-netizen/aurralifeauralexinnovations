@@ -27,6 +27,7 @@ export interface UserProfile {
   responseStyle: string; // short, balanced, detailed
   askBeforeJoking: boolean;
   memoryPermissions: MemoryPermissions;
+  birthday: string; // Format: YYYY-MM-DD
 }
 
 export interface Memory {
@@ -106,6 +107,7 @@ const defaultUserProfile: UserProfile = {
     preferences: true,
     emotional: true,
   },
+  birthday: '',
 };
 
 const AuraContext = createContext<AuraContextType | undefined>(undefined);
@@ -182,6 +184,7 @@ export const AuraProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             responseStyle: chatSettings.responseStyle,
             askBeforeJoking: chatSettings.askBeforeJoking,
             memoryPermissions: chatSettings.memoryPermissions,
+            birthday: (profile as any).birthday || '',
           });
         } else {
           setUserProfile(defaultUserProfile);
@@ -297,6 +300,7 @@ export const AuraProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             sleep_time: newProfile.sleepTime,
             tone_preference: newProfile.tonePreference,
             preferred_model: newProfile.preferredModel,
+            birthday: newProfile.birthday || null,
           });
 
           if (error) throw error;

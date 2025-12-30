@@ -64,7 +64,8 @@ export const MorningGreeting: React.FC = () => {
     // Show greeting based on time of day
     const userName = userProfile.name || 'there';
     const aiName = userProfile.aiName || 'AURRA';
-    const greeting = getTimeBasedGreeting(userName, aiName);
+    const userBirthday = userProfile.birthday || undefined;
+    const greeting = getTimeBasedGreeting(userName, aiName, userBirthday);
     
     setGreetingText(greeting);
     setShowGreeting(true);
@@ -75,7 +76,7 @@ export const MorningGreeting: React.FC = () => {
     setTimeout(() => {
       playGreeting(greeting);
     }, 500);
-  }, [userProfile.name, userProfile.aiName, playGreeting]);
+  }, [userProfile.name, userProfile.aiName, userProfile.birthday, playGreeting]);
 
   const handleDismiss = () => {
     setShowGreeting(false);
