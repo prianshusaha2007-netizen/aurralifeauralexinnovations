@@ -15,7 +15,8 @@ import {
   Brain,
   Lightbulb,
   Heart,
-  Target
+  Target,
+  BarChart3
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -24,6 +25,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { format, startOfWeek, endOfWeek, subWeeks, addWeeks, isWithinInterval, parseISO } from 'date-fns';
+import { MonthlyMoodReport } from '@/components/MonthlyMoodReport';
 
 interface MoodEntry {
   id: string;
@@ -148,6 +150,7 @@ export const MoodJournalScreen: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [currentWeekStart, setCurrentWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }));
   const [weeklyInsight, setWeeklyInsight] = useState<WeeklyInsight | null>(null);
+  const [showMonthlyReport, setShowMonthlyReport] = useState(false);
 
   const currentWeekEnd = endOfWeek(currentWeekStart, { weekStartsOn: 1 });
 
@@ -231,13 +234,29 @@ export const MoodJournalScreen: React.FC = () => {
     );
   }
 
+  // Show monthly report if requested
+  if (showMonthlyReport) {
+    return <MonthlyMoodReport onBack={() => setShowMonthlyReport(false)} />;
+  }
+
   return (
     <div className="h-full overflow-y-auto pb-24">
       {/* Header */}
       <div className="p-4 bg-gradient-to-b from-primary/10 to-transparent">
-        <div className="flex items-center gap-2 mb-1">
-          <BookHeart className="w-6 h-6 text-primary" />
-          <h1 className="text-xl font-bold">Mood Journal</h1>
+        <div className="flex items-center justify-between mb-1">
+          <div className="flex items-center gap-2">
+            <BookHeart className="w-6 h-6 text-primary" />
+            <h1 className="text-xl font-bold">Mood Journal</h1>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowMonthlyReport(true)}
+            className="gap-1.5"
+          >
+            <BarChart3 className="w-4 h-4" />
+            Monthly
+          </Button>
         </div>
         <p className="text-sm text-muted-foreground">Track your emotional patterns over time</p>
       </div>
