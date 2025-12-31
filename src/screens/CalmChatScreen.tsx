@@ -15,6 +15,7 @@ import { RoutineWidget } from '@/components/RoutineWidget';
 import { SkillsWidget } from '@/components/SkillsWidget';
 import { SkillSessionTimer } from '@/components/SkillSessionTimer';
 import { CreditWarning } from '@/components/CreditWarning';
+import { CreditLoadingSkeleton } from '@/components/CreditLoadingSkeleton';
 import { UpgradeSheet } from '@/components/UpgradeSheet';
 import { useAura } from '@/contexts/AuraContext';
 import { useAuraChat } from '@/hooks/useAuraChat';
@@ -655,7 +656,7 @@ export const CalmChatScreen: React.FC<CalmChatScreenProps> = ({ onMenuClick }) =
 
           {/* Soft Credit Warning - appears naturally in chat */}
           <AnimatePresence>
-            {showSoftWarning && (
+            {!creditStatus.isLoading && showSoftWarning && (
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -679,9 +680,24 @@ export const CalmChatScreen: React.FC<CalmChatScreenProps> = ({ onMenuClick }) =
             )}
           </AnimatePresence>
 
+          {/* Credit Loading Skeleton */}
+          <AnimatePresence>
+            {creditStatus.isLoading && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="flex gap-3"
+              >
+                <div className="w-9 h-9 rounded-full overflow-hidden ring-2 ring-primary/10 shrink-0 bg-muted animate-pulse" />
+                <CreditLoadingSkeleton variant="card" className="flex-1" />
+              </motion.div>
+            )}
+          </AnimatePresence>
+
           {/* Limit Reached Warning - appears naturally in chat */}
           <AnimatePresence>
-            {showLimitWarning && (
+            {!creditStatus.isLoading && showLimitWarning && (
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}

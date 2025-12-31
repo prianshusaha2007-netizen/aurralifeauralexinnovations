@@ -13,6 +13,7 @@ import { QuickActions } from '@/components/QuickActions';
 import { TutorMode } from '@/components/TutorMode';
 import { ChatGames, GameType, getGameSystemPrompt } from '@/components/ChatGames';
 import { CreditWarning } from '@/components/CreditWarning';
+import { CreditLoadingSkeleton } from '@/components/CreditLoadingSkeleton';
 import { UpgradeSheet } from '@/components/UpgradeSheet';
 import { ChatSettingsSheet } from '@/components/ChatSettingsSheet';
 import { LiveVoiceInput } from '@/components/LiveVoiceInput';
@@ -943,8 +944,13 @@ ${data.improvements?.length > 0 ? `**Tips:** ${data.improvements.join(', ')}` : 
             </motion.div>
           )}
 
+          {/* Credit Loading Skeleton */}
+          {creditStatus.isLoading && (
+            <CreditLoadingSkeleton variant="card" className="my-2" />
+          )}
+
           {/* Credit Soft Warning */}
-          {creditStatus.showSoftWarning && !creditWarningShown && !creditStatus.isPremium && (
+          {!creditStatus.isLoading && creditStatus.showSoftWarning && !creditWarningShown && !creditStatus.isPremium && (
             <CreditWarning
               type="soft"
               aiName={aiName}
@@ -954,7 +960,7 @@ ${data.improvements?.length > 0 ? `**Tips:** ${data.improvements.join(', ')}` : 
           )}
 
           {/* Credit Limit Reached Warning */}
-          {creditStatus.isLimitReached && !creditStatus.isPremium && (
+          {!creditStatus.isLoading && creditStatus.isLimitReached && !creditStatus.isPremium && (
             <CreditWarning
               type="limit"
               aiName={aiName}
