@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Send, Plus, Loader2, Download, RefreshCw, Headphones, ChevronDown, Target } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { CalmChatBubble } from '@/components/CalmChatBubble';
-import { ThinkingIndicator } from '@/components/ThinkingIndicator';
+import { SplitChatBubble } from '@/components/SplitChatBubble';
+import { TypingIndicator } from '@/components/TypingIndicator';
 import { MemorySavePrompt } from '@/components/MemorySavePrompt';
 import { MediaToolsSheet } from '@/components/MediaToolsSheet';
 import { ChatQuickActions } from '@/components/ChatQuickActions';
@@ -568,7 +568,7 @@ export const CalmChatScreen: React.FC<CalmChatScreenProps> = ({ onMenuClick }) =
       <div ref={chatContainerRef} className="flex-1 overflow-y-auto px-4 py-6">
         <div className="max-w-2xl mx-auto space-y-5">
           {chatMessages.map((message, index) => (
-            <CalmChatBubble
+            <SplitChatBubble
               key={message.id}
               content={message.content}
               sender={message.sender}
@@ -705,9 +705,9 @@ export const CalmChatScreen: React.FC<CalmChatScreenProps> = ({ onMenuClick }) =
             )}
           </AnimatePresence>
 
-          {/* Typing Indicator */}
+          {/* Typing Indicator - WhatsApp style */}
           {(isThinking || isGenerating || isCreatingDoc) && chatMessages[chatMessages.length - 1]?.sender === 'user' && (
-            <ThinkingIndicator />
+            <TypingIndicator />
           )}
           
           <div ref={messagesEndRef} />
