@@ -33,6 +33,7 @@ import { useCreditWarning } from '@/hooks/useCreditWarning';
 import { useDailyFlow } from '@/hooks/useDailyFlow';
 import { FirstTimePreferences } from '@/components/FirstTimePreferences';
 import { NightWindDown } from '@/components/NightWindDown';
+import { MorningBriefingCard } from '@/components/MorningBriefingCard';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -377,6 +378,17 @@ export const CalmChatScreen: React.FC<CalmChatScreenProps> = ({ onMenuClick }) =
     await handleSend(answer);
   };
 
+  const handleMorningBriefingAction = async (choice: 'light' | 'push') => {
+    setShowMorningFlow(false);
+    localStorage.setItem('aura-day-mode', choice);
+    
+    const message = choice === 'light' 
+      ? "I want to take it easy today. Let's keep things light."
+      : "I'm ready to push harder today. Let's make progress!";
+    
+    await handleSend(message);
+  };
+
   const handleQuickAction = async (actionId: string, message: string) => {
     await handleSend(message);
   };
@@ -509,84 +521,16 @@ export const CalmChatScreen: React.FC<CalmChatScreenProps> = ({ onMenuClick }) =
         )}
       </AnimatePresence>
 
-      {/* Morning Flow - soft, not interrogative */}
+      {/* Morning Briefing Card - appears in chat style */}
       <AnimatePresence>
         {showMorningFlow && (
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            className="px-4 py-4"
-          >
-            <div className="bg-gradient-to-br from-primary/10 to-accent/10 rounded-2xl p-5 border border-primary/20">
-              <p className="text-lg font-medium text-foreground mb-1">
-                Good morning, {userProfile.name}
-              </p>
-              {isBriefingLoading ? (
-                <p className="text-sm text-muted-foreground">Checking the weather...</p>
-              ) : briefing ? (
-                <p className="text-sm text-muted-foreground mb-4">{briefing.weather}</p>
-              ) : null}
-              
-              {/* Routine Visual Nudge */}
-              {routineVisual && (
-                <motion.div 
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: 0.3 }}
-                  className="mt-4 mb-4"
-                >
-                  <p className="text-xs text-muted-foreground mb-2">Your day at a glance</p>
-                  <div 
-                    className="relative rounded-xl overflow-hidden cursor-pointer group"
-                    onClick={openVisual}
-                  >
-                    <img 
-                      src={routineVisual.imageUrl} 
-                      alt="Your routine" 
-                      className="w-full h-32 object-cover transition-transform group-hover:scale-105"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-background/60 to-transparent" />
-                    <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between">
-                      <span className="text-xs font-medium text-foreground">
-                        {routineVisual.blocksCount} blocks today
-                      </span>
-                      <Button size="sm" variant="secondary" className="h-6 text-xs rounded-full">
-                        View
-                      </Button>
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-              
-              <p className="text-sm text-foreground mt-4 mb-3">
-                Does today feel like a light day or a push day?
-              </p>
-              
-              <div className="flex flex-wrap gap-2">
-                {['Light day', 'Push day', 'Not sure yet'].map(opt => (
-                  <Button
-                    key={opt}
-                    variant="outline"
-                    size="sm"
-                    className="rounded-full text-xs bg-background/50"
-                    onClick={() => handleMorningQuestion(`Today feels like a ${opt.toLowerCase()}`)}
-                  >
-                    {opt}
-                  </Button>
-                ))}
-              </div>
-              
-              <Button
-                variant="ghost"
-                size="sm"
-                className="mt-3 text-xs text-muted-foreground"
-                onClick={() => setShowMorningFlow(false)}
-              >
-                Skip
-              </Button>
-            </div>
-          </motion.div>
+          <div className="px-4 py-4">
+            <MorningBriefingCard
+              userName={userProfile.name}
+              onDismiss={() => setShowMorningFlow(false)}
+              onAction={handleMorningBriefingAction}
+            />
+          </div>
         )}
       </AnimatePresence>
 
