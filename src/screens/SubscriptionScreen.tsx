@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Crown, Star, Heart, CreditCard, Calendar, Check, X, Loader2, AlertCircle, ChevronRight, Sparkles, MessageCircle, Brain, Dumbbell, Palette, Users, Mic, Image, FileText, BarChart3, Zap, Clock, RefreshCw } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -51,7 +52,7 @@ const TIER_INFO = {
     color: 'text-primary', 
     bgColor: 'bg-primary/10',
     tagline: 'For consistency & growth',
-    price: '₹49–₹99/month',
+    price: '₹99/month',
   },
   pro: { 
     name: 'AURRA Pro', 
@@ -59,7 +60,7 @@ const TIER_INFO = {
     color: 'text-amber-500', 
     bgColor: 'bg-amber-500/10',
     tagline: 'For builders & serious self-growth',
-    price: '₹199–₹299/month',
+    price: '₹299/month',
   },
 };
 
@@ -238,8 +239,64 @@ const SubscriptionScreen: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      <div className="min-h-screen bg-background pb-20">
+        {/* Header Skeleton */}
+        <div className="sticky top-0 z-10 bg-background/95 backdrop-blur border-b border-border">
+          <div className="flex items-center gap-3 p-4">
+            <Skeleton className="w-10 h-10 rounded-lg" />
+            <div className="space-y-2">
+              <Skeleton className="h-6 w-40" />
+              <Skeleton className="h-3 w-56" />
+            </div>
+          </div>
+        </div>
+
+        <div className="p-4 space-y-6">
+          {/* Current Plan Card Skeleton */}
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-3 mb-4">
+                <Skeleton className="w-12 h-12 rounded-xl" />
+                <div className="space-y-2">
+                  <Skeleton className="h-5 w-28" />
+                  <Skeleton className="h-3 w-44" />
+                </div>
+              </div>
+              <Skeleton className="h-4 w-48 mb-4" />
+              <Skeleton className="h-10 w-full rounded-lg" />
+            </CardContent>
+          </Card>
+
+          {/* Tabs Skeleton */}
+          <Skeleton className="h-10 w-full rounded-lg" />
+
+          {/* Plan Cards Skeleton */}
+          <div className="space-y-4">
+            {[1, 2, 3].map((i) => (
+              <Card key={i}>
+                <CardContent className="pt-6">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <Skeleton className="w-5 h-5 rounded" />
+                      <Skeleton className="h-5 w-24" />
+                    </div>
+                    <Skeleton className="h-5 w-20" />
+                  </div>
+                  <Skeleton className="h-4 w-40 mb-4" />
+                  <div className="space-y-2">
+                    {[1, 2, 3, 4, 5].map((j) => (
+                      <div key={j} className="flex items-center gap-2">
+                        <Skeleton className="w-4 h-4 rounded" />
+                        <Skeleton className="h-4 w-32" />
+                      </div>
+                    ))}
+                  </div>
+                  {i > 1 && <Skeleton className="h-10 w-full mt-4 rounded-lg" />}
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
       </div>
     );
   }
