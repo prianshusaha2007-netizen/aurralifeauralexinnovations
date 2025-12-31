@@ -1,22 +1,20 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { 
-  Search, Plus, Trash2, Edit2, User, Target, Heart, 
-  Brain, Sparkles, Clock, Star, Filter, X, Check,
-  Compass, Users, Lightbulb, Calendar, Image, Eye
+  Search, User, Target, Heart, Brain, Sparkles, Clock, Star, 
+  MessageCircle, Compass, Users, Lightbulb, Calendar, X, Eye, Image
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useNavigate } from 'react-router-dom';
 import { useRoutineVisualization } from '@/hooks/useRoutineVisualization';
+
 type MemoryType = 'person' | 'goal' | 'habit' | 'emotional_pattern' | 'decision' | 'preference' | 'routine' | 'relationship';
 
 interface LifeMemory {
@@ -32,49 +30,47 @@ interface LifeMemory {
   updated_at: string;
 }
 
-const memoryTypeConfig: Record<MemoryType, { icon: React.ElementType; label: string; color: string }> = {
-  person: { icon: User, label: 'Person', color: 'text-blue-500 bg-blue-500/10' },
-  goal: { icon: Target, label: 'Goal', color: 'text-emerald-500 bg-emerald-500/10' },
-  habit: { icon: Calendar, label: 'Habit', color: 'text-orange-500 bg-orange-500/10' },
-  emotional_pattern: { icon: Heart, label: 'Emotion', color: 'text-pink-500 bg-pink-500/10' },
-  decision: { icon: Compass, label: 'Decision', color: 'text-purple-500 bg-purple-500/10' },
-  preference: { icon: Lightbulb, label: 'Preference', color: 'text-yellow-500 bg-yellow-500/10' },
-  routine: { icon: Clock, label: 'Routine', color: 'text-teal-500 bg-teal-500/10' },
-  relationship: { icon: Users, label: 'Relationship', color: 'text-rose-500 bg-rose-500/10' },
+const memoryTypeConfig: Record<MemoryType, { icon: React.ElementType; label: string; color: string; chatPrompt: string }> = {
+  person: { icon: User, label: 'Person', color: 'text-blue-500 bg-blue-500/10', chatPrompt: 'Tell me about someone important to you' },
+  goal: { icon: Target, label: 'Goal', color: 'text-emerald-500 bg-emerald-500/10', chatPrompt: 'What goal are you working towards?' },
+  habit: { icon: Calendar, label: 'Habit', color: 'text-orange-500 bg-orange-500/10', chatPrompt: 'What habits are you building?' },
+  emotional_pattern: { icon: Heart, label: 'Emotion', color: 'text-pink-500 bg-pink-500/10', chatPrompt: 'How have you been feeling lately?' },
+  decision: { icon: Compass, label: 'Decision', color: 'text-purple-500 bg-purple-500/10', chatPrompt: 'What decision are you thinking about?' },
+  preference: { icon: Lightbulb, label: 'Preference', color: 'text-yellow-500 bg-yellow-500/10', chatPrompt: 'Tell me what you prefer or like' },
+  routine: { icon: Clock, label: 'Routine', color: 'text-teal-500 bg-teal-500/10', chatPrompt: 'Describe your daily routine' },
+  relationship: { icon: Users, label: 'Relationship', color: 'text-rose-500 bg-rose-500/10', chatPrompt: 'Tell me about your relationships' },
 };
 
 const memoryTypes: MemoryType[] = ['goal', 'person', 'habit', 'preference', 'routine', 'emotional_pattern', 'decision', 'relationship'];
 
+// AI control prompts
+const AI_PROMPTS = {
+  add: 'Tell me something you want me to remember',
+  edit: (title: string) => `Update my memory about "${title}"`,
+  delete: (title: string) => `Forget about "${title}"`,
+  viewAll: 'What do you remember about me?',
+  byCategory: (cat: string) => `What do you know about my ${cat}?`,
+};
+
 export const LifeMemoriesScreen: React.FC = () => {
+  const navigate = useNavigate();
   const [memories, setMemories] = useState<LifeMemory[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedType, setSelectedType] = useState<MemoryType | null>(null);
+  const [selectedMemory, setSelectedMemory] = useState<LifeMemory | null>(null);
   const [showRoutineVisual, setShowRoutineVisual] = useState(false);
   
-  // Routine visualization
   const { routineVisual } = useRoutineVisualization();
-  
-  // Dialog states
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const [editingMemory, setEditingMemory] = useState<LifeMemory | null>(null);
-  
-  // Form states
-  const [formType, setFormType] = useState<MemoryType>('goal');
-  const [formTitle, setFormTitle] = useState('');
-  const [formContent, setFormContent] = useState('');
-  const [formImportance, setFormImportance] = useState(5);
 
   const fetchMemories = useCallback(async () => {
     setIsLoading(true);
     try {
-      let query = supabase
+      const { data, error } = await supabase
         .from('life_memories')
         .select('*')
         .order('importance_score', { ascending: false })
         .order('updated_at', { ascending: false });
-
-      const { data, error } = await query;
       
       if (error) throw error;
       setMemories((data || []) as LifeMemory[]);
@@ -90,102 +86,12 @@ export const LifeMemoriesScreen: React.FC = () => {
     fetchMemories();
   }, [fetchMemories]);
 
-  const handleAddMemory = async () => {
-    if (!formTitle.trim() || !formContent.trim()) {
-      toast.error('Please fill in all fields');
-      return;
+  // Navigate to chat with a pre-filled message
+  const goToChat = (message?: string) => {
+    if (message) {
+      localStorage.setItem('aura-prefilled-message', message);
     }
-
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Not authenticated');
-
-      const { data, error } = await supabase
-        .from('life_memories')
-        .insert({
-          user_id: user.id,
-          memory_type: formType,
-          title: formTitle.trim(),
-          content: formContent.trim(),
-          importance_score: formImportance,
-          metadata: {},
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-      
-      setMemories(prev => [data as LifeMemory, ...prev]);
-      resetForm();
-      setIsAddDialogOpen(false);
-      toast.success('Memory saved');
-    } catch (error) {
-      console.error('Error adding memory:', error);
-      toast.error('Failed to save memory');
-    }
-  };
-
-  const handleUpdateMemory = async () => {
-    if (!editingMemory || !formTitle.trim() || !formContent.trim()) return;
-
-    try {
-      const { error } = await supabase
-        .from('life_memories')
-        .update({
-          memory_type: formType,
-          title: formTitle.trim(),
-          content: formContent.trim(),
-          importance_score: formImportance,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', editingMemory.id);
-
-      if (error) throw error;
-      
-      setMemories(prev => prev.map(m => 
-        m.id === editingMemory.id 
-          ? { ...m, memory_type: formType, title: formTitle.trim(), content: formContent.trim(), importance_score: formImportance }
-          : m
-      ));
-      resetForm();
-      setEditingMemory(null);
-      toast.success('Memory updated');
-    } catch (error) {
-      console.error('Error updating memory:', error);
-      toast.error('Failed to update memory');
-    }
-  };
-
-  const handleDeleteMemory = async (id: string) => {
-    try {
-      const { error } = await supabase
-        .from('life_memories')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
-      
-      setMemories(prev => prev.filter(m => m.id !== id));
-      toast.success('Memory deleted');
-    } catch (error) {
-      console.error('Error deleting memory:', error);
-      toast.error('Failed to delete memory');
-    }
-  };
-
-  const resetForm = () => {
-    setFormType('goal');
-    setFormTitle('');
-    setFormContent('');
-    setFormImportance(5);
-  };
-
-  const openEditDialog = (memory: LifeMemory) => {
-    setEditingMemory(memory);
-    setFormType(memory.memory_type);
-    setFormTitle(memory.title);
-    setFormContent(memory.content);
-    setFormImportance(memory.importance_score);
+    navigate('/');
   };
 
   const filteredMemories = memories.filter(memory => {
@@ -207,7 +113,12 @@ export const LifeMemoriesScreen: React.FC = () => {
     const Icon = config.icon;
 
     return (
-      <div className="flex items-start gap-3 p-4 bg-card rounded-2xl border border-border/50 group hover:border-border transition-colors">
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="flex items-start gap-3 p-4 bg-card rounded-2xl border border-border/50 cursor-pointer hover:border-primary/30 transition-all"
+        onClick={() => setSelectedMemory(memory)}
+      >
         <div className={cn('p-2.5 rounded-xl shrink-0', config.color)}>
           <Icon className="w-4 h-4" />
         </div>
@@ -226,93 +137,95 @@ export const LifeMemoriesScreen: React.FC = () => {
             {format(new Date(memory.updated_at), 'MMM d, yyyy')}
           </p>
         </div>
-        <div className="flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 text-muted-foreground hover:text-foreground"
-            onClick={() => openEditDialog(memory)}
-          >
-            <Edit2 className="w-3.5 h-3.5" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 text-muted-foreground hover:text-destructive"
-            onClick={() => handleDeleteMemory(memory.id)}
-          >
-            <Trash2 className="w-3.5 h-3.5" />
-          </Button>
-        </div>
-      </div>
+      </motion.div>
     );
   };
 
-  const MemoryForm = ({ isEdit = false }: { isEdit?: boolean }) => (
-    <div className="space-y-4 pt-4">
-      <div>
-        <label className="text-sm font-medium mb-2 block">Type</label>
-        <Select value={formType} onValueChange={(v) => setFormType(v as MemoryType)}>
-          <SelectTrigger className="rounded-xl">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {memoryTypes.map(type => (
-              <SelectItem key={type} value={type}>
-                <div className="flex items-center gap-2">
-                  {React.createElement(memoryTypeConfig[type].icon, { className: 'w-4 h-4' })}
-                  {memoryTypeConfig[type].label}
-                </div>
-              </SelectItem>
-            ))
-            }
-          </SelectContent>
-        </Select>
-      </div>
-      
-      <div>
-        <label className="text-sm font-medium mb-2 block">Title</label>
-        <Input
-          value={formTitle}
-          onChange={(e) => setFormTitle(e.target.value)}
-          placeholder="What should AURRA remember?"
-          className="rounded-xl"
-        />
-      </div>
-      
-      <div>
-        <label className="text-sm font-medium mb-2 block">Details</label>
-        <Textarea
-          value={formContent}
-          onChange={(e) => setFormContent(e.target.value)}
-          placeholder="Tell me more..."
-          className="rounded-xl min-h-[100px] resize-none"
-        />
-      </div>
-      
-      <div>
-        <label className="text-sm font-medium mb-2 block">
-          Importance ({formImportance}/10)
-        </label>
-        <input
-          type="range"
-          min="1"
-          max="10"
-          value={formImportance}
-          onChange={(e) => setFormImportance(Number(e.target.value))}
-          className="w-full accent-primary"
-        />
-      </div>
-      
-      <Button 
-        onClick={isEdit ? handleUpdateMemory : handleAddMemory} 
-        className="w-full rounded-xl"
+  // Memory Detail Sheet
+  const MemoryDetailSheet = ({ memory, onClose }: { memory: LifeMemory; onClose: () => void }) => {
+    const config = memoryTypeConfig[memory.memory_type];
+    const Icon = config.icon;
+
+    return (
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 z-50 bg-background/95 backdrop-blur-sm"
+        onClick={onClose}
       >
-        <Check className="w-4 h-4 mr-2" />
-        {isEdit ? 'Update Memory' : 'Save Memory'}
-      </Button>
-    </div>
-  );
+        <motion.div
+          initial={{ y: '100%' }}
+          animate={{ y: 0 }}
+          exit={{ y: '100%' }}
+          transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+          className="absolute bottom-0 left-0 right-0 bg-card rounded-t-3xl max-h-[80vh] overflow-y-auto"
+          onClick={e => e.stopPropagation()}
+        >
+          <div className="p-6">
+            {/* Handle */}
+            <div className="w-12 h-1 bg-muted rounded-full mx-auto mb-6" />
+            
+            {/* Header */}
+            <div className="flex items-start gap-4 mb-6">
+              <div className={cn('p-3 rounded-2xl', config.color)}>
+                <Icon className="w-6 h-6" />
+              </div>
+              <div className="flex-1">
+                <Badge variant="secondary" className="mb-2">{config.label}</Badge>
+                <h2 className="text-xl font-semibold">{memory.title}</h2>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Saved {format(new Date(memory.created_at), 'MMMM d, yyyy')}
+                </p>
+              </div>
+              {memory.importance_score >= 7 && (
+                <div className="flex items-center gap-1 text-yellow-500">
+                  <Star className="w-4 h-4 fill-current" />
+                  <span className="text-xs">Important</span>
+                </div>
+              )}
+            </div>
+
+            {/* Content */}
+            <div className="bg-muted/30 rounded-2xl p-4 mb-6">
+              <p className="text-sm leading-relaxed whitespace-pre-wrap">{memory.content}</p>
+            </div>
+
+            {/* AI Control Actions */}
+            <div className="space-y-3">
+              <p className="text-xs text-muted-foreground text-center mb-4">
+                💬 Ask AURRA to manage this memory
+              </p>
+              
+              <Button
+                variant="outline"
+                className="w-full rounded-xl justify-start gap-3"
+                onClick={() => {
+                  onClose();
+                  goToChat(AI_PROMPTS.edit(memory.title));
+                }}
+              >
+                <MessageCircle className="w-4 h-4 text-primary" />
+                <span>Update this memory</span>
+              </Button>
+              
+              <Button
+                variant="outline"
+                className="w-full rounded-xl justify-start gap-3 text-destructive hover:text-destructive"
+                onClick={() => {
+                  onClose();
+                  goToChat(AI_PROMPTS.delete(memory.title));
+                }}
+              >
+                <MessageCircle className="w-4 h-4" />
+                <span>Ask AURRA to forget this</span>
+              </Button>
+            </div>
+          </div>
+        </motion.div>
+      </motion.div>
+    );
+  };
 
   return (
     <div className="flex flex-col h-full p-4 pb-24">
@@ -320,37 +233,49 @@ export const LifeMemoriesScreen: React.FC = () => {
       <div className="mb-6">
         <div className="flex items-center gap-2 mb-1">
           <Brain className="w-6 h-6 text-primary" />
-          <h1 className="text-2xl font-bold">Life</h1>
+          <h1 className="text-2xl font-bold">Life Memory</h1>
         </div>
         <p className="text-sm text-muted-foreground">
-          Your goals, preferences, and important memories
+          Everything AURRA remembers about you
         </p>
       </div>
 
-      {/* Search & Add */}
-      <div className="flex gap-2 mb-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search memories..."
-            className="pl-9 rounded-xl"
-          />
+      {/* AI Control Banner */}
+      <motion.div
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent rounded-2xl p-4 mb-4 border border-primary/20"
+      >
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-primary/20 rounded-xl">
+            <Sparkles className="w-5 h-5 text-primary" />
+          </div>
+          <div className="flex-1">
+            <p className="text-sm font-medium">AI-Managed Memories</p>
+            <p className="text-xs text-muted-foreground">
+              Tell AURRA what to remember, update, or forget
+            </p>
+          </div>
+          <Button
+            size="sm"
+            className="rounded-xl gap-2"
+            onClick={() => goToChat(AI_PROMPTS.add)}
+          >
+            <MessageCircle className="w-4 h-4" />
+            Add
+          </Button>
         </div>
-        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-          <DialogTrigger asChild>
-            <Button size="icon" className="rounded-xl shrink-0">
-              <Plus className="w-4 h-4" />
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="bg-card border-border">
-            <DialogHeader>
-              <DialogTitle>Add Memory</DialogTitle>
-            </DialogHeader>
-            <MemoryForm />
-          </DialogContent>
-        </Dialog>
+      </motion.div>
+
+      {/* Search */}
+      <div className="relative mb-4">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+        <Input
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Search memories..."
+          className="pl-9 rounded-xl"
+        />
       </div>
 
       {/* Type Filter Pills */}
@@ -384,7 +309,7 @@ export const LifeMemoriesScreen: React.FC = () => {
 
       {/* Memories List */}
       <div className="flex-1 overflow-y-auto space-y-6">
-        {/* Routine Visual Section - Always at top when available */}
+        {/* Routine Visual Section */}
         {routineVisual && !selectedType && !searchQuery && (
           <div>
             <div className="flex items-center gap-2 mb-3">
@@ -424,24 +349,40 @@ export const LifeMemoriesScreen: React.FC = () => {
             <Sparkles className="w-8 h-8 mx-auto text-primary animate-pulse mb-4" />
             <p className="text-muted-foreground">Loading memories...</p>
           </div>
-        ) : filteredMemories.length === 0 && !routineVisual ? (
+        ) : filteredMemories.length === 0 ? (
           <div className="text-center py-12">
             <Brain className="w-12 h-12 mx-auto text-muted-foreground/30 mb-4" />
-            <p className="text-muted-foreground">
+            <p className="text-muted-foreground mb-2">
               {searchQuery || selectedType ? 'No matching memories' : 'No memories yet'}
             </p>
-            <p className="text-xs text-muted-foreground/70 mt-1">
-              {searchQuery || selectedType ? 'Try a different filter' : 'Tell AURRA about your goals and preferences!'}
-            </p>
+            <Button
+              variant="outline"
+              className="rounded-xl gap-2"
+              onClick={() => goToChat(AI_PROMPTS.add)}
+            >
+              <MessageCircle className="w-4 h-4" />
+              Tell AURRA something to remember
+            </Button>
           </div>
         ) : (
           <>
             {/* Goals Section */}
             {groupedMemories.goals.length > 0 && (
               <div>
-                <div className="flex items-center gap-2 mb-3">
-                  <Target className="w-4 h-4 text-emerald-500" />
-                  <h2 className="text-sm font-semibold text-muted-foreground">GOALS</h2>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <Target className="w-4 h-4 text-emerald-500" />
+                    <h2 className="text-sm font-semibold text-muted-foreground">GOALS</h2>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-xs text-muted-foreground h-7"
+                    onClick={() => goToChat(AI_PROMPTS.byCategory('goals'))}
+                  >
+                    <MessageCircle className="w-3 h-3 mr-1" />
+                    Ask about goals
+                  </Button>
                 </div>
                 <div className="space-y-3">
                   {groupedMemories.goals.map(memory => (
@@ -484,16 +425,6 @@ export const LifeMemoriesScreen: React.FC = () => {
         )}
       </div>
 
-      {/* Edit Dialog */}
-      <Dialog open={!!editingMemory} onOpenChange={(open) => !open && setEditingMemory(null)}>
-        <DialogContent className="bg-card border-border">
-          <DialogHeader>
-            <DialogTitle>Edit Memory</DialogTitle>
-          </DialogHeader>
-          <MemoryForm isEdit />
-        </DialogContent>
-      </Dialog>
-
       {/* Footer Stats */}
       {memories.length > 0 && (
         <div className="mt-4 pt-4 border-t border-border/50">
@@ -502,6 +433,16 @@ export const LifeMemoriesScreen: React.FC = () => {
           </p>
         </div>
       )}
+
+      {/* Memory Detail Sheet */}
+      <AnimatePresence>
+        {selectedMemory && (
+          <MemoryDetailSheet
+            memory={selectedMemory}
+            onClose={() => setSelectedMemory(null)}
+          />
+        )}
+      </AnimatePresence>
 
       {/* Routine Visual Full View Modal */}
       <AnimatePresence>

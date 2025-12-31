@@ -277,6 +277,77 @@ function detectSkillManagementIntent(message: string): { action: 'add' | 'remove
   return { action: null };
 }
 
+// Detect memory management intent (AI-controlled Life Memory)
+interface MemoryIntent {
+  action: 'add' | 'update' | 'delete' | 'list' | 'query' | null;
+  memoryType?: string;
+  memoryTitle?: string;
+  content?: string;
+}
+
+function detectMemoryManagementIntent(message: string): MemoryIntent {
+  const lowerMessage = message.toLowerCase();
+  
+  // Delete/forget patterns
+  const forgetPatterns = [
+    /(?:forget|delete|remove)\s+(?:about\s+)?["']?(.+?)["']?$/i,
+    /(?:don't|do not)\s+remember\s+(?:about\s+)?["']?(.+?)["']?$/i,
+    /(?:erase|clear)\s+(?:my\s+)?(?:memory\s+(?:about|of)\s+)?["']?(.+?)["']?$/i,
+  ];
+  
+  for (const pattern of forgetPatterns) {
+    const match = lowerMessage.match(pattern);
+    if (match) {
+      return { action: 'delete', memoryTitle: match[1].trim() };
+    }
+  }
+  
+  // Update patterns
+  const updatePatterns = [
+    /update\s+(?:my\s+)?(?:memory\s+(?:about|of)\s+)?["']?(.+?)["']?$/i,
+    /change\s+(?:what\s+you\s+know\s+about\s+)?["']?(.+?)["']?$/i,
+    /(?:actually|now)\s+(?:my\s+)?(.+?)\s+(?:is|are|has|have)/i,
+  ];
+  
+  for (const pattern of updatePatterns) {
+    const match = lowerMessage.match(pattern);
+    if (match) {
+      return { action: 'update', memoryTitle: match[1].trim() };
+    }
+  }
+  
+  // List/query patterns
+  const listPatterns = [
+    /(?:what|show)\s+(?:do\s+you|all)\s+(?:remember|know)\s+(?:about\s+me)?/i,
+    /(?:list|show)\s+(?:my\s+)?(?:all\s+)?memories/i,
+    /what\s+do\s+you\s+know\s+about\s+(?:my\s+)?(.+)/i,
+  ];
+  
+  for (const pattern of listPatterns) {
+    const match = lowerMessage.match(pattern);
+    if (match) {
+      const category = match[1]?.trim();
+      return { action: 'list', memoryType: category };
+    }
+  }
+  
+  // Add/remember patterns
+  const rememberPatterns = [
+    /(?:remember|save|note|store)\s+(?:that\s+)?(?:my\s+)?(.+)/i,
+    /(?:i\s+want\s+you\s+to\s+(?:remember|know))\s+(?:that\s+)?(.+)/i,
+    /(?:tell\s+me\s+something\s+(?:to|you\s+should)\s+remember)/i,
+  ];
+  
+  for (const pattern of rememberPatterns) {
+    const match = lowerMessage.match(pattern);
+    if (match) {
+      return { action: 'add', content: match[1]?.trim() };
+    }
+  }
+  
+  return { action: null };
+}
+
 // Detect emotional state from message
 function detectEmotionalState(message: string): string {
   const lowerMessage = message.toLowerCase();
@@ -544,6 +615,7 @@ serve(async (req) => {
     const isSkillDiscovery = detectSkillDiscoveryIntent(lastMessage);
     const energyLevel = detectEnergyLevel(lastMessage);
     const skillManagement = detectSkillManagementIntent(lastMessage);
+    const memoryIntent = detectMemoryManagementIntent(lastMessage);
     
     // Build time context first (needed for persona detection)
     const now = new Date();
@@ -587,6 +659,7 @@ serve(async (req) => {
     console.log("Humor check:", humorCheck);
     console.log("Routine edit:", isRoutineEdit);
     console.log("Recall intent:", recallIntent.type, recallIntent.isRecall);
+    console.log("Memory intent:", memoryIntent.action);
 
     // Time context already built above for persona detection
     
@@ -674,8 +747,33 @@ Respond naturally: "We haven't chatted long enough yet for me to notice patterns
       }
     }
     
+    // Memory management context
+    let memoryContext = '';
+    if (memoryIntent.action) {
+      memoryContext = `
+====================================
+🧠 LIFE MEMORY MANAGEMENT MODE
+====================================
+User wants to ${memoryIntent.action} a memory.
+${memoryIntent.memoryTitle ? `Title/subject: "${memoryIntent.memoryTitle}"` : ''}
+${memoryIntent.content ? `Content: "${memoryIntent.content}"` : ''}
+
+RESPONSE BEHAVIOR:
+- For ADD: Acknowledge warmly, confirm what you'll remember. "Got it, I'll remember that."
+- For UPDATE: Confirm the change. "Updated! I now know that..."
+- For DELETE: Confirm removal gently. "Okay, I've forgotten about that."
+- For LIST: Summarize memories naturally, not as a database dump.
+
+Always sound human, never robotic. Never say "I have stored in my database."
+`;
+    }
     
     let additionalContext = '';
+    
+    // Add memory context if present
+    if (memoryContext) {
+      additionalContext += memoryContext;
+    }
     
     // Add recall context if present
     if (recallContext) {
