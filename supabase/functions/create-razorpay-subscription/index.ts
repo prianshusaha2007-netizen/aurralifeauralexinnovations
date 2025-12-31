@@ -18,8 +18,40 @@ serve(async (req) => {
   }
 
   try {
-    const { tier, userId, userEmail, userName } = await req.json();
-    console.log('Creating Razorpay subscription for tier:', tier, 'userId:', userId);
+    // Authenticate the user
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      console.error('No authorization header provided');
+      return new Response(
+        JSON.stringify({ error: 'Authentication required' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+
+    // Create auth client to verify the user
+    const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } }
+    });
+
+    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser();
+    if (authError || !user) {
+      console.error('Authentication failed:', authError);
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Use authenticated user's ID and email - never trust client-supplied values
+    const authenticatedUserId = user.id;
+    const userEmail = user.email;
+
+    const { tier, userName } = await req.json();
+    console.log('Creating Razorpay subscription for tier:', tier, 'authenticatedUserId:', authenticatedUserId);
 
     const RAZORPAY_KEY_ID = Deno.env.get('RAZORPAY_KEY_ID');
     const RAZORPAY_KEY_SECRET = Deno.env.get('RAZORPAY_KEY_SECRET');
@@ -87,7 +119,7 @@ serve(async (req) => {
         customer_notify: 1,
         notes: {
           tier,
-          userId,
+          userId: authenticatedUserId,
           product: tierConfig.name,
         },
       };
@@ -107,13 +139,11 @@ serve(async (req) => {
         const subscription = await subResponse.json();
         console.log('Razorpay subscription created:', subscription.id);
 
-        // Save subscription record to database
-        const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-        const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+        // Save subscription record to database using service role
         const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
         await supabase.from('payments').insert({
-          user_id: userId,
+          user_id: authenticatedUserId,
           razorpay_order_id: subscription.id,
           amount: tierConfig.amount,
           currency: 'INR',
@@ -149,7 +179,7 @@ serve(async (req) => {
       receipt: `sub_${tier}_${Date.now()}`.slice(0, 40),
       notes: {
         tier,
-        userId,
+        userId: authenticatedUserId,
         product: tierConfig.name,
         type: 'subscription_fallback',
       },
@@ -176,13 +206,11 @@ serve(async (req) => {
     const order = await orderResponse.json();
     console.log('Order created as subscription fallback:', order.id);
 
-    // Save payment record
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    // Save payment record using service role
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     await supabase.from('payments').insert({
-      user_id: userId,
+      user_id: authenticatedUserId,
       razorpay_order_id: order.id,
       amount: order.amount,
       currency: order.currency,

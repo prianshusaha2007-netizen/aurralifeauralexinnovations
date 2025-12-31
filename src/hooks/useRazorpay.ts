@@ -72,10 +72,10 @@ export const useRazorpay = () => {
     };
   }, []);
 
-  // One-time payment
+  // One-time payment - userId parameter kept for backward compatibility but not sent to server
   const initiatePayment = useCallback(async (
     tier: 'plus' | 'pro',
-    userId: string,
+    _userId: string, // Ignored - server uses authenticated user
     userProfile?: { name?: string; email?: string }
   ): Promise<boolean> => {
     if (!isScriptLoaded) {
@@ -92,8 +92,9 @@ export const useRazorpay = () => {
         return false;
       }
 
+      // Only send tier - server will get userId from auth token
       const { data: orderData, error: orderError } = await supabase.functions.invoke('create-razorpay-order', {
-        body: { tier, userId },
+        body: { tier },
       });
 
       if (orderError || !orderData) {
@@ -117,13 +118,13 @@ export const useRazorpay = () => {
             console.log('Payment successful:', response);
             
             try {
+              // Only send payment details and tier - server will get userId from auth token
               const { data: verifyData, error: verifyError } = await supabase.functions.invoke('verify-razorpay-payment', {
                 body: {
                   razorpay_order_id: response.razorpay_order_id,
                   razorpay_payment_id: response.razorpay_payment_id,
                   razorpay_signature: response.razorpay_signature,
                   tier,
-                  userId,
                 },
               });
 
@@ -197,10 +198,10 @@ export const useRazorpay = () => {
     }
   }, [isScriptLoaded]);
 
-  // Subscription (recurring) payment
+  // Subscription (recurring) payment - userId parameter kept for backward compatibility but not sent to server
   const initiateSubscription = useCallback(async (
     tier: 'plus' | 'pro',
-    userId: string,
+    _userId: string, // Ignored - server uses authenticated user
     userProfile?: { name?: string; email?: string }
   ): Promise<boolean> => {
     if (!isScriptLoaded) {
@@ -217,11 +218,10 @@ export const useRazorpay = () => {
         return false;
       }
 
+      // Only send tier and userName - server will get userId and email from auth token
       const { data: subData, error: subError } = await supabase.functions.invoke('create-razorpay-subscription', {
         body: { 
           tier, 
-          userId,
-          userEmail: session.user.email,
           userName: userProfile?.name,
         },
       });

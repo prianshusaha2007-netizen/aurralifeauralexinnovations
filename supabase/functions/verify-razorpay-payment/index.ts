@@ -12,8 +12,39 @@ serve(async (req) => {
   }
 
   try {
-    const { razorpay_order_id, razorpay_payment_id, razorpay_signature, tier, userId } = await req.json();
-    console.log('Verifying payment:', { razorpay_order_id, razorpay_payment_id, tier, userId });
+    // Authenticate the user
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      console.error('No authorization header provided');
+      return new Response(
+        JSON.stringify({ error: 'Authentication required' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+
+    // Create auth client to verify the user
+    const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } }
+    });
+
+    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser();
+    if (authError || !user) {
+      console.error('Authentication failed:', authError);
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Use authenticated user's ID - never trust client-supplied userId
+    const authenticatedUserId = user.id;
+
+    const { razorpay_order_id, razorpay_payment_id, razorpay_signature, tier } = await req.json();
+    console.log('Verifying payment:', { razorpay_order_id, razorpay_payment_id, tier, authenticatedUserId });
 
     const RAZORPAY_KEY_SECRET = Deno.env.get('RAZORPAY_KEY_SECRET');
     if (!RAZORPAY_KEY_SECRET) {
@@ -31,9 +62,7 @@ serve(async (req) => {
 
     console.log('Payment signature verified successfully');
 
-    // Update user's subscription in database
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    // Use service role for database operations
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Update payment record
@@ -45,6 +74,7 @@ serve(async (req) => {
         completed_at: new Date().toISOString(),
       })
       .eq('razorpay_order_id', razorpay_order_id)
+      .eq('user_id', authenticatedUserId) // Ensure payment belongs to authenticated user
       .select()
       .single();
 
@@ -60,7 +90,7 @@ serve(async (req) => {
     const { error: subError } = await supabase
       .from('subscriptions')
       .upsert({
-        user_id: userId,
+        user_id: authenticatedUserId,
         tier: tier,
         status: 'active',
         started_at: new Date().toISOString(),
@@ -82,7 +112,7 @@ serve(async (req) => {
         subscription_tier: tier,
         updated_at: new Date().toISOString(),
       })
-      .eq('user_id', userId);
+      .eq('user_id', authenticatedUserId);
 
     if (engagementError) {
       console.error('Error updating engagement:', engagementError);
@@ -97,7 +127,7 @@ serve(async (req) => {
         daily_credits_limit: tier === 'pro' ? 500 : 200,
         updated_at: new Date().toISOString(),
       })
-      .eq('user_id', userId);
+      .eq('user_id', authenticatedUserId);
 
     if (creditsError) {
       console.error('Error updating credits:', creditsError);
