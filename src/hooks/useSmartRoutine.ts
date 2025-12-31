@@ -1,6 +1,4 @@
 import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from './useAuth';
 import { toast } from 'sonner';
 
 // Smart routine types with flexibility and motivation awareness
@@ -80,7 +78,6 @@ const DEFAULT_ACTIVITY_CONFIG: Record<RoutineActivityType, { icon: string; color
 };
 
 export const useSmartRoutine = () => {
-  const { user } = useAuth();
   const [settings, setSettings] = useState<SmartRoutineSettings>({
     wakeTime: '07:00',
     sleepTime: '23:00',
