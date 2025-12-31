@@ -14,6 +14,8 @@ import { RoutineVisualCard, RoutineVisualButton } from '@/components/RoutineVisu
 import { RoutineWidget } from '@/components/RoutineWidget';
 import { SkillsWidget } from '@/components/SkillsWidget';
 import { SkillSessionTimer } from '@/components/SkillSessionTimer';
+import { CreditWarning } from '@/components/CreditWarning';
+import { UpgradeSheet } from '@/components/UpgradeSheet';
 import { useAura } from '@/contexts/AuraContext';
 import { useAuraChat } from '@/hooks/useAuraChat';
 import { useVoiceFeedback } from '@/hooks/useVoiceFeedback';
@@ -24,6 +26,7 @@ import { useWeeklyReflection } from '@/hooks/useWeeklyReflection';
 import { useRoutineBlocks } from '@/hooks/useRoutineBlocks';
 import { useRoutineVisualization } from '@/hooks/useRoutineVisualization';
 import { useSkillsProgress } from '@/hooks/useSkillsProgress';
+import { useCreditWarning } from '@/hooks/useCreditWarning';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -107,6 +110,16 @@ export const CalmChatScreen: React.FC<CalmChatScreenProps> = ({ onMenuClick }) =
     getVisualMessage 
   } = useRoutineVisualization();
   
+  // Credit warning system
+  const {
+    showSoftWarning,
+    showLimitWarning,
+    creditStatus,
+    dismissSoftWarning,
+    dismissLimitWarning,
+    checkAndShowWarning,
+  } = useCreditWarning();
+  
   const [inputValue, setInputValue] = useState('');
   const [statusIndex, setStatusIndex] = useState(0);
   const [memoryPrompt, setMemoryPrompt] = useState<{ content: string; show: boolean }>({ content: '', show: false });
@@ -122,6 +135,7 @@ export const CalmChatScreen: React.FC<CalmChatScreenProps> = ({ onMenuClick }) =
   const [showCodingMentor, setShowCodingMentor] = useState(false);
   const [showScrollButton, setShowScrollButton] = useState(false);
   const [isNearBottom, setIsNearBottom] = useState(true);
+  const [showUpgradeSheet, setShowUpgradeSheet] = useState(false);
   
   // Check if coding block is active
   const isCodingBlockActive = activeBlock?.block.type === 'coding';
@@ -266,6 +280,13 @@ export const CalmChatScreen: React.FC<CalmChatScreenProps> = ({ onMenuClick }) =
     const messageToSend = messageOverride || inputValue.trim();
     if (!messageToSend || isThinking) return;
 
+    // Check if user can still send messages (credits check)
+    if (!creditStatus.canUseCredits && !creditStatus.isPremium) {
+      // Show limit warning if not already shown
+      checkAndShowWarning();
+      return;
+    }
+
     setInputValue('');
     setShowQuickActions(false);
     
@@ -289,6 +310,8 @@ export const CalmChatScreen: React.FC<CalmChatScreenProps> = ({ onMenuClick }) =
       } else {
         addChatMessage({ content: "Sorry, I couldn't generate that image. Want to try again?", sender: 'aura' });
       }
+      // Check credits after action
+      setTimeout(() => checkAndShowWarning(), 500);
       return;
     }
 
@@ -312,6 +335,9 @@ export const CalmChatScreen: React.FC<CalmChatScreenProps> = ({ onMenuClick }) =
     }
 
     await sendMessage(messageToSend);
+    
+    // Check credits after message is sent - with delay to allow credit update
+    setTimeout(() => checkAndShowWarning(), 1000);
   };
 
   const handleSpeak = async (text: string) => {
@@ -627,6 +653,58 @@ export const CalmChatScreen: React.FC<CalmChatScreenProps> = ({ onMenuClick }) =
             )}
           </AnimatePresence>
 
+          {/* Soft Credit Warning - appears naturally in chat */}
+          <AnimatePresence>
+            {showSoftWarning && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="flex gap-3"
+              >
+                <div className="w-9 h-9 rounded-full overflow-hidden ring-2 ring-primary/10 shrink-0">
+                  <img src={auraAvatar} alt="AURRA" className="w-full h-full object-cover" />
+                </div>
+                <CreditWarning
+                  type="soft"
+                  aiName={userProfile.aiName || 'AURRA'}
+                  onContinueTomorrow={dismissSoftWarning}
+                  onUpgrade={() => {
+                    dismissSoftWarning();
+                    setShowUpgradeSheet(true);
+                  }}
+                  className="flex-1"
+                />
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Limit Reached Warning - appears naturally in chat */}
+          <AnimatePresence>
+            {showLimitWarning && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="flex gap-3"
+              >
+                <div className="w-9 h-9 rounded-full overflow-hidden ring-2 ring-primary/10 shrink-0">
+                  <img src={auraAvatar} alt="AURRA" className="w-full h-full object-cover" />
+                </div>
+                <CreditWarning
+                  type="limit"
+                  aiName={userProfile.aiName || 'AURRA'}
+                  onContinueTomorrow={dismissLimitWarning}
+                  onUpgrade={() => {
+                    dismissLimitWarning();
+                    setShowUpgradeSheet(true);
+                  }}
+                  className="flex-1"
+                />
+              </motion.div>
+            )}
+          </AnimatePresence>
+
           {/* Typing Indicator */}
           {(isThinking || isGenerating || isCreatingDoc) && chatMessages[chatMessages.length - 1]?.sender === 'user' && (
             <ThinkingIndicator />
@@ -849,6 +927,12 @@ export const CalmChatScreen: React.FC<CalmChatScreenProps> = ({ onMenuClick }) =
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Upgrade Sheet */}
+      <UpgradeSheet
+        open={showUpgradeSheet}
+        onOpenChange={setShowUpgradeSheet}
+      />
     </div>
   );
 };
