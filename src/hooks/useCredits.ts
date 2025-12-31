@@ -116,6 +116,7 @@ export function useCredits() {
   const [finalReplyUsed, setFinalReplyUsed] = useState(false);
   const [actionUsage, setActionUsage] = useState<Record<string, number>>({});
   const [isMounted, setIsMounted] = useState(true);
+  const [testUsagePercent, setTestUsagePercent] = useState<number | null>(null); // For testing only
 
   // Track mount state to prevent updates after unmount
   useEffect(() => {
@@ -278,12 +279,12 @@ export function useCredits() {
       };
     }
 
-    // Calculate chat-based usage percent
+    // Calculate chat-based usage percent (or use test override)
     const chatLimit = TIER_LIMITS[tier].normal_chat;
     const chatUsed = actionUsage.normal_chat ?? 0;
-    const usagePercent = (chatUsed / chatLimit) * 100;
+    const usagePercent = testUsagePercent !== null ? testUsagePercent : (chatUsed / chatLimit) * 100;
     const showSoftWarning = usagePercent >= 80 && usagePercent < 100;
-    const isLimitReached = chatUsed >= chatLimit;
+    const isLimitReached = usagePercent >= 100;
     const allowFinalReply = isLimitReached && !finalReplyUsed;
     const canUseCredits = !isLimitReached || allowFinalReply;
 
@@ -298,8 +299,12 @@ export function useCredits() {
       allowFinalReply,
       actionAllowed: isActionAllowed,
     };
-  }, [credits, isLoading, tier, finalReplyUsed, actionUsage, isActionAllowed]);
+  }, [credits, isLoading, tier, finalReplyUsed, actionUsage, isActionAllowed, testUsagePercent]);
 
+  // Test function to simulate usage levels
+  const simulateUsage = useCallback((percent: number | null) => {
+    setTestUsagePercent(percent);
+  }, []);
   // Use credits for an action
   const useCreditsForAction = useCallback(async (action: CreditAction): Promise<boolean> => {
     if (!user?.id || !credits) return false;
@@ -396,5 +401,6 @@ export function useCredits() {
     refreshCredits: fetchCredits,
     isActionAllowed,
     tierDisplay: TIER_DISPLAY[tier],
+    simulateUsage, // For testing credit warnings
   };
 }

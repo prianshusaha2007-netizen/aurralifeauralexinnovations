@@ -48,7 +48,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ onMenuClick, onVoiceMode
   const { chatMessages, addChatMessage, updateChatMessage, deleteChatMessage, userProfile } = useAura();
   const { sendMessage, isThinking } = useAuraChat();
   const { avatarStyle, autoSwitchPersona } = usePersonaContext();
-  const { getCreditStatus, useCreditsForAction } = useCredits();
+  const { getCreditStatus, useCreditsForAction, simulateUsage } = useCredits();
   const { processCommand } = useVoiceCommands({
     name: userProfile.name,
     wakeTime: userProfile.wakeTime,
@@ -113,6 +113,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ onMenuClick, onVoiceMode
   const creditStatus = getCreditStatus();
   const aiName = userProfile.aiName || 'AURRA';
   const vanishTimersRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
+  const [showTestPanel, setShowTestPanel] = useState(false);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -1181,6 +1182,49 @@ ${data.improvements?.length > 0 ? `**Tips:** ${data.improvements.join(', ')}` : 
       
       {/* Chat Settings Sheet */}
       <ChatSettingsSheet open={showChatSettings} onOpenChange={setShowChatSettings} />
+      
+      {/* Test Panel for Credit Warnings (Development Only) */}
+      {import.meta.env.DEV && (
+        <div className="fixed bottom-20 right-4 z-50">
+          <Button
+            variant="outline"
+            size="sm"
+            className="text-xs bg-background shadow-lg"
+            onClick={() => setShowTestPanel(!showTestPanel)}
+          >
+            🧪 Test Credits
+          </Button>
+          {showTestPanel && (
+            <div className="absolute bottom-10 right-0 bg-card border rounded-lg p-3 shadow-xl space-y-2 min-w-[160px]">
+              <p className="text-xs font-medium mb-2">Simulate Usage:</p>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full justify-start text-xs"
+                onClick={() => simulateUsage(85)}
+              >
+                80% (Soft Warning)
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full justify-start text-xs"
+                onClick={() => simulateUsage(100)}
+              >
+                100% (Limit Reached)
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full justify-start text-xs text-muted-foreground"
+                onClick={() => simulateUsage(null)}
+              >
+                Reset (Normal)
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };
