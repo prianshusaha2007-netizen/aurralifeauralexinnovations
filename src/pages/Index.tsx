@@ -46,7 +46,6 @@ import { MorningGreeting } from '@/components/MorningGreeting';
 import { MorningMoodCheck, useShouldShowMoodCheck } from '@/components/MorningMoodCheck';
 import { useReminders } from '@/hooks/useReminders';
 import { useMorningBriefing } from '@/hooks/useMorningBriefing';
-import { useSmartRoutine } from '@/hooks/useSmartRoutine';
 
 const AppContent: React.FC = () => {
   const { userProfile, isLoading, clearChatHistory } = useAura();
@@ -60,7 +59,6 @@ const AppContent: React.FC = () => {
   
   const { reminders, activeReminder, snoozeReminder, completeReminder, dismissActiveReminder } = useReminders();
   const { shouldShow: showMorningMood, dismiss: dismissMorningMood } = useShouldShowMoodCheck();
-  const { setMood } = useSmartRoutine();
   const [morningMoodVisible, setMorningMoodVisible] = useState(false);
   
   // Show morning mood check after a short delay
@@ -155,7 +153,12 @@ const AppContent: React.FC = () => {
   };
 
   const handleMorningMoodComplete = (mood: 'low' | 'normal' | 'high') => {
-    setMood(mood);
+    // Store mood in localStorage - useSmartRoutine will pick it up
+    const stored = localStorage.getItem('aurra-smart-routine');
+    const settings = stored ? JSON.parse(stored) : {};
+    settings.currentMood = mood;
+    settings.lastMoodCheck = new Date().toISOString();
+    localStorage.setItem('aurra-smart-routine', JSON.stringify(settings));
     dismissMorningMood();
     setMorningMoodVisible(false);
   };
