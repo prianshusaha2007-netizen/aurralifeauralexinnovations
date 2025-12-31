@@ -10,6 +10,7 @@ import { useMemoryPersistence } from './useMemoryPersistence';
 import { useVoicePlayback } from './useVoicePlayback';
 import { useRelationshipEvolution } from './useRelationshipEvolution';
 import { useSmartRoutine, SmartRoutineBlock } from './useSmartRoutine';
+import { useMasterIntentEngine } from './useMasterIntentEngine';
 import { supabase } from '@/integrations/supabase/client';
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/aura-chat`;
@@ -154,6 +155,7 @@ export const useAuraChat = () => {
     skipBlock,
     shiftBlock,
   } = useSmartRoutine();
+  const { classifyIntent, getResponseStrategy } = useMasterIntentEngine();
   
   const messageCountRef = useRef(0);
 
@@ -302,10 +304,12 @@ export const useAuraChat = () => {
     // Record interaction for relationship evolution
     recordInteraction('message');
     
-    // Detect emotional content for additional tracking
-    const lowerMsg = userMessage.toLowerCase();
-    const isEmotionalMessage = /(?:feel|feeling|sad|happy|anxious|worried|tired|exhausted|stressed|overwhelmed|excited|grateful)/i.test(lowerMsg);
-    if (isEmotionalMessage) {
+    // Master Intent Classification - "Chat is the OS"
+    const intent = classifyIntent(userMessage);
+    const responseStrategy = getResponseStrategy(intent);
+    
+    // Track emotional interactions
+    if (intent.shouldPrioritizeEmotion) {
       recordInteraction('emotional');
     }
 
@@ -359,6 +363,19 @@ export const useAuraChat = () => {
             // Time context for routine-aware responses
             timeContext: getTimeContext(),
             upcomingBlock: findRelevantBlock(getTodayBlocks(), new Date().getHours()),
+            // Master Intent for "Chat is the OS"
+            intent: {
+              type: intent.type,
+              confidence: intent.confidence,
+              urgency: intent.urgency,
+              subAction: intent.subAction,
+              shouldPrioritizeEmotion: intent.shouldPrioritizeEmotion,
+            },
+            responseStrategy: {
+              systemPersona: responseStrategy.systemPersona,
+              responseLength: responseStrategy.responseLength,
+              featureHint: responseStrategy.featureHint,
+            },
           },
         }),
       });

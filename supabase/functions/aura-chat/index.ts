@@ -404,6 +404,19 @@ function validateInput(data: any): { valid: boolean; error?: string; sanitized?:
         isNearRoutineTime: userProfile.upcomingBlock.isNearRoutineTime === true,
         minutesUntilBlock: typeof userProfile.upcomingBlock.minutesUntilBlock === 'number' ? userProfile.upcomingBlock.minutesUntilBlock : 0,
       } : undefined,
+      // Master Intent - "Chat is the OS"
+      intent: userProfile.intent && typeof userProfile.intent === 'object' ? {
+        type: typeof userProfile.intent.type === 'string' ? userProfile.intent.type.slice(0, 20) : 'chat',
+        confidence: typeof userProfile.intent.confidence === 'string' ? userProfile.intent.confidence.slice(0, 20) : 'vague',
+        urgency: typeof userProfile.intent.urgency === 'string' ? userProfile.intent.urgency.slice(0, 10) : 'soon',
+        subAction: typeof userProfile.intent.subAction === 'string' ? userProfile.intent.subAction.slice(0, 20) : undefined,
+        shouldPrioritizeEmotion: userProfile.intent.shouldPrioritizeEmotion === true,
+      } : undefined,
+      responseStrategy: userProfile.responseStrategy && typeof userProfile.responseStrategy === 'object' ? {
+        systemPersona: typeof userProfile.responseStrategy.systemPersona === 'string' ? userProfile.responseStrategy.systemPersona.slice(0, 20) : 'companion',
+        responseLength: typeof userProfile.responseStrategy.responseLength === 'string' ? userProfile.responseStrategy.responseLength.slice(0, 10) : 'medium',
+        featureHint: typeof userProfile.responseStrategy.featureHint === 'string' ? userProfile.responseStrategy.featureHint.slice(0, 30) : '',
+      } : undefined,
     };
   }
 
@@ -1014,6 +1027,104 @@ PHRASES TO NEVER USE:
 - Options to offer: Good / Okay / Heavy
 `;
       }
+    }
+
+    // MASTER INTENT - "Chat is the OS" rules
+    const userIntent = userProfile?.intent;
+    const responseStrategy = userProfile?.responseStrategy;
+    
+    if (userIntent) {
+      additionalContext += `
+
+====================================
+🎯 MASTER INTENT CLASSIFICATION
+====================================
+DETECTED INTENT: ${userIntent.type?.toUpperCase() || 'CHAT'}
+CONFIDENCE: ${userIntent.confidence || 'vague'}
+URGENCY: ${userIntent.urgency || 'soon'}
+${userIntent.subAction ? `SUB-ACTION: ${userIntent.subAction}` : ''}
+${userIntent.shouldPrioritizeEmotion ? '⚠️ EMOTION PRIORITY: YES - Ignore all features, respond emotionally first' : ''}
+
+CHAT-AS-OS RULES (CRITICAL):
+All features must be accessible via natural language in chat.
+Menus are optional mirrors, not primary controls.
+
+FOR THIS MESSAGE:
+1. Intent detected: ${userIntent.type}
+2. Execute action if needed
+3. Confirm briefly in WhatsApp style
+4. Sync silently (user doesn't see backend)
+
+NEVER:
+- Tell user to "go to settings"
+- Require navigation
+- Show feature menus
+
+ALWAYS:
+- Handle everything in chat
+- Confirm actions briefly
+- Use WhatsApp-style language
+- Short messages
+- Human tone
+- Minimal emojis
+
+INTENT-SPECIFIC BEHAVIOR:
+${userIntent.type === 'reminder' ? `
+REMINDER INTENT:
+- Parse time naturally ("in 2 mins", "at 5pm", "tomorrow")
+- Confirm: "Got it 🙂 I'll remind you in [time]."
+- Save silently, sync UI
+` : ''}
+${userIntent.type === 'routine' ? `
+ROUTINE INTENT (${userIntent.subAction || 'general'}):
+- If "start": Switch to mentor mode, "Alright. What are you working on?"
+- If "skip": "Got it. One day off won't break anything."
+- If "shift": "Cool. Want to push it by 30 mins or try later tonight?"
+- If "edit": "Done. I've adjusted it."
+` : ''}
+${userIntent.type === 'memory' ? `
+MEMORY INTENT:
+- Ask gently: "Want me to remember this and help you stay on track?"
+- If yes → save silently
+- If no → ignore, no pressure
+` : ''}
+${userIntent.type === 'emotion' ? `
+EMOTION INTENT (HIGHEST PRIORITY):
+- IGNORE all features
+- Respond emotionally FIRST
+- Be present, not productive
+- Short, warm, no fixing
+- "Hey. That sounds heavy. Want to talk or just sit quietly?"
+` : ''}
+${userIntent.type === 'skill' ? `
+SKILL SESSION INTENT:
+- Switch persona to MENTOR
+- Ask what they're working on
+- Provide guidance, not lectures
+` : ''}
+${userIntent.type === 'reflection' ? `
+REFLECTION INTENT:
+- Show progress warmly
+- No scores or red marks
+- "You were most consistent with gym this week. Coding slipped a bit — no stress."
+` : ''}
+${userIntent.type === 'settings' ? `
+SETTINGS INTENT:
+- Acknowledge change: "Got you. I'll keep things lighter."
+- Update preference silently
+- No navigation required
+` : ''}
+`;
+    }
+
+    // Response strategy from intent engine
+    if (responseStrategy) {
+      additionalContext += `
+RESPONSE STRATEGY:
+- Persona: ${responseStrategy.systemPersona}
+- Length: ${responseStrategy.responseLength}
+${responseStrategy.featureHint ? `- Feature hint: ${responseStrategy.featureHint}` : ''}
+`;
     }
 
     // Emotional adaptation context
