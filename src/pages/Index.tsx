@@ -31,6 +31,11 @@ import { SmartServicesScreen } from '@/screens/SmartServicesScreen';
 import { DailyRoutineScreen } from '@/screens/DailyRoutineScreen';
 import DailyPlanScreen from '@/screens/DailyPlanScreen';
 import SubscriptionScreen from '@/screens/SubscriptionScreen';
+import NotificationsScreen from '@/screens/NotificationsScreen';
+import AppearanceScreen from '@/screens/AppearanceScreen';
+import VoiceLanguageScreen from '@/screens/VoiceLanguageScreen';
+import AccountScreen from '@/screens/AccountScreen';
+import HelpSupportScreen from '@/screens/HelpSupportScreen';
 import { AuraOrb } from '@/components/AuraOrb';
 import { DailyMoodPopup } from '@/components/DailyMoodPopup';
 import { SplashScreen } from '@/components/SplashScreen';
@@ -126,13 +131,12 @@ const AppContent: React.FC = () => {
       case 'services': return <SmartServicesScreen onMenuClick={() => setSidebarOpen(true)} />;
       case 'daily-plan': return <DailyPlanScreen onBack={() => setActiveTab('chat')} />;
       case 'subscription': return <SubscriptionScreen />;
-      // New "More" menu items - map to existing screens or settings
       case 'personality': return <PersonalityProfileScreen />;
-      case 'notifications': return <SettingsScreen />;
-      case 'appearance': return <SettingsScreen />;
-      case 'voice': return <SettingsScreen />;
-      case 'account': return <SettingsScreen />;
-      case 'help': return <SettingsScreen />;
+      case 'notifications': return <NotificationsScreen onBack={() => setActiveTab('chat')} />;
+      case 'appearance': return <AppearanceScreen onBack={() => setActiveTab('chat')} />;
+      case 'voice': return <VoiceLanguageScreen onBack={() => setActiveTab('chat')} />;
+      case 'account': return <AccountScreen onBack={() => setActiveTab('chat')} />;
+      case 'help': return <HelpSupportScreen onBack={() => setActiveTab('chat')} />;
       default: return <CalmChatScreen onMenuClick={() => setSidebarOpen(true)} />;
     }
   };
