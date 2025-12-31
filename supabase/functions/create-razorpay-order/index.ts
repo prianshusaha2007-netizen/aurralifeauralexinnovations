@@ -13,8 +13,39 @@ serve(async (req) => {
   }
 
   try {
-    const { tier, userId } = await req.json();
-    console.log('Creating Razorpay order for tier:', tier, 'userId:', userId);
+    // Authenticate the user
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      console.error('No authorization header provided');
+      return new Response(
+        JSON.stringify({ error: 'Authentication required' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+
+    // Create auth client to verify the user
+    const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } }
+    });
+
+    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser();
+    if (authError || !user) {
+      console.error('Authentication failed:', authError);
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Use authenticated user's ID - never trust client-supplied userId
+    const authenticatedUserId = user.id;
+
+    const { tier } = await req.json();
+    console.log('Creating Razorpay order for tier:', tier, 'authenticatedUserId:', authenticatedUserId);
 
     const RAZORPAY_KEY_ID = Deno.env.get('RAZORPAY_KEY_ID');
     const RAZORPAY_KEY_SECRET = Deno.env.get('RAZORPAY_KEY_SECRET');
@@ -42,7 +73,7 @@ serve(async (req) => {
       receipt: `${tier}_${Date.now()}`.slice(0, 40),
       notes: {
         tier,
-        userId,
+        userId: authenticatedUserId,
         product: tierInfo.name,
       },
     };
@@ -68,15 +99,13 @@ serve(async (req) => {
     const order = await response.json();
     console.log('Razorpay order created:', order.id);
 
-    // Save payment record to database
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    // Save payment record to database using service role
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     const { error: insertError } = await supabase
       .from('payments')
       .insert({
-        user_id: userId,
+        user_id: authenticatedUserId,
         razorpay_order_id: order.id,
         amount: order.amount,
         currency: order.currency,
