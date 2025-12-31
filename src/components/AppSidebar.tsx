@@ -77,7 +77,7 @@ const menuItems: MenuItem[] = [
   { id: 'memories', icon: Brain, label: 'Memories', section: 'Personal' },
   { id: 'image-analysis', icon: Image, label: 'Image Analysis' },
   { id: 'gallery', icon: ImageIcon, label: 'Image Gallery', divider: true },
-  { id: 'settings', icon: Settings, label: 'Settings' },
+  { id: 'settings', icon: Settings, label: 'Settings', section: 'More' },
   { id: 'subscription' as TabId, icon: CreditCard, label: 'Subscription' },
 ];
 
@@ -166,9 +166,17 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
               const Icon = item.icon;
               const isActive = activeTab === item.id && !item.action;
               const showDivider = item.divider && index < menuItems.length - 1;
+              const showSectionHeader = item.section && index > 0;
               
               return (
                 <React.Fragment key={item.id}>
+                  {showSectionHeader && (
+                    <div className="pt-3 pb-1 px-4">
+                      <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                        {item.section}
+                      </span>
+                    </div>
+                  )}
                   <button
                     onClick={() => handleItemClick(item)}
                     className={cn(
