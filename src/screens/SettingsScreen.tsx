@@ -270,6 +270,18 @@ export const SettingsScreen: React.FC = () => {
       ],
     }] : []),
     {
+      title: 'SUBSCRIPTION',
+      items: [
+        {
+          icon: Crown,
+          label: 'Manage Subscription',
+          description: 'View plan, payment history & billing',
+          onClick: () => navigate('/subscription'),
+          action: <ChevronRight className="w-5 h-5 text-muted-foreground" />,
+        },
+      ],
+    },
+    {
       title: 'PERSONA & AVATAR',
       items: [
         {

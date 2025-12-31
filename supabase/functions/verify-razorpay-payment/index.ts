@@ -36,6 +36,45 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+    // Update payment record
+    const { data: paymentData, error: paymentError } = await supabase
+      .from('payments')
+      .update({
+        razorpay_payment_id: razorpay_payment_id,
+        status: 'completed',
+        completed_at: new Date().toISOString(),
+      })
+      .eq('razorpay_order_id', razorpay_order_id)
+      .select()
+      .single();
+
+    if (paymentError) {
+      console.error('Error updating payment:', paymentError);
+    }
+
+    // Calculate subscription expiry (30 days from now)
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 30);
+
+    // Upsert subscription
+    const { error: subError } = await supabase
+      .from('subscriptions')
+      .upsert({
+        user_id: userId,
+        tier: tier,
+        status: 'active',
+        started_at: new Date().toISOString(),
+        expires_at: expiresAt.toISOString(),
+        cancelled_at: null,
+        payment_id: paymentData?.id,
+      }, {
+        onConflict: 'user_id',
+      });
+
+    if (subError) {
+      console.error('Error upserting subscription:', subError);
+    }
+
     // Update user_engagement with new tier
     const { error: engagementError } = await supabase
       .from('user_engagement')

@@ -68,6 +68,27 @@ serve(async (req) => {
     const order = await response.json();
     console.log('Razorpay order created:', order.id);
 
+    // Save payment record to database
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    const { error: insertError } = await supabase
+      .from('payments')
+      .insert({
+        user_id: userId,
+        razorpay_order_id: order.id,
+        amount: order.amount,
+        currency: order.currency,
+        status: 'pending',
+        tier: tier,
+      });
+
+    if (insertError) {
+      console.error('Error saving payment record:', insertError);
+      // Don't throw - payment can still proceed
+    }
+
     return new Response(
       JSON.stringify({
         orderId: order.id,
