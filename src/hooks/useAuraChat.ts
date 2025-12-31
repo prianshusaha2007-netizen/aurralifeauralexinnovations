@@ -9,6 +9,7 @@ import { useLifeMemoryGraph } from './useLifeMemoryGraph';
 import { useMemoryPersistence } from './useMemoryPersistence';
 import { useVoicePlayback } from './useVoicePlayback';
 import { useRelationshipEvolution } from './useRelationshipEvolution';
+import { useSmartRoutine, SmartRoutineBlock } from './useSmartRoutine';
 import { supabase } from '@/integrations/supabase/client';
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/aura-chat`;
@@ -17,6 +18,96 @@ const SUMMARIZATION_THRESHOLD = 50;
 interface Message {
   role: 'user' | 'assistant' | 'system';
   content: string;
+}
+
+// Detect routine action intents from user messages
+function detectRoutineActionIntent(message: string): { 
+  action: 'start' | 'shift' | 'skip' | 'edit' | null; 
+  blockName?: string;
+  shiftMinutes?: number;
+} {
+  const lowerMessage = message.toLowerCase();
+  
+  // Start action
+  if (/^(?:let'?s?\s+)?(?:start|begin|okay|alright|ready|yes|yeah|yep|sure|go|do it|haan|chalo)/i.test(lowerMessage)) {
+    return { action: 'start' };
+  }
+  
+  // Skip action
+  if (/(?:skip|not\s+(?:now|today)|maybe\s+later|pass|nahi|aaj\s+nahi)/i.test(lowerMessage)) {
+    return { action: 'skip' };
+  }
+  
+  // Shift action
+  const shiftMatch = lowerMessage.match(/(?:shift|push|delay|later|baad\s+mein)\s*(?:by\s+)?(\d+)?\s*(?:min|hour)?/i);
+  if (shiftMatch || /not\s+now|later/i.test(lowerMessage)) {
+    const minutes = shiftMatch?.[1] ? parseInt(shiftMatch[1]) : 30;
+    return { action: 'shift', shiftMinutes: minutes };
+  }
+  
+  // Edit action
+  if (/(?:change|edit|update|modify)\s+(?:my\s+)?(?:routine|schedule|gym|study|coding|work)/i.test(lowerMessage)) {
+    const blockMatch = lowerMessage.match(/(?:change|edit|update)\s+(?:my\s+)?(\w+)/i);
+    return { action: 'edit', blockName: blockMatch?.[1] };
+  }
+  
+  return { action: null };
+}
+
+// Get time-based context for AI
+function getTimeContext(): { 
+  timeOfDay: string; 
+  currentHour: number; 
+  currentTime: string;
+  isEvening: boolean;
+  isNight: boolean;
+} {
+  const now = new Date();
+  const currentHour = now.getHours();
+  const currentTime = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+  
+  let timeOfDay = 'day';
+  if (currentHour >= 5 && currentHour < 12) timeOfDay = 'morning';
+  else if (currentHour >= 12 && currentHour < 17) timeOfDay = 'afternoon';
+  else if (currentHour >= 17 && currentHour < 21) timeOfDay = 'evening';
+  else timeOfDay = 'night';
+  
+  return {
+    timeOfDay,
+    currentHour,
+    currentTime,
+    isEvening: currentHour >= 17 && currentHour < 21,
+    isNight: currentHour >= 21 || currentHour < 5,
+  };
+}
+
+// Find upcoming/current routine block
+function findRelevantBlock(blocks: SmartRoutineBlock[], currentHour: number): {
+  upcomingBlock: SmartRoutineBlock | null;
+  isNearRoutineTime: boolean;
+  minutesUntilBlock: number;
+} {
+  if (!blocks.length) return { upcomingBlock: null, isNearRoutineTime: false, minutesUntilBlock: 0 };
+  
+  const now = new Date();
+  const currentMinutes = now.getHours() * 60 + now.getMinutes();
+  
+  for (const block of blocks) {
+    const [hours, mins] = block.timing.split(':').map(Number);
+    const blockMinutes = hours * 60 + (mins || 0);
+    const diff = blockMinutes - currentMinutes;
+    
+    // Within 45 minutes before or 15 minutes after
+    if (diff >= -15 && diff <= 45) {
+      return { 
+        upcomingBlock: block, 
+        isNearRoutineTime: true, 
+        minutesUntilBlock: diff 
+      };
+    }
+  }
+  
+  return { upcomingBlock: null, isNearRoutineTime: false, minutesUntilBlock: 0 };
 }
 
 export const useAuraChat = () => {
@@ -56,6 +147,13 @@ export const useAuraChat = () => {
     recordInteraction, 
     getRelationshipContext 
   } = useRelationshipEvolution();
+  const {
+    settings: routineSettings,
+    getTodayBlocks,
+    completeBlock,
+    skipBlock,
+    shiftBlock,
+  } = useSmartRoutine();
   
   const messageCountRef = useRef(0);
 
@@ -238,8 +336,8 @@ export const useAuraChat = () => {
             goals: userProfile.goals,
             languages: userProfile.languages,
             tonePreference: userProfile.tonePreference,
-            wakeTime: userProfile.wakeTime,
-            sleepTime: userProfile.sleepTime,
+            wakeTime: routineSettings.wakeTime || userProfile.wakeTime,
+            sleepTime: routineSettings.sleepTime || userProfile.sleepTime,
             aiName: userProfile.aiName || 'AURRA',
             preferredPersona: userProfile.preferredPersona || 'companion',
             responseStyle: userProfile.responseStyle || 'balanced',
@@ -250,6 +348,17 @@ export const useAuraChat = () => {
             relationshipPhase: engagement?.relationshipPhase || 'introduction',
             daysSinceStart: engagement ? Math.floor((Date.now() - engagement.firstInteractionAt.getTime()) / (1000 * 60 * 60 * 24)) : 0,
             subscriptionTier: engagement?.subscriptionTier || 'core',
+            // Smart Routine context
+            currentMood: routineSettings.currentMood,
+            todayBlocks: getTodayBlocks().map(b => ({
+              name: b.name,
+              timing: b.timing,
+              type: b.type,
+              completed: b.lastCompleted && new Date(b.lastCompleted).toDateString() === new Date().toDateString(),
+            })),
+            // Time context for routine-aware responses
+            timeContext: getTimeContext(),
+            upcomingBlock: findRelevantBlock(getTodayBlocks(), new Date().getHours()),
           },
         }),
       });

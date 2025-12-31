@@ -385,7 +385,25 @@ function validateInput(data: any): { valid: boolean; error?: string; sanitized?:
         name: typeof b.name === 'string' ? b.name.slice(0, 50) : 'Activity',
         timing: typeof b.timing === 'string' ? b.timing.slice(0, 20) : '',
         type: typeof b.type === 'string' ? b.type.slice(0, 20) : 'custom',
+        completed: typeof b.completed === 'boolean' ? b.completed : false,
       })) : undefined,
+      // Time context for routine-aware responses
+      timeContext: userProfile.timeContext && typeof userProfile.timeContext === 'object' ? {
+        timeOfDay: typeof userProfile.timeContext.timeOfDay === 'string' ? userProfile.timeContext.timeOfDay : 'day',
+        currentHour: typeof userProfile.timeContext.currentHour === 'number' ? userProfile.timeContext.currentHour : 12,
+        currentTime: typeof userProfile.timeContext.currentTime === 'string' ? userProfile.timeContext.currentTime : '',
+        isEvening: userProfile.timeContext.isEvening === true,
+        isNight: userProfile.timeContext.isNight === true,
+      } : undefined,
+      upcomingBlock: userProfile.upcomingBlock && typeof userProfile.upcomingBlock === 'object' ? {
+        upcomingBlock: userProfile.upcomingBlock.upcomingBlock ? {
+          name: userProfile.upcomingBlock.upcomingBlock.name?.slice(0, 50) || '',
+          type: userProfile.upcomingBlock.upcomingBlock.type?.slice(0, 20) || 'custom',
+          timing: userProfile.upcomingBlock.upcomingBlock.timing?.slice(0, 20) || '',
+        } : null,
+        isNearRoutineTime: userProfile.upcomingBlock.isNearRoutineTime === true,
+        minutesUntilBlock: typeof userProfile.upcomingBlock.minutesUntilBlock === 'number' ? userProfile.upcomingBlock.minutesUntilBlock : 0,
+      } : undefined,
     };
   }
 
@@ -884,58 +902,116 @@ ${energyLevel === 'high' ? `- FULL session recommended
 `;
     }
 
-    // Smart Routine context - mood-aware responses
+    // Smart Routine context - time-aware, mood-aware responses
     const userMood = userProfile?.currentMood;
     const todayBlocks = userProfile?.todayBlocks;
-    if (userMood || (todayBlocks && todayBlocks.length > 0)) {
+    const timeContext = userProfile?.timeContext;
+    const upcomingBlock = userProfile?.upcomingBlock;
+    
+    if (userMood || (todayBlocks && todayBlocks.length > 0) || timeContext) {
       additionalContext += `
 
 ====================================
-⏰ SMART ROUTINE CONTEXT
+⏰ SMART ROUTINE CONTEXT (CRITICAL)
 ====================================
+
+CURRENT TIME: ${timeContext?.currentTime || 'Unknown'}
+TIME OF DAY: ${timeContext?.timeOfDay?.toUpperCase() || 'DAY'}
+${timeContext?.isEvening ? '🌆 Evening mode - winding down time' : ''}
+${timeContext?.isNight ? '🌙 Night mode - be calm and gentle' : ''}
 `;
+
       if (userMood) {
         additionalContext += `
-USER'S CURRENT MOOD: ${userMood.toUpperCase()}
+USER'S MOOD TODAY: ${userMood.toUpperCase()}
 
 MOOD-AWARE BEHAVIOR:
 ${userMood === 'low' ? `- Be extra gentle, suggest lighter activities
 - Reduce expectations for today
+- Offer rest as a valid option
 - "Want to keep it light today?"
-- Never push productivity on a low-energy day` : ''}
+- NEVER push productivity on a low-energy day
+- IGNORE routine blocks if user seems emotional` : ''}
 ${userMood === 'normal' ? `- Supportive and steady
 - Encourage but don't push
-- Normal rhythm for the day` : ''}
+- Normal rhythm for the day
+- Gentle routine mentions are okay` : ''}
 ${userMood === 'high' ? `- Match their enthusiasm
 - Can suggest making the most of the energy
-- Encourage productivity if they want it` : ''}
+- Encourage productivity if they want it
+- "You're feeling ready — let's make the most of this energy."` : ''}
 `;
       }
-      if (todayBlocks && todayBlocks.length > 0) {
-        const blocksList = todayBlocks.map((b: any) => `${b.name} at ${b.timing}`).join(', ');
-        additionalContext += `
-TODAY'S ROUTINE BLOCKS: ${blocksList}
 
-ROUTINE BEHAVIOR RULES:
-- Routines are supportive, not strict
-- NEVER shame, insist, or guilt the user
-- Before mentioning a routine: Ask permission, offer options (start, shift, skip)
-- If user skips: Acknowledge lightly, NEVER mark as failure
-- Example: "Hey — study time's around now. Want to start, or shift it a bit?"
-- Motivation > enforcement
-- Emotion > schedule
+      // Enhanced routine awareness with upcoming block detection
+      if (upcomingBlock?.isNearRoutineTime && upcomingBlock?.upcomingBlock) {
+        const block = upcomingBlock.upcomingBlock;
+        const minutes = upcomingBlock.minutesUntilBlock;
+        additionalContext += `
+🎯 UPCOMING ROUTINE BLOCK:
+- Activity: ${block.name} (${block.type})
+- Scheduled: ${block.timing}
+- Time until: ${minutes > 0 ? `${minutes} minutes` : 'Now or just passed'}
+
+WHEN TO MENTION THIS:
+- Only if user asks "what should I do" or seems bored
+- Only if conversation naturally leads to it
+- NEVER interrupt emotional conversations
+- NEVER force or command
+
+IF MENTIONING, USE THIS FORMAT:
+"Hey — ${block.name.toLowerCase()} time's around now. Want to start, or shift it a bit?"
+`;
+      }
+
+      if (todayBlocks && todayBlocks.length > 0) {
+        const completedBlocks = todayBlocks.filter((b: any) => b.completed);
+        const pendingBlocks = todayBlocks.filter((b: any) => !b.completed);
+        
+        additionalContext += `
+TODAY'S ROUTINE:
+- Completed: ${completedBlocks.length > 0 ? completedBlocks.map((b: any) => b.name).join(', ') : 'None yet'}
+- Pending: ${pendingBlocks.length > 0 ? pendingBlocks.map((b: any) => `${b.name} at ${b.timing}`).join(', ') : 'All done!'}
+
+ROUTINE BEHAVIOR RULES (VERY IMPORTANT):
+1. Routines are supportive, NOT strict
+2. NEVER shame, insist, or guilt the user
+3. Before mentioning routine: Ask permission, offer options (start, shift, skip)
+4. If user skips: Acknowledge lightly, NEVER mark as failure
+5. Motivation > enforcement
+6. Emotion ALWAYS > schedule
+
+ROUTINE ACTIONS IN CHAT:
+- User says "start" / "let's do it" / "okay" → Switch to mentor mode for that activity
+- User says "skip" / "not today" → Say "Got it. One day off won't break anything."
+- User says "shift" / "later" → Say "Cool. Want to push it by 30 mins or try later tonight?"
+- User says "change gym to 7pm" → Acknowledge: "Done. I've adjusted it."
 
 PHRASES TO USE:
 - "Want to start, or shift it a bit?"
 - "That happens."
 - "No stress."
 - "Tomorrow doesn't need to be perfect."
+- "Even showing up once today counts."
 
 PHRASES TO NEVER USE:
 - "You missed your task"
 - "You failed to complete"
 - "Your streak is broken"
 - "You should have..."
+- "Why didn't you..."
+`;
+      }
+
+      // Evening/Night wind-down behavior
+      if (timeContext?.isEvening || timeContext?.isNight) {
+        additionalContext += `
+🌙 EVENING/NIGHT BEHAVIOR:
+- Don't push new tasks
+- Can ask "How did today feel overall?" (not as checklist, as feeling)
+- Be calming and reflective
+- "Before you sleep — how did today feel overall?"
+- Options to offer: Good / Okay / Heavy
 `;
       }
     }
