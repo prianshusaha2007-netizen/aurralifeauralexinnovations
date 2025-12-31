@@ -15,6 +15,7 @@ import { ChatGames, GameType, getGameSystemPrompt } from '@/components/ChatGames
 import { CreditWarning } from '@/components/CreditWarning';
 import { UpgradeSheet } from '@/components/UpgradeSheet';
 import { ChatSettingsSheet } from '@/components/ChatSettingsSheet';
+import { LiveVoiceInput } from '@/components/LiveVoiceInput';
 import { useAura, ChatMessage } from '@/contexts/AuraContext';
 import { useAuraChat } from '@/hooks/useAuraChat';
 import { useVoiceCommands } from '@/hooks/useVoiceCommands';
@@ -64,6 +65,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ onMenuClick, onVoiceMode
   const [speakingMessageId, setSpeakingMessageId] = useState<string | null>(null);
   const [wakeWordEnabled, setWakeWordEnabled] = useState(false);
   const [showVoiceInput, setShowVoiceInput] = useState(false);
+  const [showLiveVoice, setShowLiveVoice] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [imagePrompt, setImagePrompt] = useState('');
   const [showImagePrompt, setShowImagePrompt] = useState(false);
@@ -1030,6 +1032,26 @@ ${data.improvements?.length > 0 ? `**Tips:** ${data.improvements.join(', ')}` : 
         <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageSelect} className="hidden" />
         <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" onChange={handleImageSelect} className="hidden" />
         
+        {/* Live Voice Input */}
+        <AnimatePresence>
+          {showLiveVoice && (
+            <div className="max-w-2xl mx-auto mb-3">
+              <LiveVoiceInput
+                onTranscript={(text) => {
+                  setInputValue(text);
+                  setShowLiveVoice(false);
+                  // Auto-send the transcribed text
+                  if (text.trim()) {
+                    addChatMessage({ content: text, sender: 'user' });
+                    sendMessage(text, selectedModel);
+                  }
+                }}
+                onClose={() => setShowLiveVoice(false)}
+              />
+            </div>
+          )}
+        </AnimatePresence>
+
         <div className="max-w-2xl mx-auto">
           {/* Quick Actions */}
           <QuickActions onAction={handleQuickAction} className="mb-2" />
@@ -1084,11 +1106,15 @@ ${data.improvements?.length > 0 ? `**Tips:** ${data.improvements.join(', ')}` : 
                   rows={1}
                 />
                 <div className="flex items-center pr-2 pb-1.5">
-                  <ContinuousVoiceButton 
-                    onTranscription={handleVoiceTranscription}
-                    isProcessing={isThinking || isAnalyzingImage}
-                    continuous={wakeWordEnabled}
-                  />
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-9 w-9 rounded-full hover:bg-muted"
+                    onClick={() => setShowLiveVoice(true)}
+                    disabled={isThinking || isAnalyzingImage}
+                  >
+                    <Mic className="w-5 h-5 text-muted-foreground" />
+                  </Button>
                 </div>
               </div>
             </div>
