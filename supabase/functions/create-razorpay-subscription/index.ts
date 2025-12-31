@@ -8,8 +8,8 @@ const corsHeaders = {
 
 // Razorpay plan IDs (create these in Razorpay dashboard or via API)
 const PLAN_CONFIG: Record<string, { planId: string; name: string; amount: number }> = {
-  plus: { planId: '', name: 'AURRA Plus', amount: 19900 },
-  pro: { planId: '', name: 'AURRA Pro', amount: 49900 },
+  plus: { planId: '', name: 'AURRA Plus', amount: 9900 },   // ₹99
+  pro: { planId: '', name: 'AURRA Pro', amount: 29900 },    // ₹299
 };
 
 serve(async (req) => {
