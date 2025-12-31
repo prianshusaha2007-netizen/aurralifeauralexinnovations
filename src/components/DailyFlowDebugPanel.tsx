@@ -23,10 +23,12 @@ export const DailyFlowDebugPanel: React.FC<DailyFlowDebugPanelProps> = ({
   onResetFlow,
   flowState,
 }) => {
+  // Only show in development - must be before hooks for production optimization
+  // but we need to keep hooks consistent, so we just hide the UI instead
+  const isDev = !import.meta.env.PROD;
   const [isOpen, setIsOpen] = useState(false);
 
-  // Only show in development
-  if (import.meta.env.PROD) return null;
+  if (!isDev) return null;
 
   return (
     <>
