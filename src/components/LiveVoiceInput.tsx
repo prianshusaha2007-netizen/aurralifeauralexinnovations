@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { useScribe } from '@elevenlabs/react';
 import { Mic, MicOff, Send, X, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -11,6 +11,115 @@ interface LiveVoiceInputProps {
   onClose?: () => void;
   className?: string;
 }
+
+// Audio Waveform Visualization Component
+const AudioWaveformVisualizer: React.FC<{ isActive: boolean }> = ({ isActive }) => {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const animationRef = useRef<number>();
+  const analyzerRef = useRef<AnalyserNode | null>(null);
+  const dataArrayRef = useRef<Uint8Array | null>(null);
+
+  useEffect(() => {
+    if (!isActive) {
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current);
+      }
+      // Clear canvas when not active
+      const canvas = canvasRef.current;
+      if (canvas) {
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+      }
+      return;
+    }
+
+    const setupAudio = async () => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const audioContext = new AudioContext();
+        const source = audioContext.createMediaStreamSource(stream);
+        const analyzer = audioContext.createAnalyser();
+        
+        analyzer.fftSize = 64;
+        const bufferLength = analyzer.frequencyBinCount;
+        const dataArray = new Uint8Array(bufferLength);
+        
+        source.connect(analyzer);
+        analyzerRef.current = analyzer;
+        dataArrayRef.current = dataArray;
+
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+
+        const draw = () => {
+          if (!analyzerRef.current || !dataArrayRef.current) return;
+          
+          animationRef.current = requestAnimationFrame(draw);
+          analyzerRef.current.getByteFrequencyData(dataArrayRef.current as Uint8Array<ArrayBuffer>);
+          
+          const width = canvas.width;
+          const height = canvas.height;
+          
+          ctx.clearRect(0, 0, width, height);
+          
+          const barCount = 24;
+          const barWidth = width / barCount - 2;
+          const centerY = height / 2;
+          
+          for (let i = 0; i < barCount; i++) {
+            const dataIndex = Math.floor(i * dataArrayRef.current.length / barCount);
+            const value = dataArrayRef.current[dataIndex];
+            const barHeight = (value / 255) * (height * 0.8);
+            
+            const x = i * (barWidth + 2);
+            
+            // Create gradient for bars
+            const gradient = ctx.createLinearGradient(0, centerY - barHeight / 2, 0, centerY + barHeight / 2);
+            gradient.addColorStop(0, 'hsl(var(--primary) / 0.8)');
+            gradient.addColorStop(0.5, 'hsl(var(--primary))');
+            gradient.addColorStop(1, 'hsl(var(--primary) / 0.8)');
+            
+            ctx.fillStyle = gradient;
+            ctx.beginPath();
+            ctx.roundRect(x, centerY - barHeight / 2, barWidth, Math.max(barHeight, 4), 2);
+            ctx.fill();
+          }
+        };
+        
+        draw();
+
+        return () => {
+          stream.getTracks().forEach(track => track.stop());
+          audioContext.close();
+        };
+      } catch (error) {
+        console.error('Error setting up audio visualization:', error);
+      }
+    };
+
+    setupAudio();
+
+    return () => {
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current);
+      }
+    };
+  }, [isActive]);
+
+  return (
+    <canvas
+      ref={canvasRef}
+      width={280}
+      height={48}
+      className="w-full h-12"
+    />
+  );
+};
 
 export const LiveVoiceInput: React.FC<LiveVoiceInputProps> = ({
   onTranscript,
@@ -131,6 +240,13 @@ export const LiveVoiceInput: React.FC<LiveVoiceInputProps> = ({
       {error && (
         <div className="text-sm text-destructive mb-3 p-2 bg-destructive/10 rounded-lg">
           {error}
+        </div>
+      )}
+
+      {/* Waveform Visualization */}
+      {scribe.isConnected && (
+        <div className="mb-3 p-2 bg-muted/30 rounded-xl">
+          <AudioWaveformVisualizer isActive={scribe.isConnected} />
         </div>
       )}
 
