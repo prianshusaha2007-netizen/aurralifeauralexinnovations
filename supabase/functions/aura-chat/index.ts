@@ -213,6 +213,46 @@ function detectRoutineEditIntent(message: string): boolean {
   return routinePatterns.some(p => p.test(lowerMessage));
 }
 
+// Detect yesterday/memory recall intent
+function detectRecallIntent(message: string): { type: 'yesterday' | 'struggles' | 'wins' | 'recent' | null; isRecall: boolean } {
+  const lowerMessage = message.toLowerCase();
+  
+  // Yesterday specific queries
+  const yesterdayPatterns = [
+    /(?:what|how)\s+(?:did|was|were)\s+(?:i|yesterday|my\s+day)/i,
+    /(?:tell|show|give)\s+me\s+(?:about\s+)?yesterday/i,
+    /yesterday'?s?\s+(?:summary|recap|chat|conversation)/i,
+    /(?:what|how)\s+happened\s+yesterday/i,
+    /kal\s+(?:kya|kaisa)/i,
+    /(?:recap|remember)\s+yesterday/i,
+    /what\s+did\s+(?:we|i)\s+(?:talk|discuss)\s+(?:about\s+)?yesterday/i,
+    /how\s+was\s+(?:my\s+)?yesterday/i,
+  ];
+  
+  if (yesterdayPatterns.some(p => p.test(lowerMessage))) {
+    return { type: 'yesterday', isRecall: true };
+  }
+  
+  // Struggles pattern
+  if (/(?:what|how)\s+have\s+i\s+been\s+(?:struggling|having trouble|stuck)/i.test(lowerMessage) ||
+      /(?:struggling|difficult|hard)\s+(?:with|lately|recently)/i.test(lowerMessage)) {
+    return { type: 'struggles', isRecall: true };
+  }
+  
+  // Wins pattern
+  if (/(?:what|how)\s+have\s+i\s+been\s+(?:doing|achieving|accomplishing)/i.test(lowerMessage) ||
+      /(?:my|recent)\s+(?:wins|achievements|progress)/i.test(lowerMessage)) {
+    return { type: 'wins', isRecall: true };
+  }
+  
+  // Recent activity pattern
+  if (/(?:what|how)\s+(?:have\s+i|was\s+i)\s+(?:doing|been)\s+(?:lately|recently|this week)/i.test(lowerMessage)) {
+    return { type: 'recent', isRecall: true };
+  }
+  
+  return { type: null, isRecall: false };
+}
+
 // Detect skill management intent
 function detectSkillManagementIntent(message: string): { action: 'add' | 'remove' | 'pause' | 'update' | null; skill?: string } {
   const lowerMessage = message.toLowerCase();
@@ -499,6 +539,7 @@ serve(async (req) => {
     const isCodingMode = detectCodingMode(lastMessage);
     const humorCheck = detectHumorRequest(lastMessage);
     const isRoutineEdit = detectRoutineEditIntent(lastMessage);
+    const recallIntent = detectRecallIntent(lastMessage);
     const skillMode = detectSkillMode(lastMessage);
     const isSkillDiscovery = detectSkillDiscoveryIntent(lastMessage);
     const energyLevel = detectEnergyLevel(lastMessage);
@@ -545,14 +586,104 @@ serve(async (req) => {
     console.log("Energy level:", energyLevel);
     console.log("Humor check:", humorCheck);
     console.log("Routine edit:", isRoutineEdit);
+    console.log("Recall intent:", recallIntent.type, recallIntent.isRecall);
 
     // Time context already built above for persona detection
+    
+    // Fetch yesterday/recall context if needed
+    let recallContext = '';
+    if (recallIntent.isRecall) {
+      try {
+        // Fetch recent summaries for context
+        const twoWeeksAgo = new Date();
+        twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
+        
+        const { data: summaries } = await supabase
+          .from('chat_summaries')
+          .select('*')
+          .eq('user_id', user.id)
+          .gte('time_range_start', twoWeeksAgo.toISOString())
+          .order('created_at', { ascending: false })
+          .limit(7);
+        
+        if (summaries && summaries.length > 0) {
+          if (recallIntent.type === 'yesterday') {
+            const yesterday = new Date();
+            yesterday.setDate(yesterday.getDate() - 1);
+            const yesterdayStr = yesterday.toISOString().split('T')[0];
+            
+            const yesterdaySummary = summaries.find(s => 
+              s.time_range_start.startsWith(yesterdayStr)
+            );
+            
+            if (yesterdaySummary) {
+              recallContext = `
+====================================
+📅 YESTERDAY'S CONTEXT (INTERNAL - DO NOT QUOTE DIRECTLY)
+====================================
+Summary: ${yesterdaySummary.summary}
+Mood trend: ${yesterdaySummary.emotional_trend || 'neutral'}
+Topics: ${(yesterdaySummary.key_topics || []).join(', ')}
+Open loops: ${(yesterdaySummary.open_loops || []).join(', ')}
+
+RESPONSE STYLE:
+- Give a SHORT, human summary (2-3 sentences max)
+- DO NOT quote the user or use timestamps
+- DO NOT say "you said..." or "at 9:12 PM..."
+- Speak naturally: "You had college, went to the gym, and mostly rested at night."
+- If coding didn't happen: "Coding didn't happen — but that's okay."
+- End with a gentle forward look: "Want to keep today similar or change things up?"
+`;
+            } else {
+              recallContext = `
+====================================
+📅 YESTERDAY RECALL - NO DATA
+====================================
+We didn't chat much yesterday. Respond naturally:
+"We didn't really chat yesterday. Want to catch me up on how things are going?"
+`;
+            }
+          } else if (recallIntent.type === 'struggles' || recallIntent.type === 'wins' || recallIntent.type === 'recent') {
+            const emotionalTrends = summaries.map(s => s.emotional_trend).filter(Boolean);
+            const allTopics = summaries.flatMap(s => s.key_topics || []);
+            
+            recallContext = `
+====================================
+📊 PATTERN RECALL (${recallIntent.type.toUpperCase()})
+====================================
+Recent emotional trends: ${emotionalTrends.join(', ')}
+Common topics: ${[...new Set(allTopics)].slice(0, 5).join(', ')}
+
+RESPONSE STYLE for ${recallIntent.type}:
+${recallIntent.type === 'struggles' ? '- Focus on patterns, not specifics: "Mostly energy and consistency at night. Mornings have been better."' : ''}
+${recallIntent.type === 'wins' ? '- Highlight positives: "You\'ve had some good momentum lately."' : ''}
+${recallIntent.type === 'recent' ? '- Give overview: "You\'ve been [trend]. [topics] came up recently."' : ''}
+- Keep it SHORT (1-2 sentences)
+- No timestamps, no quotes
+- Insight, not logs
+`;
+          }
+        } else {
+          recallContext = `
+User is asking about past conversations but we don't have enough history yet.
+Respond naturally: "We haven't chatted long enough yet for me to notice patterns. But I'm here now — what's on your mind?"
+`;
+        }
+      } catch (err) {
+        console.error('Error fetching recall context:', err);
+      }
+    }
     
     
     let additionalContext = '';
     
+    // Add recall context if present
+    if (recallContext) {
+      additionalContext += recallContext;
+    }
+
     if (realTimeCheck.needsRealTime) {
-      additionalContext = `
+      additionalContext += `
 REAL-TIME DATA CONTEXT:
 Query type: ${realTimeCheck.queryType}
 Search: "${realTimeCheck.searchQuery}"
