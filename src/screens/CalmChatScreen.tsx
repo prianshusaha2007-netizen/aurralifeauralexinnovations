@@ -34,6 +34,7 @@ import { useDailyFlow } from '@/hooks/useDailyFlow';
 import { FirstTimePreferences } from '@/components/FirstTimePreferences';
 import { NightWindDown } from '@/components/NightWindDown';
 import { MorningBriefingCard } from '@/components/MorningBriefingCard';
+import { DailyFlowDebugPanel } from '@/components/DailyFlowDebugPanel';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -132,6 +133,10 @@ export const CalmChatScreen: React.FC<CalmChatScreenProps> = ({ onMenuClick }) =
     isFirstTimeUser,
     dismissPreferences,
     dismissWindDown,
+    triggerMorningFlow,
+    triggerNightFlow,
+    triggerFirstTimeFlow,
+    resetAllFlowState,
   } = useDailyFlow();
   
   const [inputValue, setInputValue] = useState('');
@@ -996,6 +1001,27 @@ export const CalmChatScreen: React.FC<CalmChatScreenProps> = ({ onMenuClick }) =
         onOpenChange={(open) => {
           setShowUpgradeSheet(open);
           if (setChatUpgradeSheet) setChatUpgradeSheet(open);
+        }}
+      />
+
+      {/* Daily Flow Debug Panel - dev only */}
+      <DailyFlowDebugPanel
+        onTriggerMorning={() => {
+          triggerMorningFlow();
+          setShowMorningFlow(true);
+          fetchBriefing();
+        }}
+        onTriggerNight={triggerNightFlow}
+        onTriggerFirstTime={triggerFirstTimeFlow}
+        onResetFlow={() => {
+          resetAllFlowState();
+          setShowMorningFlow(false);
+        }}
+        flowState={{
+          showPreferences,
+          showMorningFlow,
+          showWindDown,
+          isFirstTimeUser,
         }}
       />
     </div>

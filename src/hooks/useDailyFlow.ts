@@ -85,10 +85,44 @@ export const useDailyFlow = () => {
     setState(prev => ({ ...prev, showWindDown: false }));
   }, []);
 
+  // Debug/simulation functions
+  const triggerMorningFlow = useCallback(() => {
+    setState(prev => ({ ...prev, showMorningBriefing: true }));
+  }, []);
+
+  const triggerNightFlow = useCallback(() => {
+    setState(prev => ({ ...prev, showWindDown: true, isFirstTimeUser: false }));
+  }, []);
+
+  const triggerFirstTimeFlow = useCallback(() => {
+    localStorage.removeItem('aura-preferences-complete');
+    setState(prev => ({ ...prev, showPreferences: true, isFirstTimeUser: true }));
+  }, []);
+
+  const resetAllFlowState = useCallback(() => {
+    localStorage.removeItem('aura-preferences-complete');
+    localStorage.removeItem('aura-morning-briefing-date');
+    localStorage.removeItem('aura-winddown-date');
+    localStorage.removeItem('aura-morning-flow-date');
+    localStorage.removeItem('aura-winddown-history');
+    setState({
+      showPreferences: false,
+      showMorningBriefing: false,
+      showWindDown: false,
+      isFirstTimeUser: false,
+      currentDayChat: new Date().toISOString().split('T')[0],
+    });
+  }, []);
+
   return {
     ...state,
     dismissPreferences,
     dismissMorningBriefing,
     dismissWindDown,
+    // Debug functions
+    triggerMorningFlow,
+    triggerNightFlow,
+    triggerFirstTimeFlow,
+    resetAllFlowState,
   };
 };
