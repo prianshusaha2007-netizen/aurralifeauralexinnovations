@@ -8,6 +8,7 @@ import { useMoodCheckIn } from './useMoodCheckIn';
 import { useLifeMemoryGraph } from './useLifeMemoryGraph';
 import { useMemoryPersistence } from './useMemoryPersistence';
 import { useVoicePlayback } from './useVoicePlayback';
+import { useRelationshipEvolution } from './useRelationshipEvolution';
 import { supabase } from '@/integrations/supabase/client';
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/aura-chat`;
@@ -50,6 +51,11 @@ export const useAuraChat = () => {
     dismissPendingMemory,
   } = useMemoryPersistence();
   const { playText } = useVoicePlayback();
+  const { 
+    engagement, 
+    recordInteraction, 
+    getRelationshipContext 
+  } = useRelationshipEvolution();
   
   const messageCountRef = useRef(0);
 
@@ -194,6 +200,16 @@ export const useAuraChat = () => {
     
     // Trigger summarization check in background
     checkSummarization();
+    
+    // Record interaction for relationship evolution
+    recordInteraction('message');
+    
+    // Detect emotional content for additional tracking
+    const lowerMsg = userMessage.toLowerCase();
+    const isEmotionalMessage = /(?:feel|feeling|sad|happy|anxious|worried|tired|exhausted|stressed|overwhelmed|excited|grateful)/i.test(lowerMsg);
+    if (isEmotionalMessage) {
+      recordInteraction('emotional');
+    }
 
     let assistantContent = '';
     let messageId: string | null = null;
@@ -230,6 +246,10 @@ export const useAuraChat = () => {
             askBeforeJoking: userProfile.askBeforeJoking !== false,
             relationshipStyle: userProfile.relationshipStyle || 'best_friend',
             aurraGender: userProfile.aurraGender || 'neutral',
+            // Relationship evolution data
+            relationshipPhase: engagement?.relationshipPhase || 'introduction',
+            daysSinceStart: engagement ? Math.floor((Date.now() - engagement.firstInteractionAt.getTime()) / (1000 * 60 * 60 * 24)) : 0,
+            subscriptionTier: engagement?.subscriptionTier || 'core',
           },
         }),
       });

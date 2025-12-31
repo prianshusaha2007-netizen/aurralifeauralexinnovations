@@ -42,6 +42,7 @@ import { MicrophoneTest } from '@/components/MicrophoneTest';
 import { ResetPermissionsGuide } from '@/components/ResetPermissionsGuide';
 import { PersonaSettings } from '@/components/PersonaSettings';
 import { UpgradeSheet } from '@/components/UpgradeSheet';
+import { RelationshipProgress } from '@/components/RelationshipProgress';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { useMorningBriefing } from '@/hooks/useMorningBriefing';
@@ -667,6 +668,11 @@ export const SettingsScreen: React.FC = () => {
         <p className="text-xs text-muted-foreground mt-3">
           Version 1.0
         </p>
+      </div>
+
+      {/* Relationship Progress */}
+      <div className="mb-6">
+        <RelationshipProgress />
       </div>
 
       {/* Settings Sections */}
