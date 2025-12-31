@@ -8,34 +8,8 @@ import { GlobalBottomNav } from '@/components/GlobalBottomNav';
 import { ReminderPopup } from '@/components/ReminderPopup';
 import { FloatingFocusButton } from '@/components/FloatingFocusButton';
 import { CalmChatScreen } from '@/screens/CalmChatScreen';
-import { LifeMemoriesScreen } from '@/screens/LifeMemoriesScreen';
-import { RoutineScreen } from '@/screens/RoutineScreen';
-import { SettingsScreen } from '@/screens/SettingsScreen';
 import { OnboardingScreen } from '@/screens/OnboardingScreen';
-import { PlayLearnScreen } from '@/screens/PlayLearnScreen';
-import { MoodCheckInScreen } from '@/screens/MoodCheckInScreen';
-import { MoodJournalScreen } from '@/screens/MoodJournalScreen';
-import { PersonalityProfileScreen } from '@/screens/PersonalityProfileScreen';
-import { SmartSearchScreen } from '@/screens/SmartSearchScreen';
-import { ChatHistoryScreen } from '@/screens/ChatHistoryScreen';
-import { PermissionsScreen } from '@/screens/PermissionsScreen';
 import { PermissionsOnboardingScreen } from '@/screens/PermissionsOnboardingScreen';
-import { HabitTrackerScreen } from '@/screens/HabitTrackerScreen';
-import { HydrationScreen } from '@/screens/HydrationScreen';
-import { ImageAnalysisScreen } from '@/screens/ImageAnalysisScreen';
-import { SocialLeaderboardScreen } from '@/screens/SocialLeaderboardScreen';
-import { ImageGalleryScreen } from '@/screens/ImageGalleryScreen';
-import { ProgressDashboardScreen } from '@/screens/ProgressDashboardScreen';
-import { RemindersScreen } from '@/screens/RemindersScreen';
-import { SmartServicesScreen } from '@/screens/SmartServicesScreen';
-import { DailyRoutineScreen } from '@/screens/DailyRoutineScreen';
-import DailyPlanScreen from '@/screens/DailyPlanScreen';
-import SubscriptionScreen from '@/screens/SubscriptionScreen';
-import NotificationsScreen from '@/screens/NotificationsScreen';
-import AppearanceScreen from '@/screens/AppearanceScreen';
-import VoiceLanguageScreen from '@/screens/VoiceLanguageScreen';
-import AccountScreen from '@/screens/AccountScreen';
-import HelpSupportScreen from '@/screens/HelpSupportScreen';
 import { AuraOrb } from '@/components/AuraOrb';
 import { DailyMoodPopup } from '@/components/DailyMoodPopup';
 import { SplashScreen } from '@/components/SplashScreen';
@@ -50,7 +24,6 @@ import { useMorningBriefing } from '@/hooks/useMorningBriefing';
 const AppContent: React.FC = () => {
   const { userProfile, isLoading, clearChatHistory } = useAura();
   const { setUserSchedule } = useTheme();
-  const [activeTab, setActiveTab] = useState<TabId>('chat');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [voiceModeOpen, setVoiceModeOpen] = useState(false);
   const [permissionsComplete, setPermissionsComplete] = useState(() => {
@@ -68,11 +41,6 @@ const AppContent: React.FC = () => {
       return () => clearTimeout(timer);
     }
   }, [showMorningMood]);
-  
-  // Count upcoming reminders (scheduled and active)
-  const upcomingRemindersCount = reminders.filter(r => 
-    r.isActive && r.status === 'scheduled' && new Date(r.time) > new Date()
-  ).length;
   
   useMorningBriefing();
 
@@ -116,40 +84,14 @@ const AppContent: React.FC = () => {
 
   const handleNewChat = () => {
     clearChatHistory();
-    setActiveTab('chat');
   };
 
-  const renderScreen = () => {
-    switch (activeTab) {
-      case 'chat': return <CalmChatScreen onMenuClick={() => setSidebarOpen(true)} />;
-      case 'games': return <PlayLearnScreen />;
-      case 'memories': return <LifeMemoriesScreen />;
-      case 'routine': return <DailyRoutineScreen onMenuClick={() => setSidebarOpen(true)} />;
-      case 'habits': return <HabitTrackerScreen />;
-      case 'hydration': return <HydrationScreen />;
-      case 'settings': return <SettingsScreen />;
-      case 'mood': return <MoodCheckInScreen />;
-      case 'mood-journal': return <MoodJournalScreen />;
-      case 'profile': return <PersonalityProfileScreen />;
-      case 'search': return <SmartSearchScreen />;
-      case 'history': return <ChatHistoryScreen />;
-      case 'permissions': return <PermissionsScreen />;
-      case 'image-analysis': return <ImageAnalysisScreen />;
-      case 'gallery': return <ImageGalleryScreen />;
-      case 'social': return <SocialLeaderboardScreen />;
-      case 'progress': return <ProgressDashboardScreen />;
-      case 'reminders': return <RemindersScreen onMenuClick={() => setSidebarOpen(true)} />;
-      case 'services': return <SmartServicesScreen onMenuClick={() => setSidebarOpen(true)} />;
-      case 'daily-plan': return <DailyPlanScreen onBack={() => setActiveTab('chat')} />;
-      case 'subscription': return <SubscriptionScreen />;
-      case 'personality': return <PersonalityProfileScreen />;
-      case 'notifications': return <NotificationsScreen onBack={() => setActiveTab('chat')} />;
-      case 'appearance': return <AppearanceScreen onBack={() => setActiveTab('chat')} />;
-      case 'voice': return <VoiceLanguageScreen onBack={() => setActiveTab('chat')} />;
-      case 'account': return <AccountScreen onBack={() => setActiveTab('chat')} />;
-      case 'help': return <HelpSupportScreen onBack={() => setActiveTab('chat')} />;
-      default: return <CalmChatScreen onMenuClick={() => setSidebarOpen(true)} />;
-    }
+  // Chat is the cockpit - only render chat screen
+  // All other "screens" are accessed via sidebar or triggered via chat
+  const handleSidebarTabChange = (tab: TabId) => {
+    // For settings screens, we'll need to handle them
+    // For now, just close sidebar - features should be accessed via chat
+    setSidebarOpen(false);
   };
 
   const handleMorningMoodComplete = (mood: 'low' | 'normal' | 'high') => {
@@ -195,25 +137,23 @@ const AppContent: React.FC = () => {
       <AppSidebar 
         isOpen={sidebarOpen} 
         onClose={() => setSidebarOpen(false)}
-        activeTab={activeTab}
-        onTabChange={setActiveTab}
+        activeTab="chat"
+        onTabChange={handleSidebarTabChange}
         onNewChat={handleNewChat}
       />
 
       {/* Floating Focus Button - appears during active routine blocks */}
       <FloatingFocusButton />
 
-      <main className="flex-1 overflow-hidden pb-16">
-        <PageTransition pageKey={activeTab}>
-          {renderScreen()}
+      {/* Chat is the only screen - the cockpit */}
+      <main className="flex-1 overflow-hidden pb-12">
+        <PageTransition pageKey="chat">
+          <CalmChatScreen onMenuClick={() => setSidebarOpen(true)} />
         </PageTransition>
       </main>
 
       <GlobalBottomNav
-        activeTab={activeTab}
-        onTabChange={(tab) => setActiveTab(tab as TabId)}
         onMenuClick={() => setSidebarOpen(true)}
-        upcomingRemindersCount={upcomingRemindersCount}
       />
     </div>
   );

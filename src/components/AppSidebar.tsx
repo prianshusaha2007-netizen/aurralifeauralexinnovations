@@ -74,51 +74,17 @@ interface MenuItem {
   showBadge?: boolean;
 }
 
-// Main chat items (shown at top, outside "More")
-const mainChatItems: MenuItem[] = [
-  { id: 'new-chat', icon: Plus, label: 'New Chat', action: true },
-  { id: 'chat', icon: MessageSquare, label: 'Chat' },
-  { id: 'history', icon: History, label: 'Chat History' },
-  { id: 'reminders', icon: Bell, label: 'Reminders & Alarms' },
-  { id: 'services', icon: MapPin, label: 'Smart Services', divider: true },
-];
-
-// "More" menu items - following the exact structure from requirements
-const moreMenuItems: MenuItem[] = [
-  { id: 'subscription', icon: CreditCard, label: 'Subscription & Credits', section: 'More', showBadge: true },
-  { id: 'personality', icon: Sparkles, label: 'Personality & Relationship' },
-  { id: 'routine', icon: Clock, label: 'Routine & Reminders' },
-  { id: 'memories', icon: Brain, label: 'Memory & Privacy' },
-  { id: 'notifications', icon: Bell, label: 'Notifications' },
-  { id: 'appearance', icon: Palette, label: 'Appearance & Accessibility' },
-  { id: 'voice', icon: Mic, label: 'Voice & Language' },
-  { id: 'progress', icon: BarChart3, label: 'Progress & Data' },
-  { id: 'account', icon: User, label: 'Account' },
-  { id: 'help', icon: HelpCircle, label: 'Help & Support', divider: true },
-];
-
-// Wellness & features section
-const wellnessItems: MenuItem[] = [
-  { id: 'daily-plan', icon: Target, label: "Today's Focus", section: 'Wellness' },
-  { id: 'mood', icon: Heart, label: 'Daily Check-In' },
-  { id: 'mood-journal', icon: BookHeart, label: 'Mood Journal' },
-  { id: 'games', icon: Gamepad2, label: 'Play Games' },
-  { id: 'hydration', icon: Droplets, label: 'Hydration Tracker' },
-  { id: 'social', icon: Trophy, label: 'Social Leaderboard', divider: true },
-];
-
-// Tools section
-const toolsItems: MenuItem[] = [
-  { id: 'image-analysis', icon: Image, label: 'Image Analysis', section: 'Tools' },
-  { id: 'gallery', icon: ImageIcon, label: 'Image Gallery', divider: true },
-];
-
-// Combined menu items
+// Minimal sidebar - only settings/secondary items (Chat is the cockpit - no navigation needed)
 const menuItems: MenuItem[] = [
-  ...mainChatItems,
-  ...wellnessItems,
-  ...toolsItems,
-  ...moreMenuItems,
+  { id: 'new-chat', icon: Plus, label: 'New Chat', action: true },
+  { id: 'history', icon: History, label: 'Chat History', divider: true },
+  { id: 'subscription', icon: CreditCard, label: 'Subscription & Credits', section: 'Settings', showBadge: true },
+  { id: 'personality', icon: Sparkles, label: 'Personality & Relationship' },
+  { id: 'appearance', icon: Palette, label: 'Appearance' },
+  { id: 'voice', icon: Mic, label: 'Voice & Language' },
+  { id: 'notifications', icon: Bell, label: 'Notifications', divider: true },
+  { id: 'account', icon: User, label: 'Account', section: 'Account' },
+  { id: 'help', icon: HelpCircle, label: 'Help & Support' },
 ];
 
 interface AppSidebarProps {

@@ -1,10 +1,11 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Send, Plus, Loader2, Download, RefreshCw, Headphones, ChevronDown, Target } from 'lucide-react';
+import { Send, Plus, Loader2, Download, RefreshCw, Headphones, ChevronDown, MoreVertical } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SplitChatBubble } from '@/components/SplitChatBubble';
 import { TypingIndicator } from '@/components/TypingIndicator';
 import { MemorySavePrompt } from '@/components/MemorySavePrompt';
 import { MediaToolsSheet } from '@/components/MediaToolsSheet';
+import { ContextShortcutsSheet } from '@/components/ContextShortcutsSheet';
 import { ChatQuickActions } from '@/components/ChatQuickActions';
 import { VoiceInputButton } from '@/components/VoiceInputButton';
 import { VoiceModal } from '@/components/VoiceModal';
@@ -31,7 +32,6 @@ import { useCreditWarning } from '@/hooks/useCreditWarning';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
 import auraAvatar from '@/assets/aura-avatar.jpeg';
 
 interface CalmChatScreenProps {
@@ -90,7 +90,6 @@ const detectDocIntent = (message: string): boolean => {
 };
 
 export const CalmChatScreen: React.FC<CalmChatScreenProps> = ({ onMenuClick }) => {
-  const navigate = useNavigate();
   const { chatMessages, addChatMessage, userProfile } = useAura();
   const { sendMessage, isThinking, showUpgradeSheet: chatUpgradeSheet, setShowUpgradeSheet: setChatUpgradeSheet, focusState } = useAuraChat();
   const { speak, isSpeaking } = useVoiceFeedback();
@@ -137,6 +136,7 @@ export const CalmChatScreen: React.FC<CalmChatScreenProps> = ({ onMenuClick }) =
   const [showScrollButton, setShowScrollButton] = useState(false);
   const [isNearBottom, setIsNearBottom] = useState(true);
   const [showUpgradeSheet, setShowUpgradeSheet] = useState(false);
+  const [showContextSheet, setShowContextSheet] = useState(false);
   
   // Check if coding block is active
   const isCodingBlockActive = activeBlock?.block.type === 'coding';
@@ -399,13 +399,15 @@ export const CalmChatScreen: React.FC<CalmChatScreenProps> = ({ onMenuClick }) =
       {/* Subtle gradient background */}
       <div className="absolute inset-0 bg-gradient-to-b from-primary/5 via-transparent to-transparent pointer-events-none" />
 
-      {/* Fixed Header */}
+      {/* Fixed Header - Simplified cockpit style */}
       <header className="flex-shrink-0 z-50 bg-background/80 backdrop-blur-md border-b border-border/30">
         <div className="flex items-center justify-between px-4 py-3 pl-14">
+          {/* Left: Avatar */}
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full overflow-hidden ring-2 ring-primary/20 shadow-lg shadow-primary/10">
               <img src={auraAvatar} alt="AURRA" className="w-full h-full object-cover" />
             </div>
+            {/* Center: Name & Status */}
             <div>
               <h1 className="font-semibold text-foreground">AURRA</h1>
               <motion.p 
@@ -419,20 +421,8 @@ export const CalmChatScreen: React.FC<CalmChatScreenProps> = ({ onMenuClick }) =
             </div>
           </div>
           
-          <div className="flex items-center gap-2">
-            {/* Skills Button - shows when user has active skills */}
-            {hasActiveSkills() && (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="rounded-full h-10 w-10 text-muted-foreground hover:text-primary hover:bg-primary/10 relative"
-                onClick={() => navigate('/skills')}
-              >
-                <Target className="w-5 h-5" />
-                <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-primary rounded-full" />
-              </Button>
-            )}
-            
+          {/* Right: Voice & More buttons */}
+          <div className="flex items-center gap-1">
             {/* Routine Visual Button - shows when visual exists but is hidden */}
             {routineVisual && !showVisual && (
               <RoutineVisualButton
@@ -449,6 +439,16 @@ export const CalmChatScreen: React.FC<CalmChatScreenProps> = ({ onMenuClick }) =
               onClick={() => setShowVoiceMode(true)}
             >
               <Headphones className="w-5 h-5" />
+            </Button>
+            
+            {/* More Menu Button */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="rounded-full h-10 w-10 text-muted-foreground hover:text-foreground hover:bg-accent/50"
+              onClick={onMenuClick}
+            >
+              <MoreVertical className="w-5 h-5" />
             </Button>
           </div>
         </div>
@@ -576,12 +576,16 @@ export const CalmChatScreen: React.FC<CalmChatScreenProps> = ({ onMenuClick }) =
           <RoutineWidget 
             onViewVisual={openVisual}
             onViewRoutine={() => {
-              // Navigate to routine screen would happen via parent
+              // Send message to show routine in chat
+              handleSend("Show me my routine for today");
             }}
           />
-          {/* Skills Widget - compact view in header area */}
+          {/* Skills Widget - compact view */}
           {hasActiveSkills() && (
-            <SkillsWidget onNavigate={() => navigate('/skills')} />
+            <SkillsWidget onNavigate={() => {
+              // Send message to show skills in chat
+              handleSend("Show my skills and progress");
+            }} />
           )}
         </div>
       )}
@@ -912,6 +916,13 @@ export const CalmChatScreen: React.FC<CalmChatScreenProps> = ({ onMenuClick }) =
         onAction={handleMediaAction}
         onFileSelect={handleFileSelect}
         isUploading={isUploading}
+      />
+
+      {/* Context Shortcuts Sheet - Quick access to features via chat */}
+      <ContextShortcutsSheet
+        open={showContextSheet}
+        onOpenChange={setShowContextSheet}
+        onSendMessage={handleSend}
       />
 
       {/* Voice Mode Modal */}
