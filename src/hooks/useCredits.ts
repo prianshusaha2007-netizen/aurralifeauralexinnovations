@@ -115,19 +115,32 @@ export function useCredits() {
   const [isLoading, setIsLoading] = useState(true);
   const [finalReplyUsed, setFinalReplyUsed] = useState(false);
   const [actionUsage, setActionUsage] = useState<Record<string, number>>({});
+  const [isMounted, setIsMounted] = useState(true);
+
+  // Track mount state to prevent updates after unmount
+  useEffect(() => {
+    setIsMounted(true);
+    return () => {
+      setIsMounted(false);
+    };
+  }, []);
 
   // Fetch user tier from engagement table
-  const fetchTier = useCallback(async () => {
-    if (!user?.id) return;
+  const fetchTier = useCallback(async (mounted: boolean) => {
+    if (!user?.id || !mounted) return;
     
-    const { data } = await supabase
-      .from('user_engagement')
-      .select('subscription_tier')
-      .eq('user_id', user.id)
-      .maybeSingle();
-    
-    if (data?.subscription_tier) {
-      setTier(data.subscription_tier as SubscriptionTier);
+    try {
+      const { data } = await supabase
+        .from('user_engagement')
+        .select('subscription_tier')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      
+      if (mounted && data?.subscription_tier) {
+        setTier(data.subscription_tier as SubscriptionTier);
+      }
+    } catch (err) {
+      console.error('Error fetching tier:', err);
     }
   }, [user?.id]);
 
@@ -138,14 +151,20 @@ export function useCredits() {
       return;
     }
 
+    let mounted = true;
+
     try {
-      await fetchTier();
+      await fetchTier(mounted);
+      
+      if (!mounted) return;
       
       const { data, error } = await supabase
         .from('user_credits')
         .select('*')
         .eq('user_id', user.id)
         .maybeSingle();
+
+      if (!mounted) return;
 
       if (error && error.code !== 'PGRST116') {
         console.error('Error fetching credits:', error);
@@ -165,6 +184,8 @@ export function useCredits() {
             .eq('user_id', user.id)
             .select()
             .single();
+
+          if (!mounted) return;
 
           if (!updateError && updated) {
             setCredits(updated);
@@ -189,6 +210,8 @@ export function useCredits() {
           .select()
           .single();
 
+        if (!mounted) return;
+
         if (!insertError && newCredits) {
           setCredits(newCredits);
         }
@@ -196,7 +219,9 @@ export function useCredits() {
     } catch (err) {
       console.error('Credits fetch error:', err);
     } finally {
-      setIsLoading(false);
+      if (mounted) {
+        setIsLoading(false);
+      }
     }
   }, [user?.id, fetchTier]);
 
@@ -352,7 +377,7 @@ export function useCredits() {
 
       if (!error && data) {
         setCredits(data);
-        await fetchTier(); // Refresh tier
+        await fetchTier(true); // Refresh tier
         return true;
       }
       return false;
