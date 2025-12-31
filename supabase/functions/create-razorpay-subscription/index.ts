@@ -6,6 +6,29 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Simple in-memory rate limiting
+const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
+const RATE_LIMIT_WINDOW_MS = 60 * 1000; // 1 minute
+const RATE_LIMIT_MAX_REQUESTS = 5; // 5 requests per minute per user
+
+function checkRateLimit(userId: string): { allowed: boolean; retryAfter?: number } {
+  const now = Date.now();
+  const userLimit = rateLimitMap.get(userId);
+  
+  if (!userLimit || now > userLimit.resetTime) {
+    rateLimitMap.set(userId, { count: 1, resetTime: now + RATE_LIMIT_WINDOW_MS });
+    return { allowed: true };
+  }
+  
+  if (userLimit.count >= RATE_LIMIT_MAX_REQUESTS) {
+    const retryAfter = Math.ceil((userLimit.resetTime - now) / 1000);
+    return { allowed: false, retryAfter };
+  }
+  
+  userLimit.count++;
+  return { allowed: true };
+}
+
 // Tier pricing configuration
 const TIER_CONFIG: Record<string, { name: string; amount: number }> = {
   plus: { name: 'AURRA Plus', amount: 9900 },   // ₹99
@@ -49,6 +72,16 @@ serve(async (req) => {
     // Use authenticated user's ID and email - never trust client-supplied values
     const authenticatedUserId = user.id;
     const userEmail = user.email;
+
+    // Check rate limit
+    const rateLimit = checkRateLimit(authenticatedUserId);
+    if (!rateLimit.allowed) {
+      console.warn('Rate limit exceeded for user:', authenticatedUserId);
+      return new Response(
+        JSON.stringify({ error: 'Too many requests. Please try again later.', retryAfter: rateLimit.retryAfter }),
+        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json', 'Retry-After': String(rateLimit.retryAfter) } }
+      );
+    }
 
     const { tier, userName } = await req.json();
     console.log('Creating Razorpay subscription for tier:', tier, 'authenticatedUserId:', authenticatedUserId);

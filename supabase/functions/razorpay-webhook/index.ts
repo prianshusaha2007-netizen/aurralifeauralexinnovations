@@ -6,118 +6,236 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-razorpay-signature',
 };
 
+// IP-based rate limiting for webhooks
+const webhookRateLimitMap = new Map<string, { count: number; resetTime: number }>();
+const WEBHOOK_RATE_LIMIT_WINDOW_MS = 60 * 1000; // 1 minute
+const WEBHOOK_RATE_LIMIT_MAX_REQUESTS = 100; // 100 webhook requests per minute per IP
+
+function checkWebhookRateLimit(ip: string): { allowed: boolean; retryAfter?: number } {
+  const now = Date.now();
+  const ipLimit = webhookRateLimitMap.get(ip);
+  
+  if (!ipLimit || now > ipLimit.resetTime) {
+    webhookRateLimitMap.set(ip, { count: 1, resetTime: now + WEBHOOK_RATE_LIMIT_WINDOW_MS });
+    return { allowed: true };
+  }
+  
+  if (ipLimit.count >= WEBHOOK_RATE_LIMIT_MAX_REQUESTS) {
+    const retryAfter = Math.ceil((ipLimit.resetTime - now) / 1000);
+    return { allowed: false, retryAfter };
+  }
+  
+  ipLimit.count++;
+  return { allowed: true };
+}
+
+// Log webhook events for monitoring
+function logWebhookEvent(eventType: string, data: Record<string, unknown>) {
+  const timestamp = new Date().toISOString();
+  console.log(JSON.stringify({
+    type: 'WEBHOOK_EVENT',
+    timestamp,
+    eventType,
+    ...data,
+  }));
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const requestId = crypto.randomUUID();
+  const clientIp = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
+  const startTime = Date.now();
+
   try {
+    // Rate limit check
+    const rateLimit = checkWebhookRateLimit(clientIp);
+    if (!rateLimit.allowed) {
+      logWebhookEvent('RATE_LIMITED', { requestId, clientIp, retryAfter: rateLimit.retryAfter });
+      return new Response(
+        JSON.stringify({ error: 'Too many requests' }),
+        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json', 'Retry-After': String(rateLimit.retryAfter) } }
+      );
+    }
+
     const RAZORPAY_KEY_SECRET = Deno.env.get('RAZORPAY_KEY_SECRET');
     if (!RAZORPAY_KEY_SECRET) {
+      logWebhookEvent('CONFIG_ERROR', { requestId, error: 'Razorpay secret not configured' });
       throw new Error('Razorpay secret not configured');
     }
 
     // Get the webhook signature
     const signature = req.headers.get('x-razorpay-signature');
     const body = await req.text();
-    
-    console.log('Received Razorpay webhook');
+
+    logWebhookEvent('WEBHOOK_RECEIVED', { 
+      requestId, 
+      clientIp, 
+      hasSignature: !!signature,
+      bodyLength: body.length 
+    });
 
     // Verify webhook signature
-    if (signature) {
-      const expectedSignature = await generateHmac(body, RAZORPAY_KEY_SECRET);
-      if (expectedSignature !== signature) {
-        console.error('Webhook signature verification failed');
-        return new Response(
-          JSON.stringify({ error: 'Invalid signature' }),
-          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
+    if (!signature) {
+      logWebhookEvent('SIGNATURE_MISSING', { requestId, clientIp });
+      return new Response(
+        JSON.stringify({ error: 'Missing signature' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
+
+    const expectedSignature = await generateHmac(body, RAZORPAY_KEY_SECRET);
+    const signatureValid = expectedSignature === signature;
+
+    if (!signatureValid) {
+      logWebhookEvent('SIGNATURE_INVALID', { 
+        requestId, 
+        clientIp,
+        receivedSignaturePrefix: signature.substring(0, 10) + '...',
+        expectedSignaturePrefix: expectedSignature.substring(0, 10) + '...'
+      });
+      return new Response(
+        JSON.stringify({ error: 'Invalid signature' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    logWebhookEvent('SIGNATURE_VERIFIED', { requestId });
 
     const payload = JSON.parse(body);
     const event = payload.event;
     const subscriptionData = payload.payload?.subscription?.entity;
     const paymentData = payload.payload?.payment?.entity;
 
-    console.log('Webhook event:', event);
+    logWebhookEvent('EVENT_PARSED', { 
+      requestId, 
+      event,
+      subscriptionId: subscriptionData?.id,
+      paymentId: paymentData?.id,
+      userId: subscriptionData?.notes?.userId || paymentData?.notes?.userId
+    });
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+    let handlerResult = { success: true, action: 'none' };
+
     switch (event) {
       case 'subscription.authenticated':
-        console.log('Subscription authenticated:', subscriptionData?.id);
+        logWebhookEvent('SUBSCRIPTION_AUTHENTICATED', { requestId, subscriptionId: subscriptionData?.id });
+        handlerResult = { success: true, action: 'authenticated' };
         break;
 
       case 'subscription.activated':
-        console.log('Subscription activated:', subscriptionData?.id);
-        await handleSubscriptionActivated(supabase, subscriptionData);
+        logWebhookEvent('SUBSCRIPTION_ACTIVATED', { 
+          requestId, 
+          subscriptionId: subscriptionData?.id,
+          userId: subscriptionData?.notes?.userId,
+          tier: subscriptionData?.notes?.tier
+        });
+        await handleSubscriptionActivated(supabase, subscriptionData, requestId);
+        handlerResult = { success: true, action: 'activated' };
         break;
 
       case 'subscription.charged':
-        console.log('Subscription charged:', subscriptionData?.id, paymentData?.id);
-        await handleSubscriptionCharged(supabase, subscriptionData, paymentData);
+        logWebhookEvent('SUBSCRIPTION_CHARGED', { 
+          requestId, 
+          subscriptionId: subscriptionData?.id,
+          paymentId: paymentData?.id,
+          amount: paymentData?.amount
+        });
+        await handleSubscriptionCharged(supabase, subscriptionData, paymentData, requestId);
+        handlerResult = { success: true, action: 'charged' };
         break;
 
       case 'subscription.completed':
-        console.log('Subscription completed:', subscriptionData?.id);
-        await handleSubscriptionEnded(supabase, subscriptionData, 'completed');
+        logWebhookEvent('SUBSCRIPTION_COMPLETED', { requestId, subscriptionId: subscriptionData?.id });
+        await handleSubscriptionEnded(supabase, subscriptionData, 'completed', requestId);
+        handlerResult = { success: true, action: 'completed' };
         break;
 
       case 'subscription.cancelled':
-        console.log('Subscription cancelled:', subscriptionData?.id);
-        await handleSubscriptionEnded(supabase, subscriptionData, 'cancelled');
+        logWebhookEvent('SUBSCRIPTION_CANCELLED', { requestId, subscriptionId: subscriptionData?.id });
+        await handleSubscriptionEnded(supabase, subscriptionData, 'cancelled', requestId);
+        handlerResult = { success: true, action: 'cancelled' };
         break;
 
       case 'subscription.halted':
-        console.log('Subscription halted (payment failed):', subscriptionData?.id);
-        await handleSubscriptionEnded(supabase, subscriptionData, 'halted');
+        logWebhookEvent('SUBSCRIPTION_HALTED', { requestId, subscriptionId: subscriptionData?.id });
+        await handleSubscriptionEnded(supabase, subscriptionData, 'halted', requestId);
+        handlerResult = { success: true, action: 'halted' };
         break;
 
       case 'subscription.pending':
-        console.log('Subscription pending:', subscriptionData?.id);
+        logWebhookEvent('SUBSCRIPTION_PENDING', { requestId, subscriptionId: subscriptionData?.id });
+        handlerResult = { success: true, action: 'pending' };
         break;
 
       case 'payment.captured':
-        console.log('Payment captured:', paymentData?.id);
+        logWebhookEvent('PAYMENT_CAPTURED', { requestId, paymentId: paymentData?.id, amount: paymentData?.amount });
+        handlerResult = { success: true, action: 'payment_captured' };
         break;
 
       case 'payment.failed':
-        console.log('Payment failed:', paymentData?.id);
+        logWebhookEvent('PAYMENT_FAILED', { 
+          requestId, 
+          paymentId: paymentData?.id,
+          errorCode: paymentData?.error_code,
+          errorDescription: paymentData?.error_description
+        });
+        handlerResult = { success: true, action: 'payment_failed' };
         break;
 
       default:
-        console.log('Unhandled webhook event:', event);
+        logWebhookEvent('UNHANDLED_EVENT', { requestId, event });
+        handlerResult = { success: true, action: 'unhandled' };
     }
 
+    const processingTime = Date.now() - startTime;
+    logWebhookEvent('WEBHOOK_COMPLETED', { 
+      requestId, 
+      processingTimeMs: processingTime,
+      ...handlerResult
+    });
+
     return new Response(
-      JSON.stringify({ received: true }),
+      JSON.stringify({ received: true, requestId }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error: unknown) {
-    console.error('Webhook processing error:', error);
+    const processingTime = Date.now() - startTime;
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    
+    logWebhookEvent('WEBHOOK_ERROR', { 
+      requestId, 
+      processingTimeMs: processingTime,
+      error: errorMessage,
+      stack: error instanceof Error ? error.stack : undefined
+    });
+    
     return new Response(
-      JSON.stringify({ error: errorMessage }),
+      JSON.stringify({ error: errorMessage, requestId }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 });
 
-async function handleSubscriptionActivated(supabase: any, subscriptionData: any) {
-  if (!subscriptionData?.notes?.userId) {
-    console.error('No userId in subscription notes');
+async function handleSubscriptionActivated(supabase: any, subscriptionData: Record<string, unknown>, requestId: string) {
+  const notes = subscriptionData?.notes as Record<string, string> | undefined;
+  if (!notes?.userId) {
+    logWebhookEvent('HANDLER_ERROR', { requestId, handler: 'activated', error: 'No userId in subscription notes' });
     return;
   }
 
-  const userId = subscriptionData.notes.userId;
-  const tier = subscriptionData.notes.tier || 'plus';
+  const userId = notes.userId;
+  const tier = notes.tier || 'plus';
 
   // Calculate next billing date
   const currentEnd = subscriptionData.current_end 
-    ? new Date(subscriptionData.current_end * 1000) 
+    ? new Date((subscriptionData.current_end as number) * 1000) 
     : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
 
   // Upsert subscription
@@ -135,11 +253,11 @@ async function handleSubscriptionActivated(supabase: any, subscriptionData: any)
     });
 
   if (subError) {
-    console.error('Error upserting subscription:', subError);
+    logWebhookEvent('DB_ERROR', { requestId, handler: 'activated', table: 'subscriptions', error: subError.message });
   }
 
   // Update user_engagement
-  await supabase
+  const { error: engError } = await supabase
     .from('user_engagement')
     .update({
       subscription_tier: tier,
@@ -147,8 +265,12 @@ async function handleSubscriptionActivated(supabase: any, subscriptionData: any)
     })
     .eq('user_id', userId);
 
+  if (engError) {
+    logWebhookEvent('DB_ERROR', { requestId, handler: 'activated', table: 'user_engagement', error: engError.message });
+  }
+
   // Update user_credits
-  await supabase
+  const { error: credError } = await supabase
     .from('user_credits')
     .update({
       is_premium: true,
@@ -158,35 +280,47 @@ async function handleSubscriptionActivated(supabase: any, subscriptionData: any)
     })
     .eq('user_id', userId);
 
-  console.log('Subscription activated for user:', userId);
+  if (credError) {
+    logWebhookEvent('DB_ERROR', { requestId, handler: 'activated', table: 'user_credits', error: credError.message });
+  }
+
+  logWebhookEvent('HANDLER_SUCCESS', { requestId, handler: 'activated', userId, tier });
 }
 
-async function handleSubscriptionCharged(supabase: any, subscriptionData: any, paymentData: any) {
-  if (!subscriptionData?.notes?.userId) return;
+async function handleSubscriptionCharged(supabase: any, subscriptionData: Record<string, unknown>, paymentData: Record<string, unknown>, requestId: string) {
+  const notes = subscriptionData?.notes as Record<string, string> | undefined;
+  if (!notes?.userId) {
+    logWebhookEvent('HANDLER_ERROR', { requestId, handler: 'charged', error: 'No userId in subscription notes' });
+    return;
+  }
 
-  const userId = subscriptionData.notes.userId;
-  const tier = subscriptionData.notes.tier || 'plus';
+  const userId = notes.userId;
+  const tier = notes.tier || 'plus';
 
   // Record payment
-  await supabase
+  const { error: payError } = await supabase
     .from('payments')
     .insert({
       user_id: userId,
-      razorpay_order_id: subscriptionData.id,
-      razorpay_payment_id: paymentData?.id,
-      amount: paymentData?.amount || subscriptionData.plan?.item?.amount,
-      currency: paymentData?.currency || 'INR',
+      razorpay_order_id: subscriptionData.id as string,
+      razorpay_payment_id: paymentData?.id as string | undefined,
+      amount: (paymentData?.amount as number) || ((subscriptionData.plan as Record<string, unknown>)?.item as Record<string, unknown>)?.amount as number,
+      currency: (paymentData?.currency as string) || 'INR',
       status: 'completed',
       tier: tier,
       completed_at: new Date().toISOString(),
     });
 
+  if (payError) {
+    logWebhookEvent('DB_ERROR', { requestId, handler: 'charged', table: 'payments', error: payError.message });
+  }
+
   // Extend subscription
   const currentEnd = subscriptionData.current_end 
-    ? new Date(subscriptionData.current_end * 1000) 
+    ? new Date((subscriptionData.current_end as number) * 1000) 
     : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
 
-  await supabase
+  const { error: subError } = await supabase
     .from('subscriptions')
     .update({
       expires_at: currentEnd.toISOString(),
@@ -194,16 +328,24 @@ async function handleSubscriptionCharged(supabase: any, subscriptionData: any, p
     })
     .eq('user_id', userId);
 
-  console.log('Subscription charged for user:', userId);
+  if (subError) {
+    logWebhookEvent('DB_ERROR', { requestId, handler: 'charged', table: 'subscriptions', error: subError.message });
+  }
+
+  logWebhookEvent('HANDLER_SUCCESS', { requestId, handler: 'charged', userId });
 }
 
-async function handleSubscriptionEnded(supabase: any, subscriptionData: any, status: string) {
-  if (!subscriptionData?.notes?.userId) return;
+async function handleSubscriptionEnded(supabase: any, subscriptionData: Record<string, unknown>, status: string, requestId: string) {
+  const notes = subscriptionData?.notes as Record<string, string> | undefined;
+  if (!notes?.userId) {
+    logWebhookEvent('HANDLER_ERROR', { requestId, handler: 'ended', error: 'No userId in subscription notes' });
+    return;
+  }
 
-  const userId = subscriptionData.notes.userId;
+  const userId = notes.userId;
 
   // Update subscription status
-  await supabase
+  const { error: subError } = await supabase
     .from('subscriptions')
     .update({
       status: status,
@@ -211,8 +353,12 @@ async function handleSubscriptionEnded(supabase: any, subscriptionData: any, sta
     })
     .eq('user_id', userId);
 
+  if (subError) {
+    logWebhookEvent('DB_ERROR', { requestId, handler: 'ended', table: 'subscriptions', error: subError.message });
+  }
+
   // Downgrade user
-  await supabase
+  const { error: engError } = await supabase
     .from('user_engagement')
     .update({
       subscription_tier: 'core',
@@ -220,7 +366,11 @@ async function handleSubscriptionEnded(supabase: any, subscriptionData: any, sta
     })
     .eq('user_id', userId);
 
-  await supabase
+  if (engError) {
+    logWebhookEvent('DB_ERROR', { requestId, handler: 'ended', table: 'user_engagement', error: engError.message });
+  }
+
+  const { error: credError } = await supabase
     .from('user_credits')
     .update({
       is_premium: false,
@@ -229,7 +379,11 @@ async function handleSubscriptionEnded(supabase: any, subscriptionData: any, sta
     })
     .eq('user_id', userId);
 
-  console.log('Subscription ended for user:', userId, 'status:', status);
+  if (credError) {
+    logWebhookEvent('DB_ERROR', { requestId, handler: 'ended', table: 'user_credits', error: credError.message });
+  }
+
+  logWebhookEvent('HANDLER_SUCCESS', { requestId, handler: 'ended', userId, status });
 }
 
 async function generateHmac(data: string, secret: string): Promise<string> {
