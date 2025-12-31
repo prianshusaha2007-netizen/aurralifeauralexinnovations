@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 
@@ -109,20 +109,21 @@ export const TIER_DISPLAY = {
 };
 
 export function useCredits() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [credits, setCredits] = useState<UserCredits | null>(null);
   const [tier, setTier] = useState<SubscriptionTier>('core');
   const [isLoading, setIsLoading] = useState(true);
   const [finalReplyUsed, setFinalReplyUsed] = useState(false);
   const [actionUsage, setActionUsage] = useState<Record<string, number>>({});
-  const [isMounted, setIsMounted] = useState(true);
-  const [testUsagePercent, setTestUsagePercent] = useState<number | null>(null); // For testing only
+  const [testUsagePercent, setTestUsagePercent] = useState<number | null>(null);
+  const isMountedRef = useRef(true);
+  const hasFetchedRef = useRef(false);
 
-  // Track mount state to prevent updates after unmount
+  // Track mount state
   useEffect(() => {
-    setIsMounted(true);
+    isMountedRef.current = true;
     return () => {
-      setIsMounted(false);
+      isMountedRef.current = false;
     };
   }, []);
 
@@ -147,17 +148,14 @@ export function useCredits() {
 
   // Fetch or create user credits
   const fetchCredits = useCallback(async () => {
-    if (!user?.id) {
-      setIsLoading(false);
+    if (!user?.id || !isMountedRef.current) {
       return;
     }
 
-    let mounted = true;
-
     try {
-      await fetchTier(mounted);
+      await fetchTier(isMountedRef.current);
       
-      if (!mounted) return;
+      if (!isMountedRef.current) return;
       
       const { data, error } = await supabase
         .from('user_credits')
@@ -165,11 +163,11 @@ export function useCredits() {
         .eq('user_id', user.id)
         .maybeSingle();
 
-      if (!mounted) return;
+      if (!isMountedRef.current) return;
 
       if (error && error.code !== 'PGRST116') {
         console.error('Error fetching credits:', error);
-        setIsLoading(false);
+        if (isMountedRef.current) setIsLoading(false);
         return;
       }
 
@@ -186,7 +184,7 @@ export function useCredits() {
             .select()
             .single();
 
-          if (!mounted) return;
+          if (!isMountedRef.current) return;
 
           if (!updateError && updated) {
             setCredits(updated);
@@ -196,7 +194,7 @@ export function useCredits() {
             setCredits(data);
           }
         } else {
-          setCredits(data);
+          if (isMountedRef.current) setCredits(data);
         }
       } else {
         const { data: newCredits, error: insertError } = await supabase
@@ -211,7 +209,7 @@ export function useCredits() {
           .select()
           .single();
 
-        if (!mounted) return;
+        if (!isMountedRef.current) return;
 
         if (!insertError && newCredits) {
           setCredits(newCredits);
@@ -220,15 +218,22 @@ export function useCredits() {
     } catch (err) {
       console.error('Credits fetch error:', err);
     } finally {
-      if (mounted) {
+      if (isMountedRef.current) {
         setIsLoading(false);
       }
     }
   }, [user?.id, fetchTier]);
 
   useEffect(() => {
-    fetchCredits();
-  }, [fetchCredits]);
+    // Only fetch once auth is done loading and we have a user
+    if (!authLoading && user?.id && !hasFetchedRef.current) {
+      hasFetchedRef.current = true;
+      fetchCredits();
+    } else if (!authLoading && !user) {
+      // No user, set loading to false
+      setIsLoading(false);
+    }
+  }, [authLoading, user?.id, fetchCredits]);
 
   // Check if a specific action is allowed for current tier
   const isActionAllowed = useCallback((action: CreditAction): boolean => {
