@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { useScribe } from '@elevenlabs/react';
-import { Mic, MicOff, Send, X, Loader2 } from 'lucide-react';
+import { Mic, MicOff, Send, X, Loader2, Pause, Play } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
@@ -127,6 +127,7 @@ export const LiveVoiceInput: React.FC<LiveVoiceInputProps> = ({
   className,
 }) => {
   const [isConnecting, setIsConnecting] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fullTranscript, setFullTranscript] = useState('');
 
@@ -141,10 +142,13 @@ export const LiveVoiceInput: React.FC<LiveVoiceInputProps> = ({
     },
   });
 
-  const handleStart = useCallback(async () => {
+  const handleStart = useCallback(async (preserveTranscript = false) => {
     setError(null);
     setIsConnecting(true);
-    setFullTranscript('');
+    if (!preserveTranscript) {
+      setFullTranscript('');
+    }
+    setIsPaused(false);
     
     try {
       const { data, error: fnError } = await supabase.functions.invoke('elevenlabs-scribe-token');
@@ -169,8 +173,22 @@ export const LiveVoiceInput: React.FC<LiveVoiceInputProps> = ({
     }
   }, [scribe]);
 
+  const handlePause = useCallback(() => {
+    // Commit any partial transcript to full before pausing
+    if (scribe.partialTranscript) {
+      setFullTranscript(prev => prev + (prev ? ' ' : '') + scribe.partialTranscript);
+    }
+    scribe.disconnect();
+    setIsPaused(true);
+  }, [scribe]);
+
+  const handleResume = useCallback(() => {
+    handleStart(true); // Resume with preserved transcript
+  }, [handleStart]);
+
   const handleStop = useCallback(() => {
     scribe.disconnect();
+    setIsPaused(false);
   }, [scribe]);
 
   const handleSend = useCallback(() => {
@@ -222,6 +240,11 @@ export const LiveVoiceInput: React.FC<LiveVoiceInputProps> = ({
               <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
               <span className="text-sm text-muted-foreground">Connecting...</span>
             </div>
+          ) : isPaused ? (
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-yellow-500" />
+              <span className="text-sm font-medium text-yellow-600 dark:text-yellow-400">Paused</span>
+            </div>
           ) : (
             <span className="text-sm text-muted-foreground">Tap mic to start</span>
           )}
@@ -266,9 +289,10 @@ export const LiveVoiceInput: React.FC<LiveVoiceInputProps> = ({
 
       {/* Actions */}
       <div className="flex items-center justify-center gap-3">
-        {!scribe.isConnected ? (
+        {/* Start/Resume Button - when not connected */}
+        {!scribe.isConnected && !isPaused && (
           <Button
-            onClick={handleStart}
+            onClick={() => handleStart()}
             disabled={isConnecting}
             className="rounded-full h-12 w-12"
             size="icon"
@@ -279,17 +303,49 @@ export const LiveVoiceInput: React.FC<LiveVoiceInputProps> = ({
               <Mic className="w-5 h-5" />
             )}
           </Button>
-        ) : (
+        )}
+
+        {/* Resume Button - when paused */}
+        {!scribe.isConnected && isPaused && (
           <Button
-            onClick={handleStop}
-            variant="destructive"
-            className="rounded-full h-12 w-12"
+            onClick={handleResume}
+            disabled={isConnecting}
+            className="rounded-full h-12 w-12 bg-green-600 hover:bg-green-700"
             size="icon"
           >
-            <MicOff className="w-5 h-5" />
+            {isConnecting ? (
+              <Loader2 className="w-5 h-5 animate-spin" />
+            ) : (
+              <Play className="w-5 h-5" />
+            )}
           </Button>
         )}
 
+        {/* Pause Button - when recording */}
+        {scribe.isConnected && (
+          <Button
+            onClick={handlePause}
+            variant="outline"
+            className="rounded-full h-12 w-12"
+            size="icon"
+          >
+            <Pause className="w-5 h-5" />
+          </Button>
+        )}
+
+        {/* Stop/Clear Button - when recording or paused with content */}
+        {(scribe.isConnected || (isPaused && displayText)) && (
+          <Button
+            onClick={handleStop}
+            variant="destructive"
+            className="rounded-full h-10 w-10"
+            size="icon"
+          >
+            <MicOff className="w-4 h-4" />
+          </Button>
+        )}
+
+        {/* Send Button */}
         {displayText && (
           <Button
             onClick={handleSend}
