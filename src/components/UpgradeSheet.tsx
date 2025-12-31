@@ -1,14 +1,15 @@
 import React, { useState } from 'react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
-import { Check, Heart, Sparkles, Star, Rocket, Crown, Loader2 } from 'lucide-react';
+import { Check, Heart, Sparkles, Star, Rocket, Crown, Loader2, RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useCredits } from '@/hooks/useCredits';
 import { useAura } from '@/contexts/AuraContext';
 import { useRelationshipEvolution, SubscriptionTier } from '@/hooks/useRelationshipEvolution';
-import { useRazorpay } from '@/hooks/useRazorpay';
+import { useRazorpay, PaymentMode } from '@/hooks/useRazorpay';
 import { useAuth } from '@/hooks/useAuth';
-import { toast } from 'sonner';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Label } from '@/components/ui/label';
 
 interface UpgradeSheetProps {
   open: boolean;
@@ -79,8 +80,9 @@ export const UpgradeSheet: React.FC<UpgradeSheetProps> = ({ open, onOpenChange }
   const { upgradeTier, recordUpgradePrompt, engagement } = useRelationshipEvolution();
   const { userProfile } = useAura();
   const { user } = useAuth();
-  const { initiatePayment, isLoading: isPaymentLoading, isReady: isPaymentReady } = useRazorpay();
+  const { initiatePayment, initiateSubscription, isLoading: isPaymentLoading, isReady: isPaymentReady } = useRazorpay();
   const [selectedTier, setSelectedTier] = useState<SubscriptionTier>('plus');
+  const [paymentMode, setPaymentMode] = useState<PaymentMode>('subscription');
 
   const aiName = userProfile.aiName || 'AURRA';
   const currentTier = engagement?.subscriptionTier || 'core';
@@ -88,10 +90,19 @@ export const UpgradeSheet: React.FC<UpgradeSheetProps> = ({ open, onOpenChange }
   const handleUpgrade = async (tier: SubscriptionTier) => {
     if (tier === 'core' || !user) return;
     
-    const success = await initiatePayment(tier as 'plus' | 'pro', user.id, {
-      name: userProfile.name,
-      email: user.email,
-    });
+    let success = false;
+    
+    if (paymentMode === 'subscription') {
+      success = await initiateSubscription(tier as 'plus' | 'pro', user.id, {
+        name: userProfile.name,
+        email: user.email,
+      });
+    } else {
+      success = await initiatePayment(tier as 'plus' | 'pro', user.id, {
+        name: userProfile.name,
+        email: user.email,
+      });
+    }
 
     if (success) {
       await upgradeTier(tier);
@@ -126,7 +137,7 @@ export const UpgradeSheet: React.FC<UpgradeSheetProps> = ({ open, onOpenChange }
           </p>
         </SheetHeader>
 
-        <div className="mt-4 space-y-4 overflow-y-auto max-h-[60vh] pb-4">
+        <div className="mt-4 space-y-4 overflow-y-auto max-h-[55vh] pb-4">
           {/* Tier Selection */}
           <div className="flex gap-2 justify-center mb-4">
             {(['core', 'plus', 'pro'] as SubscriptionTier[]).map((tier) => {
@@ -217,6 +228,37 @@ export const UpgradeSheet: React.FC<UpgradeSheetProps> = ({ open, onOpenChange }
                   ))}
                 </div>
 
+                {/* Payment Mode Selection */}
+                {tier !== 'core' && canUpgrade && (
+                  <div className="mt-4 p-3 bg-muted/50 rounded-xl">
+                    <p className="text-xs font-medium mb-2">Billing preference:</p>
+                    <RadioGroup 
+                      value={paymentMode} 
+                      onValueChange={(v) => setPaymentMode(v as PaymentMode)}
+                      className="flex gap-4"
+                    >
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="subscription" id="subscription" />
+                        <Label htmlFor="subscription" className="text-sm cursor-pointer flex items-center gap-1">
+                          <RefreshCw className="w-3 h-3" />
+                          Auto-renew
+                        </Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="one-time" id="one-time" />
+                        <Label htmlFor="one-time" className="text-sm cursor-pointer">
+                          One month
+                        </Label>
+                      </div>
+                    </RadioGroup>
+                    {paymentMode === 'subscription' && (
+                      <p className="text-[10px] text-muted-foreground mt-2">
+                        Cancel anytime from subscription settings
+                      </p>
+                    )}
+                  </div>
+                )}
+
                 {/* Tier-specific CTA */}
                 {tier !== 'core' && (
                   <div className="mt-4">
@@ -248,7 +290,7 @@ export const UpgradeSheet: React.FC<UpgradeSheetProps> = ({ open, onOpenChange }
                         ) : (
                           <>
                             <Sparkles className="w-5 h-5 mr-2" />
-                            Pay {config.price.split('/')[0]}
+                            {paymentMode === 'subscription' ? 'Subscribe' : 'Pay'} {config.price.split('/')[0]}
                           </>
                         )}
                       </Button>
@@ -267,7 +309,10 @@ export const UpgradeSheet: React.FC<UpgradeSheetProps> = ({ open, onOpenChange }
         {/* Footer */}
         <div className="pt-3 border-t border-border">
           <p className="text-xs text-center text-muted-foreground">
-            Cancel anytime · Secure payment via Razorpay · Your data stays yours
+            {paymentMode === 'subscription' 
+              ? 'Auto-renews monthly · Cancel anytime · Secure via Razorpay'
+              : 'One-time payment · 30 days access · Secure via Razorpay'
+            }
           </p>
           <p className="text-[10px] text-center text-muted-foreground/70 mt-1">
             Upgrades never appear during emotional moments or late-night chats.
