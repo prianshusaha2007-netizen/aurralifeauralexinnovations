@@ -13,6 +13,7 @@ import { toast } from 'sonner';
 import { StreakCard } from '@/components/StreakCard';
 import { FriendInviteSystem } from '@/components/FriendInviteSystem';
 import { AchievementBadges } from '@/components/AchievementBadges';
+import { FriendCirclesLeaderboard } from '@/components/FriendCirclesLeaderboard';
 
 interface LeaderboardEntry {
   rank: number;
@@ -268,17 +269,25 @@ export const SocialLeaderboardScreen: React.FC = () => {
           </div>
         </Card>
 
-        <Tabs defaultValue="leaderboard" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-2">
+        <Tabs defaultValue="friends" className="space-y-4">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="friends">
+              <Users className="w-4 h-4 mr-2" />
+              Friends
+            </TabsTrigger>
             <TabsTrigger value="leaderboard">
               <Trophy className="w-4 h-4 mr-2" />
-              Leaderboard
+              Global
             </TabsTrigger>
             <TabsTrigger value="challenges">
               <Target className="w-4 h-4 mr-2" />
               Challenges
             </TabsTrigger>
           </TabsList>
+
+          <TabsContent value="friends" className="space-y-3">
+            <FriendCirclesLeaderboard />
+          </TabsContent>
 
           <TabsContent value="leaderboard" className="space-y-3">
             {/* Top 3 Highlight */}

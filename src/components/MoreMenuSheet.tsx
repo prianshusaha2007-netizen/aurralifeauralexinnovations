@@ -16,7 +16,8 @@ import {
   User,
   X,
   ChevronRight,
-  Timer
+  Timer,
+  Users
 } from 'lucide-react';
 import {
   Drawer,
@@ -76,6 +77,13 @@ const MENU_ITEMS = [
     label: 'Focus Stats', 
     action: 'focus-stats',
     color: 'from-violet-500 to-indigo-500'
+  },
+  { 
+    id: 'friend-circles', 
+    icon: Users, 
+    label: 'Friend Circles', 
+    action: 'friend-circles',
+    color: 'from-blue-500 to-sky-500'
   },
   { 
     id: 'daily-routine', 
@@ -174,6 +182,10 @@ export const MoreMenuSheet: React.FC<MoreMenuSheetProps> = ({
       onNewChat();
     } else if (item.action === 'subscription') {
       navigate('/subscription');
+    } else if (item.action === 'focus-stats') {
+      navigate('/progress');
+    } else if (item.action === 'friend-circles') {
+      navigate('/social');
     } else if (item.message) {
       onSendMessage(item.message);
     }

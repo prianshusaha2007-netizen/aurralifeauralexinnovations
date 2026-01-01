@@ -218,6 +218,45 @@ export type Database = {
         }
         Relationships: []
       }
+      focus_sessions: {
+        Row: {
+          completed: string
+          created_at: string
+          duration_minutes: number
+          focus_type: string
+          goal: string | null
+          gym_body_area: string | null
+          gym_sub_type: string | null
+          id: string
+          struggled_count: number | null
+          user_id: string
+        }
+        Insert: {
+          completed?: string
+          created_at?: string
+          duration_minutes?: number
+          focus_type: string
+          goal?: string | null
+          gym_body_area?: string | null
+          gym_sub_type?: string | null
+          id?: string
+          struggled_count?: number | null
+          user_id: string
+        }
+        Update: {
+          completed?: string
+          created_at?: string
+          duration_minutes?: number
+          focus_type?: string
+          goal?: string | null
+          gym_body_area?: string | null
+          gym_sub_type?: string | null
+          id?: string
+          struggled_count?: number | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       friend_codes: {
         Row: {
           code: string
@@ -531,6 +570,7 @@ export type Database = {
           profession: string | null
           professions: string[] | null
           public_profile: boolean | null
+          share_focus_stats: boolean | null
           sleep_time: string | null
           stress_level: string | null
           tone_preference: string | null
@@ -550,6 +590,7 @@ export type Database = {
           profession?: string | null
           professions?: string[] | null
           public_profile?: boolean | null
+          share_focus_stats?: boolean | null
           sleep_time?: string | null
           stress_level?: string | null
           tone_preference?: string | null
@@ -569,6 +610,7 @@ export type Database = {
           profession?: string | null
           professions?: string[] | null
           public_profile?: boolean | null
+          share_focus_stats?: boolean | null
           sleep_time?: string | null
           stress_level?: string | null
           tone_preference?: string | null

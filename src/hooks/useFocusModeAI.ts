@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { useFocusMode, FocusSession } from './useFocusMode';
+import { useFocusSessions } from './useFocusSessions';
 
 export type FocusType = 'study' | 'coding' | 'work' | 'creative' | 'quiet' | 'gym';
 
@@ -44,6 +45,7 @@ const RECOVERY_STORAGE_KEY = 'aurra-recovery-state';
 
 export const useFocusModeAI = () => {
   const focusMode = useFocusMode();
+  const { saveFocusSession } = useFocusSessions();
   
   const [focusType, setFocusType] = useState<FocusType | null>(null);
   const [goal, setGoal] = useState<FocusGoal | null>(null);
@@ -313,7 +315,7 @@ export const useFocusModeAI = () => {
   }, [focusMode, focusType, struggleSignals]);
 
   // Record reflection and reset state
-  const recordReflection = useCallback((completed: 'yes' | 'almost' | 'not_today') => {
+  const recordReflection = useCallback(async (completed: 'yes' | 'almost' | 'not_today') => {
     // Store session result for routine learning
     const sessionResult = {
       type: focusType,
@@ -333,6 +335,19 @@ export const useFocusModeAI = () => {
     results.push(sessionResult);
     localStorage.setItem('aurra-focus-results', JSON.stringify(results.slice(-50))); // Keep last 50
     
+    // Also save to database for friend circles
+    if (focusType) {
+      await saveFocusSession({
+        focusType,
+        goal: goal?.description,
+        durationMinutes: focusMode.currentSession?.duration || 25,
+        completed,
+        struggledCount: struggleSignals.length,
+        gymSubType: goal?.gymSubType,
+        gymBodyArea: goal?.gymBodyArea,
+      });
+    }
+    
     // Reset state
     setFocusType(null);
     setGoal(null);
@@ -340,7 +355,7 @@ export const useFocusModeAI = () => {
     setPauseCount(0);
     setSessionComplete(false);
     setGymSubType(null);
-  }, [focusType, goal, struggleSignals, focusMode.currentSession]);
+  }, [focusType, goal, struggleSignals, focusMode.currentSession, saveFocusSession]);
 
   // Update recovery status (called on app open)
   const updateRecoveryStatus = useCallback((feeling: 'better' | 'still_tired') => {
