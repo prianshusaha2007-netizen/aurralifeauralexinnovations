@@ -38,8 +38,11 @@ import { useDailyFlow } from '@/hooks/useDailyFlow';
 import { useRealtimeContext } from '@/hooks/useRealtimeContext';
 import { useSettingsIntent } from '@/hooks/useSettingsIntent';
 import { useWeatherSuggestions } from '@/hooks/useWeatherSuggestions';
+import { useSmartRoutine } from '@/hooks/useSmartRoutine';
 import { FirstTimePreferences } from '@/components/FirstTimePreferences';
-import { NightWindDown } from '@/components/NightWindDown';
+import { NightWindDownFlow } from '@/components/NightWindDownFlow';
+import { RoutineOnboardingChat } from '@/components/RoutineOnboardingChat';
+import { ChatRoutineNudge } from '@/components/ChatRoutineNudge';
 import { MorningBriefingCard } from '@/components/MorningBriefingCard';
 import { DailyFlowDebugPanel } from '@/components/DailyFlowDebugPanel';
 import { cn } from '@/lib/utils';
@@ -132,17 +135,24 @@ export const CalmChatScreen: React.FC<CalmChatScreenProps> = ({ onMenuClick, onN
     showPreferences,
     showMorningBriefing,
     showWindDown,
+    showRoutineOnboarding,
     isFirstTimeUser,
     hasGreetedToday,
     dismissPreferences,
     dismissMorningBriefing,
     dismissWindDown,
+    dismissRoutineOnboarding,
+    adjustTomorrowRoutine,
     triggerMorningFlow,
     triggerNightFlow,
     triggerFirstTimeFlow,
+    triggerRoutineOnboarding,
     resetAllFlowState,
     markGreeting,
   } = useDailyFlow();
+  
+  // Smart routine with nudges
+  const { activeNudge, respondToNudge, pendingNudges } = useSmartRoutine();
   
   // Real-time context (location, weather, time awareness)
   const { context: realtimeContext } = useRealtimeContext();
@@ -767,8 +777,30 @@ export const CalmChatScreen: React.FC<CalmChatScreenProps> = ({ onMenuClick, onN
           {/* Night Wind Down Flow */}
           <AnimatePresence>
             {showWindDown && !isFirstTimeUser && (
-              <NightWindDown
+              <NightWindDownFlow
                 onDismiss={dismissWindDown}
+                onSendMessage={handleSend}
+                onAdjustTomorrow={adjustTomorrowRoutine}
+              />
+            )}
+          </AnimatePresence>
+
+          {/* Routine Onboarding Chat Flow */}
+          <AnimatePresence>
+            {showRoutineOnboarding && !isFirstTimeUser && !showWindDown && (
+              <RoutineOnboardingChat
+                onComplete={dismissRoutineOnboarding}
+                onSkip={dismissRoutineOnboarding}
+              />
+            )}
+          </AnimatePresence>
+
+          {/* Routine Nudges - appear near scheduled block times */}
+          <AnimatePresence>
+            {activeNudge && !showWindDown && !showRoutineOnboarding && !showPreferences && (
+              <ChatRoutineNudge
+                nudge={activeNudge}
+                onRespond={(action, blockId) => respondToNudge(action)}
                 onSendMessage={handleSend}
               />
             )}
