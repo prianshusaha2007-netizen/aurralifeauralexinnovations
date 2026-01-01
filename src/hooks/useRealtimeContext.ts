@@ -245,7 +245,7 @@ export const useRealtimeContext = () => {
           humidity: cached.humidity,
           isHot: cached.temperature > 30,
           isCold: cached.temperature < 15,
-          isRaining: cached.condition.toLowerCase().includes('rain'),
+          isRaining: cached.condition?.toLowerCase().includes('rain') ?? false,
           hasWeather: true,
         }));
         return;
