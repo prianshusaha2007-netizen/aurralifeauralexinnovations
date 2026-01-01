@@ -9,6 +9,7 @@ import { MediaToolsSheet } from '@/components/MediaToolsSheet';
 import { ContextShortcutsSheet } from '@/components/ContextShortcutsSheet';
 import { MoreMenuSheet } from '@/components/MoreMenuSheet';
 import { ChatQuickActions } from '@/components/ChatQuickActions';
+import { InlineSettingsCard, SettingsCardType } from '@/components/InlineSettingsCards';
 import { VoiceInputButton } from '@/components/VoiceInputButton';
 import { VoiceModal } from '@/components/VoiceModal';
 import { WeeklyReflectionModal } from '@/components/WeeklyReflectionModal';
@@ -33,6 +34,7 @@ import { useSkillsProgress } from '@/hooks/useSkillsProgress';
 import { useCreditWarning } from '@/hooks/useCreditWarning';
 import { useDailyFlow } from '@/hooks/useDailyFlow';
 import { useRealtimeContext } from '@/hooks/useRealtimeContext';
+import { useSettingsIntent } from '@/hooks/useSettingsIntent';
 import { FirstTimePreferences } from '@/components/FirstTimePreferences';
 import { NightWindDown } from '@/components/NightWindDown';
 import { MorningBriefingCard } from '@/components/MorningBriefingCard';
@@ -147,6 +149,9 @@ export const CalmChatScreen: React.FC<CalmChatScreenProps> = ({ onMenuClick, onN
   // Real-time context (location, weather, time awareness)
   const { context: realtimeContext } = useRealtimeContext();
   
+  // Settings intent detection
+  const { detectSettingsIntent } = useSettingsIntent();
+  
   const [inputValue, setInputValue] = useState('');
   const [statusIndex, setStatusIndex] = useState(0);
   const [memoryPrompt, setMemoryPrompt] = useState<{ content: string; show: boolean }>({ content: '', show: false });
@@ -165,6 +170,7 @@ export const CalmChatScreen: React.FC<CalmChatScreenProps> = ({ onMenuClick, onN
   const [showContextSheet, setShowContextSheet] = useState(false);
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [longPressVoiceActive, setLongPressVoiceActive] = useState(false);
+  const [activeSettingsCard, setActiveSettingsCard] = useState<SettingsCardType>(null);
   
   // Check if coding block is active
   const isCodingBlockActive = activeBlock?.block.type === 'coding';
@@ -329,6 +335,19 @@ export const CalmChatScreen: React.FC<CalmChatScreenProps> = ({ onMenuClick, onN
     // Reset textarea height
     if (inputRef.current) {
       inputRef.current.style.height = '44px';
+    }
+
+    // Check for settings intent - show inline settings cards instead of AI response
+    const settingsIntent = detectSettingsIntent(messageToSend);
+    if (settingsIntent.shouldShowCard) {
+      addChatMessage({ content: messageToSend, sender: 'user' });
+      addChatMessage({ content: settingsIntent.confirmationMessage, sender: 'aura' });
+      // Small delay to show the card after the message appears
+      setTimeout(() => {
+        setActiveSettingsCard(settingsIntent.type);
+        scrollToBottom('smooth');
+      }, 300);
+      return;
     }
 
     // Check for image generation intent
@@ -706,6 +725,20 @@ export const CalmChatScreen: React.FC<CalmChatScreenProps> = ({ onMenuClick, onN
               <ChatQuickActions 
                 onAction={handleQuickAction}
                 className="py-6"
+              />
+            )}
+          </AnimatePresence>
+
+          {/* Inline Settings Cards - appear when settings intent is detected */}
+          <AnimatePresence>
+            {activeSettingsCard && (
+              <InlineSettingsCard
+                type={activeSettingsCard}
+                onDismiss={() => setActiveSettingsCard(null)}
+                onSettingsChanged={(message) => {
+                  addChatMessage({ content: `✓ ${message}`, sender: 'aura' });
+                  setTimeout(() => setActiveSettingsCard(null), 1500);
+                }}
               />
             )}
           </AnimatePresence>
