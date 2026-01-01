@@ -191,28 +191,15 @@ export const MorningBriefingCard: React.FC<MorningBriefingCardProps> = ({
         </div>
 
         {/* Card Content */}
-        <div className="flex-1 relative overflow-hidden rounded-2xl rounded-tl-sm bg-gradient-to-br from-primary/10 via-accent/5 to-muted/30 border border-border/50 p-4">
-          {/* Header row */}
+        <div className="flex-1 relative overflow-hidden rounded-2xl rounded-tl-sm bg-gradient-to-br from-amber-500/10 via-orange-500/5 to-muted/30 border border-amber-500/20 p-4">
+          {/* Header */}
           <div className="flex items-start justify-between mb-3">
             <div>
               <h3 className="text-base font-semibold text-foreground">
-                {greeting} 🙂
+                Here's how today looks 👇
               </h3>
-              <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
-                <span className="flex items-center gap-1">
-                  <Clock className="w-3 h-3" />
-                  {formatTime(currentTime)}
-                </span>
-                {weather && (
-                  <span className="flex items-center gap-1">
-                    {getWeatherIcon()}
-                    {weather.temperature}°C, {weather.condition}
-                  </span>
-                )}
-              </div>
             </div>
             
-            {/* Action buttons */}
             <div className="flex items-center gap-1">
               <Button
                 variant="ghost"
@@ -237,56 +224,50 @@ export const MorningBriefingCard: React.FC<MorningBriefingCardProps> = ({
             </div>
           </div>
 
-          {/* Today's Routine */}
-          {todayBlocks.length > 0 && (
-            <div className="mb-3">
-              <p className="text-xs text-muted-foreground mb-2">Today's routine:</p>
-              <div className="flex flex-wrap gap-2">
-                {todayBlocks.map((block) => (
-                  <div
-                    key={block.id}
-                    className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-background/60 border border-border/30 text-xs"
-                  >
-                    {BLOCK_ICONS[block.type] || BLOCK_ICONS.default}
-                    <span className="font-medium">{block.title}</span>
-                    <span className="text-muted-foreground">{formatBlockTime(block.startTime)}</span>
-                  </div>
-                ))}
-              </div>
+          {/* Weather context */}
+          {weather && (
+            <div className="flex items-center gap-2 mb-3 text-sm text-muted-foreground">
+              {getWeatherIcon()}
+              <span>Weather's {weather.condition.toLowerCase()}, {weather.temperature}°C</span>
             </div>
           )}
 
-          {todayBlocks.length === 0 && (
-            <p className="text-sm text-muted-foreground mb-3">
-              You have a flexible day ahead. What would you like to focus on?
+          {/* Today's Routine - simplified */}
+          {todayBlocks.length > 0 ? (
+            <div className="mb-3">
+              <p className="text-sm text-foreground">
+                You've got <span className="font-medium">{todayBlocks.map(b => b.title.toLowerCase()).join(' + ')}</span> later.
+              </p>
+            </div>
+          ) : (
+            <p className="text-sm text-foreground mb-3">
+              You have a flexible day ahead.
             </p>
           )}
 
-          {/* Quick Action Buttons */}
-          <div className="flex gap-2 mt-3">
+          {/* Main question */}
+          <p className="text-sm font-medium text-foreground mb-4">
+            Want to take it light or push a bit?
+          </p>
+
+          {/* Action Buttons - softer language */}
+          <div className="flex gap-2">
             <Button
               variant="outline"
               size="sm"
-              className="rounded-full flex-1 gap-1.5 bg-background/50 hover:bg-background"
+              className="rounded-full flex-1 bg-background/50 hover:bg-background"
               onClick={() => handleChoice('light')}
             >
-              <Coffee className="w-4 h-4" />
-              Light day
+              Take it light
             </Button>
             <Button
               size="sm"
-              className="rounded-full flex-1 gap-1.5"
+              className="rounded-full flex-1 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white"
               onClick={() => handleChoice('push')}
             >
-              <Zap className="w-4 h-4" />
-              Push harder
+              Let's push
             </Button>
           </div>
-
-          {/* Subtle hint */}
-          <p className="text-[10px] text-muted-foreground/60 mt-3 text-center">
-            Tap 🔊 to hear this aloud
-          </p>
         </div>
       </motion.div>
     </AnimatePresence>

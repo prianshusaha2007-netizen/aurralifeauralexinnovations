@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { 
   Sun, Moon, Monitor, Palette, Mic, Volume2, Sparkles, 
   Check, X, User, Brain, Hammer, Scan, Droplets, Bell,
-  Calendar, Plus, Trash2, Clock, CreditCard, MapPin,
-  Briefcase, Target
+  Calendar, Clock, CreditCard, MapPin,
+  Briefcase, Target, Heart, Sunrise, Sunset
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
@@ -525,12 +525,12 @@ const RoutineCard: React.FC<{
   );
 };
 
-// Subscription Card
+// Subscription Card - Non-pushy, value-first design
 const SubscriptionCard: React.FC<{ 
   onDismiss: () => void;
   onSettingsChanged?: (message: string) => void;
 }> = ({ onDismiss }) => {
-  const [subscription, setSubscription] = useState<{ tier: string; creditsUsed: number; creditsLimit: number } | null>(null);
+  const [subscription, setSubscription] = useState<{ tier: string; creditsUsed: number; creditsLimit: number; renewalDate?: string } | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -546,7 +546,7 @@ const SubscriptionCard: React.FC<{
 
       const { data: sub } = await supabase
         .from('subscriptions')
-        .select('tier')
+        .select('tier, expires_at')
         .eq('user_id', user.id)
         .eq('status', 'active')
         .maybeSingle();
@@ -554,7 +554,8 @@ const SubscriptionCard: React.FC<{
       setSubscription({
         tier: sub?.tier || 'free',
         creditsUsed: credits?.daily_credits_used || 0,
-        creditsLimit: credits?.daily_credits_limit || 10,
+        creditsLimit: credits?.daily_credits_limit || 30,
+        renewalDate: sub?.expires_at ? new Date(sub.expires_at).toLocaleDateString('en-IN', { month: 'short', day: 'numeric' }) : undefined,
       });
       setLoading(false);
     };
@@ -562,19 +563,24 @@ const SubscriptionCard: React.FC<{
     fetchSubscription();
   }, []);
 
-  const tierLabels: Record<string, string> = {
-    free: 'Free',
-    core: 'Core',
-    plus: 'Plus',
-    pro: 'Pro',
-  };
+  // Plan configuration - user-friendly labels, no technical jargon
+  const plans = [
+    { id: 'free', name: 'Free', price: '₹0', messages: '~30/day', label: 'Light daily use', color: 'from-gray-400 to-gray-500' },
+    { id: 'basic', name: 'Basic', price: '₹99', messages: '~80/day', label: 'Everyday use', color: 'from-blue-400 to-blue-500' },
+    { id: 'pro', name: 'Pro', price: '₹199', messages: '~150/day', label: 'Most popular', color: 'from-purple-500 to-pink-500', recommended: true },
+    { id: 'max', name: 'Max', price: '₹299', messages: '~300/day', label: 'All-day use', color: 'from-amber-500 to-orange-500' },
+  ];
+
+  const currentPlan = plans.find(p => p.id === subscription?.tier) || plans[0];
+  const usagePercent = Math.min(100, ((subscription?.creditsUsed || 0) / (subscription?.creditsLimit || 1)) * 100);
+  const isNearLimit = usagePercent > 80;
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <CreditCard className="w-4 h-4 text-purple-500" />
-          <span className="font-medium text-sm">Subscription & Credits</span>
+          <span className="font-medium text-sm">Your Plan</span>
         </div>
         <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onDismiss}>
           <X className="w-4 h-4" />
@@ -585,31 +591,100 @@ const SubscriptionCard: React.FC<{
         <div className="text-center py-4 text-muted-foreground text-sm">Loading...</div>
       ) : (
         <>
-          <div className="p-4 rounded-xl bg-gradient-to-br from-purple-500/20 to-pink-500/20 border border-purple-500/30">
+          {/* Current Plan Card */}
+          <div className={cn(
+            "p-4 rounded-xl border",
+            `bg-gradient-to-br ${currentPlan.color}/20 border-primary/30`
+          )}>
             <div className="flex items-center justify-between mb-3">
-              <span className="text-sm font-medium">Current Plan</span>
-              <Badge className="bg-purple-500 text-white">
-                {tierLabels[subscription?.tier || 'free']}
-              </Badge>
+              <div>
+                <Badge className={cn("bg-gradient-to-r text-white", currentPlan.color)}>
+                  {currentPlan.name}
+                </Badge>
+                <p className="text-xs text-muted-foreground mt-1">{currentPlan.label}</p>
+              </div>
+              <span className="text-lg font-semibold">{currentPlan.price}<span className="text-xs text-muted-foreground">/mo</span></span>
             </div>
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Credits today</span>
-                <span>{subscription?.creditsUsed} / {subscription?.creditsLimit}</span>
+            
+            {/* Usage indicator - no technical terms */}
+            <div className="space-y-1.5">
+              <div className="flex justify-between text-xs">
+                <span className="text-muted-foreground">Today's usage</span>
+                <span className={isNearLimit ? 'text-orange-500 font-medium' : ''}>
+                  {subscription?.creditsUsed} messages used
+                </span>
               </div>
               <div className="h-2 bg-muted rounded-full overflow-hidden">
-                <div 
-                  className="h-full bg-gradient-to-r from-purple-500 to-pink-500 transition-all"
-                  style={{ width: `${Math.min(100, ((subscription?.creditsUsed || 0) / (subscription?.creditsLimit || 1)) * 100)}%` }}
+                <motion.div 
+                  initial={{ width: 0 }}
+                  animate={{ width: `${usagePercent}%` }}
+                  className={cn(
+                    "h-full rounded-full transition-all",
+                    isNearLimit ? 'bg-orange-500' : `bg-gradient-to-r ${currentPlan.color}`
+                  )}
                 />
               </div>
             </div>
+
+            {subscription?.renewalDate && (
+              <p className="text-xs text-muted-foreground mt-2">
+                Renews {subscription.renewalDate}
+              </p>
+            )}
           </div>
 
+          {/* Soft upsell - only for free users, never pushy */}
           {subscription?.tier === 'free' && (
-            <Button className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600">
-              Upgrade Plan
-            </Button>
+            <div className="space-y-3">
+              <p className="text-xs text-muted-foreground text-center">
+                Pick what feels right. You can change anytime.
+              </p>
+              
+              <div className="grid grid-cols-3 gap-2">
+                {plans.slice(1).map((plan) => (
+                  <button
+                    key={plan.id}
+                    className={cn(
+                      'p-2.5 rounded-xl border-2 transition-all text-center relative',
+                      plan.recommended 
+                        ? 'border-purple-500 bg-purple-500/10' 
+                        : 'border-border/50 hover:border-primary/50'
+                    )}
+                  >
+                    {plan.recommended && (
+                      <span className="absolute -top-2 left-1/2 -translate-x-1/2 text-[8px] bg-purple-500 text-white px-2 py-0.5 rounded-full">
+                        Popular
+                      </span>
+                    )}
+                    <p className="font-semibold text-sm">{plan.price}</p>
+                    <p className="text-[10px] text-muted-foreground">{plan.messages}</p>
+                  </button>
+                ))}
+              </div>
+
+              <Button 
+                variant="outline" 
+                className="w-full rounded-full text-sm"
+              >
+                See plans
+              </Button>
+            </div>
+          )}
+
+          {/* Near limit soft nudge */}
+          {isNearLimit && subscription?.tier === 'free' && (
+            <motion.div
+              initial={{ opacity: 0, y: 5 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="p-3 rounded-xl bg-orange-500/10 border border-orange-500/20 text-center"
+            >
+              <p className="text-xs text-foreground">
+                I can still chat, but I'll be a bit limited today 🙂
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                If you want deeper help anytime, you can unlock more access.
+              </p>
+            </motion.div>
           )}
         </>
       )}
@@ -617,67 +692,122 @@ const SubscriptionCard: React.FC<{
   );
 };
 
-// Profile Card
+// Profile Card - Clean, human sections
 const ProfileCard: React.FC<{ 
   onDismiss: () => void;
   onSettingsChanged?: (message: string) => void;
-}> = ({ onDismiss, onSettingsChanged }) => {
-  const { userProfile, updateUserProfile } = useAura();
-  const { toast } = useToast();
+}> = ({ onDismiss }) => {
+  const { userProfile } = useAura();
+  
+  // Relationship options
+  const relationships = [
+    { id: 'friend', label: 'Best Friend', emoji: '🤝' },
+    { id: 'mentor', label: 'Mentor', emoji: '🧭' },
+    { id: 'coach', label: 'Coach', emoji: '💪' },
+    { id: 'thinker', label: 'Thinking Partner', emoji: '🧠' },
+  ];
+  
+  const currentRelationship = localStorage.getItem('aurra-relationship') || 'friend';
+
+  const formatTime = (time: string | undefined) => {
+    if (!time) return '--:--';
+    const [h, m] = time.split(':');
+    const hour = parseInt(h);
+    const ampm = hour >= 12 ? 'PM' : 'AM';
+    return `${hour % 12 || 12}:${m} ${ampm}`;
+  };
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <User className="w-4 h-4 text-primary" />
-          <span className="font-medium text-sm">Profile</span>
+          <span className="font-medium text-sm">Profile & Personal Details</span>
         </div>
         <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onDismiss}>
           <X className="w-4 h-4" />
         </Button>
       </div>
 
-      <div className="space-y-3">
-        <div className="flex items-center gap-3 p-3 rounded-xl bg-card/50 border border-border/50">
-          <User className="w-4 h-4 text-muted-foreground" />
-          <div className="flex-1">
-            <p className="text-xs text-muted-foreground">Name</p>
-            <p className="text-sm font-medium">{userProfile.name || 'Not set'}</p>
+      {/* About You Section */}
+      <div className="space-y-2">
+        <p className="text-xs text-muted-foreground font-medium flex items-center gap-1">
+          <Brain className="w-3 h-3" /> About You
+        </p>
+        <div className="grid grid-cols-2 gap-2">
+          <div className="p-2.5 rounded-xl bg-card/50 border border-border/50">
+            <p className="text-[10px] text-muted-foreground">Name</p>
+            <p className="text-sm font-medium truncate">{userProfile.name || 'Not set'}</p>
           </div>
-        </div>
-
-        <div className="flex items-center gap-3 p-3 rounded-xl bg-card/50 border border-border/50">
-          <Briefcase className="w-4 h-4 text-muted-foreground" />
-          <div className="flex-1">
-            <p className="text-xs text-muted-foreground">Profession</p>
-            <p className="text-sm font-medium">{userProfile.profession || 'Not set'}</p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-3 p-3 rounded-xl bg-card/50 border border-border/50">
-          <Clock className="w-4 h-4 text-muted-foreground" />
-          <div className="flex-1">
-            <p className="text-xs text-muted-foreground">Schedule</p>
-            <p className="text-sm font-medium">
-              {userProfile.wakeTime || '07:00'} - {userProfile.sleepTime || '23:00'}
-            </p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-3 p-3 rounded-xl bg-card/50 border border-border/50">
-          <Target className="w-4 h-4 text-muted-foreground" />
-          <div className="flex-1">
-            <p className="text-xs text-muted-foreground">Goals</p>
-            <p className="text-sm font-medium">
-              {userProfile.goals?.length ? userProfile.goals.slice(0, 2).join(', ') : 'Not set'}
-            </p>
+          <div className="p-2.5 rounded-xl bg-card/50 border border-border/50">
+            <p className="text-[10px] text-muted-foreground">Profession</p>
+            <p className="text-sm font-medium truncate">{userProfile.profession || 'Not set'}</p>
           </div>
         </div>
       </div>
 
-      <p className="text-xs text-muted-foreground text-center">
-        Say "update my profession to..." to change
-      </p>
+      {/* Daily Rhythm Section */}
+      <div className="space-y-2">
+        <p className="text-xs text-muted-foreground font-medium flex items-center gap-1">
+          <Clock className="w-3 h-3" /> Daily Rhythm
+        </p>
+        <div className="flex gap-2">
+          <div className="flex-1 p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center gap-2">
+            <Sunrise className="w-4 h-4 text-amber-500" />
+            <div>
+              <p className="text-[10px] text-muted-foreground">Wake</p>
+              <p className="text-sm font-medium">{formatTime(userProfile.wakeTime)}</p>
+            </div>
+          </div>
+          <div className="flex-1 p-2.5 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center gap-2">
+            <Sunset className="w-4 h-4 text-indigo-500" />
+            <div>
+              <p className="text-[10px] text-muted-foreground">Sleep</p>
+              <p className="text-sm font-medium">{formatTime(userProfile.sleepTime)}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Life Focus Section */}
+      <div className="space-y-2">
+        <p className="text-xs text-muted-foreground font-medium flex items-center gap-1">
+          <Target className="w-3 h-3" /> Life Focus
+        </p>
+        <div className="p-2.5 rounded-xl bg-card/50 border border-border/50">
+          <p className="text-sm">
+            {userProfile.goals?.length 
+              ? userProfile.goals.slice(0, 3).join(' • ') 
+              : 'Tell me your goals to get started'}
+          </p>
+        </div>
+      </div>
+
+      {/* Relationship with AURRA */}
+      <div className="space-y-2">
+        <p className="text-xs text-muted-foreground font-medium flex items-center gap-1">
+          <Heart className="w-3 h-3" /> Relationship with AURRA
+        </p>
+        <div className="grid grid-cols-4 gap-1.5">
+          {relationships.map((rel) => (
+            <div
+              key={rel.id}
+              className={cn(
+                'p-2 rounded-lg text-center transition-all',
+                currentRelationship === rel.id
+                  ? 'bg-primary/10 border-2 border-primary'
+                  : 'bg-card/50 border border-border/50'
+              )}
+            >
+              <span className="text-base">{rel.emoji}</span>
+              <p className="text-[9px] mt-0.5 leading-tight">{rel.label}</p>
+            </div>
+          ))}
+        </div>
+        <p className="text-[10px] text-muted-foreground text-center">
+          You can change this anytime
+        </p>
+      </div>
     </div>
   );
 };
