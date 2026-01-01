@@ -23,9 +23,18 @@ import {
   DrawerClose,
 } from '@/components/ui/drawer';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { motion } from 'framer-motion';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
+import { useCredits } from '@/hooks/useCredits';
+
+const TIER_LABELS: Record<string, string> = {
+  core: 'Free',
+  plus: 'Basic',
+  pro: 'Pro',
+  max: 'Max',
+};
 
 interface MoreMenuSheetProps {
   open: boolean;
@@ -137,6 +146,9 @@ export const MoreMenuSheet: React.FC<MoreMenuSheetProps> = ({
   onSendMessage,
   onNewChat,
 }) => {
+  const { tier } = useCredits();
+  const planLabel = TIER_LABELS[tier] || 'Free';
+
   const handleItemClick = (item: typeof MENU_ITEMS[0]) => {
     if (item.action === 'new-chat') {
       onNewChat();
@@ -193,12 +205,22 @@ export const MoreMenuSheet: React.FC<MoreMenuSheetProps> = ({
                         isNewChat ? 'text-primary-foreground' : 'text-white'
                       )} />
                     </div>
-                    <span className={cn(
-                      'font-medium',
-                      isNewChat ? 'text-primary-foreground' : 'text-foreground'
-                    )}>
-                      {item.label}
-                    </span>
+                    <div className="flex items-center gap-2 flex-1">
+                      <span className={cn(
+                        'font-medium',
+                        isNewChat ? 'text-primary-foreground' : 'text-foreground'
+                      )}>
+                        {item.label}
+                      </span>
+                      {item.id === 'subscription-credits' && (
+                        <Badge 
+                          variant={tier === 'pro' ? 'default' : 'secondary'}
+                          className="text-xs px-1.5 py-0"
+                        >
+                          {planLabel}
+                        </Badge>
+                      )}
+                    </div>
                   </motion.button>
                   {item.divider && (
                     <div className="my-1 border-t border-border/30" />
