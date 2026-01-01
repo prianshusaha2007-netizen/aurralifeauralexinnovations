@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   Plus,
   History,
@@ -13,7 +14,8 @@ import {
   CreditCard,
   Shield,
   User,
-  X
+  X,
+  ChevronRight
 } from 'lucide-react';
 import {
   Drawer,
@@ -24,6 +26,7 @@ import {
 } from '@/components/ui/drawer';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
 import { motion } from 'framer-motion';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
@@ -33,7 +36,6 @@ const TIER_LABELS: Record<string, string> = {
   core: 'Free',
   plus: 'Basic',
   pro: 'Pro',
-  max: 'Max',
 };
 
 interface MoreMenuSheetProps {
@@ -100,7 +102,7 @@ const MENU_ITEMS = [
     id: 'subscription-credits', 
     icon: CreditCard, 
     label: 'Subscription & Credits', 
-    message: 'Show my plan and usage',
+    action: 'subscription',
     color: 'from-purple-500 to-pink-500'
   },
   { 
@@ -146,15 +148,26 @@ export const MoreMenuSheet: React.FC<MoreMenuSheetProps> = ({
   onSendMessage,
   onNewChat,
 }) => {
-  const { tier } = useCredits();
+  const navigate = useNavigate();
+  const { tier, getCreditStatus } = useCredits();
+  const creditStatus = getCreditStatus();
   const planLabel = TIER_LABELS[tier] || 'Free';
+  const usagePercent = Math.min(creditStatus.usagePercent, 100);
 
   const handleItemClick = (item: typeof MENU_ITEMS[0]) => {
     if (item.action === 'new-chat') {
       onNewChat();
+    } else if (item.action === 'subscription') {
+      navigate('/subscription');
     } else if (item.message) {
       onSendMessage(item.message);
     }
+    onOpenChange(false);
+  };
+
+  const handleBadgeClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigate('/subscription');
     onOpenChange(false);
   };
 
@@ -179,49 +192,76 @@ export const MoreMenuSheet: React.FC<MoreMenuSheetProps> = ({
             {MENU_ITEMS.map((item, index) => {
               const Icon = item.icon;
               const isNewChat = item.action === 'new-chat';
+              const isSubscription = item.id === 'subscription-credits';
               
               return (
                 <React.Fragment key={item.id}>
-                  <motion.button
+                  <motion.div
                     initial={{ opacity: 0, x: -10 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: index * 0.02 }}
-                    onClick={() => handleItemClick(item)}
-                    className={cn(
-                      'flex items-center gap-3 p-3.5 rounded-xl transition-all text-left group',
-                      isNewChat 
-                        ? 'bg-primary text-primary-foreground hover:bg-primary/90 mb-2'
-                        : 'bg-card/50 border border-border/40 hover:bg-accent/50 hover:border-primary/30'
-                    )}
                   >
-                    <div className={cn(
-                      'w-10 h-10 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110',
-                      isNewChat 
-                        ? 'bg-primary-foreground/20' 
-                        : `bg-gradient-to-br ${item.color}`
-                    )}>
-                      <Icon className={cn(
-                        'w-5 h-5',
-                        isNewChat ? 'text-primary-foreground' : 'text-white'
-                      )} />
-                    </div>
-                    <div className="flex items-center gap-2 flex-1">
-                      <span className={cn(
-                        'font-medium',
-                        isNewChat ? 'text-primary-foreground' : 'text-foreground'
-                      )}>
-                        {item.label}
-                      </span>
-                      {item.id === 'subscription-credits' && (
-                        <Badge 
-                          variant={tier === 'pro' ? 'default' : 'secondary'}
-                          className="text-xs px-1.5 py-0"
-                        >
-                          {planLabel}
-                        </Badge>
+                    <button
+                      onClick={() => handleItemClick(item)}
+                      className={cn(
+                        'flex items-center gap-3 p-3.5 rounded-xl transition-all text-left group w-full',
+                        isNewChat 
+                          ? 'bg-primary text-primary-foreground hover:bg-primary/90 mb-2'
+                          : 'bg-card/50 border border-border/40 hover:bg-accent/50 hover:border-primary/30'
                       )}
-                    </div>
-                  </motion.button>
+                    >
+                      <div className={cn(
+                        'w-10 h-10 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110',
+                        isNewChat 
+                          ? 'bg-primary-foreground/20' 
+                          : `bg-gradient-to-br ${item.color}`
+                      )}>
+                        <Icon className={cn(
+                          'w-5 h-5',
+                          isNewChat ? 'text-primary-foreground' : 'text-white'
+                        )} />
+                      </div>
+                      <div className="flex items-center gap-2 flex-1">
+                        <span className={cn(
+                          'font-medium',
+                          isNewChat ? 'text-primary-foreground' : 'text-foreground'
+                        )}>
+                          {item.label}
+                        </span>
+                        {isSubscription && (
+                          <Badge 
+                            variant={tier === 'pro' ? 'default' : 'secondary'}
+                            className="text-xs px-1.5 py-0 cursor-pointer hover:opacity-80 transition-opacity"
+                            onClick={handleBadgeClick}
+                          >
+                            {planLabel}
+                            <ChevronRight className="w-3 h-3 ml-0.5" />
+                          </Badge>
+                        )}
+                      </div>
+                    </button>
+                    
+                    {/* Usage progress bar for subscription item */}
+                    {isSubscription && !creditStatus.isPremium && (
+                      <div className="mt-1.5 mx-1 mb-2">
+                        <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
+                          <span>Daily usage</span>
+                          <span>{Math.round(usagePercent)}%</span>
+                        </div>
+                        <Progress 
+                          value={usagePercent} 
+                          className="h-1.5"
+                        />
+                        {usagePercent >= 80 && (
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {usagePercent >= 100 
+                              ? "You've reached today's limit" 
+                              : "Running low on daily credits"}
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </motion.div>
                   {item.divider && (
                     <div className="my-1 border-t border-border/30" />
                   )}
