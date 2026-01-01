@@ -5,6 +5,7 @@ interface DailyFlowState {
   showPreferences: boolean;
   showMorningBriefing: boolean;
   showWindDown: boolean;
+  showRoutineOnboarding: boolean;
   isFirstTimeUser: boolean;
   currentDayChat: string;
   hasGreetedToday: boolean;
@@ -15,6 +16,7 @@ export const useDailyFlow = () => {
     showPreferences: false,
     showMorningBriefing: false,
     showWindDown: false,
+    showRoutineOnboarding: false,
     isFirstTimeUser: false,
     currentDayChat: '',
     hasGreetedToday: hasGreetedToday(),
@@ -27,17 +29,21 @@ export const useDailyFlow = () => {
       const hour = now.getHours();
       const today = now.toISOString().split('T')[0];
       
-      // Check if first-time user
+      // Check if first-time user (no preferences completed)
       const hasCompletedPrefs = localStorage.getItem('aura-preferences-complete');
       const isFirstTime = !hasCompletedPrefs;
       
+      // Check if routine onboarding is needed
+      const hasCompletedRoutineOnboarding = localStorage.getItem('aurra-routine-onboarding-complete');
+      const shouldShowRoutineOnboarding = !hasCompletedRoutineOnboarding && !isFirstTime;
+      
       // Check morning briefing (5am-11am, once per day)
       const lastMorningBriefing = localStorage.getItem('aura-morning-briefing-date');
-      const shouldShowMorning = hour >= 5 && hour < 11 && lastMorningBriefing !== today && !isFirstTime;
+      const shouldShowMorning = hour >= 5 && hour < 11 && lastMorningBriefing !== today && !isFirstTime && !shouldShowRoutineOnboarding;
       
-      // Check wind-down (10pm-2am, once per day)
+      // Check wind-down (9pm-2am, once per day)
       const lastWindDown = localStorage.getItem('aura-winddown-date');
-      const shouldShowWindDown = (hour >= 22 || hour < 2) && lastWindDown !== today && !isFirstTime;
+      const shouldShowWindDown = (hour >= 21 || hour < 2) && lastWindDown !== today && !isFirstTime;
       
       // Check if we need to archive yesterday's chat
       const lastChatDate = localStorage.getItem('aura-chat-date');
@@ -59,6 +65,7 @@ export const useDailyFlow = () => {
         showPreferences: isFirstTime,
         showMorningBriefing: shouldShowMorning,
         showWindDown: shouldShowWindDown,
+        showRoutineOnboarding: shouldShowRoutineOnboarding,
         isFirstTimeUser: isFirstTime,
         currentDayChat: today,
         hasGreetedToday: hasGreetedToday(),
@@ -89,6 +96,21 @@ export const useDailyFlow = () => {
     setState(prev => ({ ...prev, showWindDown: false }));
   }, []);
 
+  const dismissRoutineOnboarding = useCallback(() => {
+    localStorage.setItem('aurra-routine-onboarding-complete', 'true');
+    setState(prev => ({ ...prev, showRoutineOnboarding: false }));
+  }, []);
+
+  // Adjust tomorrow's routine based on tonight's feeling
+  const adjustTomorrowRoutine = useCallback((intensity: 'lighter' | 'same' | 'heavier') => {
+    const adjustment = {
+      date: new Date().toISOString(),
+      intensity,
+      applied: false,
+    };
+    localStorage.setItem('aurra-tomorrow-adjustment', JSON.stringify(adjustment));
+  }, []);
+
   // Debug/simulation functions
   const triggerMorningFlow = useCallback(() => {
     setState(prev => ({ ...prev, showMorningBriefing: true }));
@@ -103,6 +125,11 @@ export const useDailyFlow = () => {
     setState(prev => ({ ...prev, showPreferences: true, isFirstTimeUser: true }));
   }, []);
 
+  const triggerRoutineOnboarding = useCallback(() => {
+    localStorage.removeItem('aurra-routine-onboarding-complete');
+    setState(prev => ({ ...prev, showRoutineOnboarding: true }));
+  }, []);
+
   const resetAllFlowState = useCallback(() => {
     localStorage.removeItem('aura-preferences-complete');
     localStorage.removeItem('aura-morning-briefing-date');
@@ -110,10 +137,13 @@ export const useDailyFlow = () => {
     localStorage.removeItem('aura-morning-flow-date');
     localStorage.removeItem('aura-winddown-history');
     localStorage.removeItem('aura-last-greeting-date');
+    localStorage.removeItem('aurra-routine-onboarding-complete');
+    localStorage.removeItem('aurra-tomorrow-adjustment');
     setState({
       showPreferences: false,
       showMorningBriefing: false,
       showWindDown: false,
+      showRoutineOnboarding: false,
       isFirstTimeUser: false,
       currentDayChat: new Date().toISOString().split('T')[0],
       hasGreetedToday: false,
@@ -131,11 +161,14 @@ export const useDailyFlow = () => {
     dismissPreferences,
     dismissMorningBriefing,
     dismissWindDown,
+    dismissRoutineOnboarding,
+    adjustTomorrowRoutine,
     markGreeting,
     // Debug functions
     triggerMorningFlow,
     triggerNightFlow,
     triggerFirstTimeFlow,
+    triggerRoutineOnboarding,
     resetAllFlowState,
   };
 };
