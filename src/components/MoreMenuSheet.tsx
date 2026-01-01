@@ -12,6 +12,7 @@ import {
   Mic,
   CreditCard,
   Shield,
+  User,
   X
 } from 'lucide-react';
 import {
@@ -47,7 +48,8 @@ const MENU_ITEMS = [
     icon: History, 
     label: 'Chat History', 
     message: 'Show my recent chat history',
-    color: 'from-blue-500 to-cyan-500'
+    color: 'from-blue-500 to-cyan-500',
+    divider: true
   },
   { 
     id: 'todays-focus', 
@@ -82,7 +84,22 @@ const MENU_ITEMS = [
     icon: Brain, 
     label: 'Memories', 
     message: 'What do you remember about me?',
-    color: 'from-pink-500 to-rose-500'
+    color: 'from-pink-500 to-rose-500',
+    divider: true
+  },
+  { 
+    id: 'subscription-credits', 
+    icon: CreditCard, 
+    label: 'Subscription & Credits', 
+    message: 'Show my plan and usage',
+    color: 'from-purple-500 to-pink-500'
+  },
+  { 
+    id: 'profile', 
+    icon: User, 
+    label: 'Profile & Personal Details', 
+    message: 'Show my profile and personal details',
+    color: 'from-blue-500 to-indigo-500'
   },
   { 
     id: 'personality-relationship', 
@@ -104,13 +121,6 @@ const MENU_ITEMS = [
     label: 'Voice & Language', 
     message: 'Show my voice and language settings',
     color: 'from-teal-500 to-emerald-500'
-  },
-  { 
-    id: 'subscription-credits', 
-    icon: CreditCard, 
-    label: 'Subscription & Credits', 
-    message: 'Show my plan and usage',
-    color: 'from-purple-500 to-pink-500'
   },
   { 
     id: 'privacy-account', 
@@ -159,37 +169,41 @@ export const MoreMenuSheet: React.FC<MoreMenuSheetProps> = ({
               const isNewChat = item.action === 'new-chat';
               
               return (
-                <motion.button
-                  key={item.id}
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: index * 0.03 }}
-                  onClick={() => handleItemClick(item)}
-                  className={cn(
-                    'flex items-center gap-3 p-3.5 rounded-xl transition-all text-left group',
-                    isNewChat 
-                      ? 'bg-primary text-primary-foreground hover:bg-primary/90 mb-2'
-                      : 'bg-card/50 border border-border/40 hover:bg-accent/50 hover:border-primary/30'
+                <React.Fragment key={item.id}>
+                  <motion.button
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: index * 0.02 }}
+                    onClick={() => handleItemClick(item)}
+                    className={cn(
+                      'flex items-center gap-3 p-3.5 rounded-xl transition-all text-left group',
+                      isNewChat 
+                        ? 'bg-primary text-primary-foreground hover:bg-primary/90 mb-2'
+                        : 'bg-card/50 border border-border/40 hover:bg-accent/50 hover:border-primary/30'
+                    )}
+                  >
+                    <div className={cn(
+                      'w-10 h-10 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110',
+                      isNewChat 
+                        ? 'bg-primary-foreground/20' 
+                        : `bg-gradient-to-br ${item.color}`
+                    )}>
+                      <Icon className={cn(
+                        'w-5 h-5',
+                        isNewChat ? 'text-primary-foreground' : 'text-white'
+                      )} />
+                    </div>
+                    <span className={cn(
+                      'font-medium',
+                      isNewChat ? 'text-primary-foreground' : 'text-foreground'
+                    )}>
+                      {item.label}
+                    </span>
+                  </motion.button>
+                  {item.divider && (
+                    <div className="my-1 border-t border-border/30" />
                   )}
-                >
-                  <div className={cn(
-                    'w-10 h-10 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110',
-                    isNewChat 
-                      ? 'bg-primary-foreground/20' 
-                      : `bg-gradient-to-br ${item.color}`
-                  )}>
-                    <Icon className={cn(
-                      'w-5 h-5',
-                      isNewChat ? 'text-primary-foreground' : 'text-white'
-                    )} />
-                  </div>
-                  <span className={cn(
-                    'font-medium',
-                    isNewChat ? 'text-primary-foreground' : 'text-foreground'
-                  )}>
-                    {item.label}
-                  </span>
-                </motion.button>
+                </React.Fragment>
               );
             })}
           </div>
