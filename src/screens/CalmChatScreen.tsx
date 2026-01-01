@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Send, Plus, Loader2, Download, RefreshCw, Headphones, ChevronDown, MoreVertical, Mic, CreditCard } from 'lucide-react';
+import { Send, Plus, Loader2, Download, RefreshCw, Headphones, ChevronDown, MoreVertical, Mic, CreditCard, Sparkles } from 'lucide-react';
 import { useChatGestures } from '@/hooks/useChatGestures';
 import { Button } from '@/components/ui/button';
 import { SplitChatBubble } from '@/components/SplitChatBubble';
@@ -533,21 +533,33 @@ export const CalmChatScreen: React.FC<CalmChatScreenProps> = ({ onMenuClick, onN
           
           {/* Right: Subscription, Voice & More buttons */}
           <div className="flex items-center gap-1">
-            {/* Subscription Quick Access - shows plan badge for free users */}
-            {!creditStatus.isPremium && !creditStatus.isLoading && (
+            {/* Subscription Quick Access - shows plan badge for all users */}
+            {!creditStatus.isLoading && (
               <Button
                 variant="ghost"
                 size="sm"
                 className={cn(
-                  "rounded-full h-8 px-2.5 text-xs text-muted-foreground hover:text-primary hover:bg-primary/10 gap-1",
-                  creditStatus.usagePercent >= 80 && "animate-pulse text-amber-500 hover:text-amber-600"
+                  "rounded-full h-8 px-2.5 text-xs gap-1 transition-colors",
+                  creditStatus.isPremium 
+                    ? "text-primary hover:text-primary/80 hover:bg-primary/10" 
+                    : "text-muted-foreground hover:text-primary hover:bg-primary/10",
+                  !creditStatus.isPremium && creditStatus.usagePercent >= 80 && "animate-pulse text-amber-500 hover:text-amber-600"
                 )}
                 onClick={() => navigate('/subscription')}
               >
-                <CreditCard className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">
-                  {creditStatus.usagePercent >= 100 ? 'Upgrade' : 'Free'}
-                </span>
+                {creditStatus.isPremium ? (
+                  <>
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline capitalize">{creditStatus.tier}</span>
+                  </>
+                ) : (
+                  <>
+                    <CreditCard className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">
+                      {creditStatus.usagePercent >= 100 ? 'Upgrade' : 'Free'}
+                    </span>
+                  </>
+                )}
               </Button>
             )}
             
