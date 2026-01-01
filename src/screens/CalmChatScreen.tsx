@@ -41,6 +41,7 @@ import { useWeatherSuggestions } from '@/hooks/useWeatherSuggestions';
 import { useSmartRoutine } from '@/hooks/useSmartRoutine';
 import { useUserStateDetection } from '@/hooks/useUserStateDetection';
 import { useUserJourney } from '@/hooks/useUserJourney';
+import { useFocusModeIntegration, FocusModeUIElements, FocusModeHeaderBanner } from '@/components/FocusModeIntegration';
 import { FirstTimePreferences } from '@/components/FirstTimePreferences';
 import { NightWindDownFlow } from '@/components/NightWindDownFlow';
 import { RoutineOnboardingChat } from '@/components/RoutineOnboardingChat';
@@ -187,6 +188,9 @@ export const CalmChatScreen: React.FC<CalmChatScreenProps> = ({ onMenuClick, onN
   
   // Weather-based proactive suggestions
   const { triggerSuggestion, shouldProactivelySuggest } = useWeatherSuggestions(realtimeContext);
+  
+  // AI-integrated Focus Mode
+  const focusModeAI = useFocusModeIntegration();
   
   const [inputValue, setInputValue] = useState('');
   const [memoryPrompt, setMemoryPrompt] = useState<{ content: string; show: boolean }>({ content: '', show: false });
@@ -398,6 +402,17 @@ export const CalmChatScreen: React.FC<CalmChatScreenProps> = ({ onMenuClick, onN
     // Reset textarea height
     if (inputRef.current) {
       inputRef.current.style.height = '44px';
+    }
+
+    // Check for focus mode intent first
+    const focusResult = focusModeAI.handleFocusMessage(messageToSend);
+    if (focusResult.handled) {
+      addChatMessage({ content: messageToSend, sender: 'user' });
+      if (focusResult.response) {
+        addChatMessage({ content: focusResult.response, sender: 'aura' });
+      }
+      scrollToBottom('smooth');
+      return;
     }
 
     // Check for settings intent - show inline settings cards instead of AI response
@@ -627,24 +642,10 @@ export const CalmChatScreen: React.FC<CalmChatScreenProps> = ({ onMenuClick, onN
       {/* Spacer for fixed header */}
       <div style={{ height: HEADER_HEIGHT }} className="flex-shrink-0" />
 
-      {/* Focus Mode Banner - shows when in focus mode */}
+      {/* AI-Integrated Focus Mode Banner - shows when in focus mode */}
       <AnimatePresence>
-        {focusState?.isActive && (
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            className="px-4 py-2"
-          >
-            <div className="bg-gradient-to-r from-violet-500/20 to-purple-500/20 rounded-xl p-3 border border-violet-500/30 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-3 h-3 bg-violet-500 rounded-full animate-pulse" />
-                <span className="font-medium text-violet-600 dark:text-violet-400">Focus Mode</span>
-                <span className="text-sm text-muted-foreground">{focusState.formatTime(focusState.remainingTime)}</span>
-              </div>
-              <span className="text-xs text-muted-foreground">Say "end focus" to stop</span>
-            </div>
-          </motion.div>
+        {focusModeAI.isActive && focusModeAI.focusType && (
+          <FocusModeHeaderBanner focusMode={focusModeAI} />
         )}
       </AnimatePresence>
 
@@ -880,9 +881,12 @@ export const CalmChatScreen: React.FC<CalmChatScreenProps> = ({ onMenuClick, onN
             )}
           </AnimatePresence>
 
+          {/* Focus Mode UI Elements - type selection, goal input, reflection */}
+          <FocusModeUIElements focusMode={focusModeAI} onSendMessage={handleSend} />
+
           {/* Quick Actions - Show when chat is empty or minimal */}
           <AnimatePresence>
-            {showQuickActions && !showMorningBriefing && !showPreferences && !showWindDown && userState === 'normal' && chatMessages.length <= 1 && (
+            {showQuickActions && !showMorningBriefing && !showPreferences && !showWindDown && !focusModeAI.awaitingTypeSelection && !focusModeAI.awaitingGoal && userState === 'normal' && chatMessages.length <= 1 && (
               <ChatQuickActions 
                 onAction={handleQuickAction}
                 className="py-6"
