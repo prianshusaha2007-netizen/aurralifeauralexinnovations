@@ -7,6 +7,7 @@ import { TypingIndicator } from '@/components/TypingIndicator';
 import { MemorySavePrompt } from '@/components/MemorySavePrompt';
 import { MediaToolsSheet } from '@/components/MediaToolsSheet';
 import { ContextShortcutsSheet } from '@/components/ContextShortcutsSheet';
+import { MoreMenuSheet } from '@/components/MoreMenuSheet';
 import { ChatQuickActions } from '@/components/ChatQuickActions';
 import { VoiceInputButton } from '@/components/VoiceInputButton';
 import { VoiceModal } from '@/components/VoiceModal';
@@ -43,6 +44,7 @@ import auraAvatar from '@/assets/aura-avatar.jpeg';
 
 interface CalmChatScreenProps {
   onMenuClick?: () => void;
+  onNewChat?: () => void;
 }
 
 // Status messages that rotate
@@ -96,7 +98,7 @@ const detectDocIntent = (message: string): boolean => {
   return patterns.some(p => p.test(message));
 };
 
-export const CalmChatScreen: React.FC<CalmChatScreenProps> = ({ onMenuClick }) => {
+export const CalmChatScreen: React.FC<CalmChatScreenProps> = ({ onMenuClick, onNewChat }) => {
   const { chatMessages, addChatMessage, userProfile } = useAura();
   const { sendMessage, isThinking, showUpgradeSheet: chatUpgradeSheet, setShowUpgradeSheet: setChatUpgradeSheet, focusState } = useAuraChat();
   const { speak, isSpeaking } = useVoiceFeedback();
@@ -161,6 +163,7 @@ export const CalmChatScreen: React.FC<CalmChatScreenProps> = ({ onMenuClick }) =
   const [isNearBottom, setIsNearBottom] = useState(true);
   const [showUpgradeSheet, setShowUpgradeSheet] = useState(false);
   const [showContextSheet, setShowContextSheet] = useState(false);
+  const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [longPressVoiceActive, setLongPressVoiceActive] = useState(false);
   
   // Check if coding block is active
@@ -501,12 +504,12 @@ export const CalmChatScreen: React.FC<CalmChatScreenProps> = ({ onMenuClick }) =
               <Headphones className="w-5 h-5" />
             </Button>
             
-            {/* More Menu Button */}
+            {/* More Menu Button - Opens chat-binding menu */}
             <Button
               variant="ghost"
               size="icon"
               className="rounded-full h-10 w-10 text-muted-foreground hover:text-foreground hover:bg-accent/50"
-              onClick={onMenuClick}
+              onClick={() => setShowMoreMenu(true)}
             >
               <MoreVertical className="w-5 h-5" />
             </Button>
@@ -964,6 +967,19 @@ export const CalmChatScreen: React.FC<CalmChatScreenProps> = ({ onMenuClick }) =
         open={showContextSheet}
         onOpenChange={setShowContextSheet}
         onSendMessage={handleSend}
+      />
+
+      {/* More Menu Sheet - Global control center with chat-binding */}
+      <MoreMenuSheet
+        open={showMoreMenu}
+        onOpenChange={setShowMoreMenu}
+        onSendMessage={handleSend}
+        onNewChat={() => {
+          if (onNewChat) {
+            onNewChat();
+            addChatMessage({ content: "New day, fresh chat ☀️", sender: 'aura' });
+          }
+        }}
       />
 
       {/* Voice Mode Modal */}

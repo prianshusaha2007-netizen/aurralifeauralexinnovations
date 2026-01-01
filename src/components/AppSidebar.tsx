@@ -1,31 +1,18 @@
 import React, { useEffect, useState } from 'react';
 import { 
-  MessageSquare, 
-  History, 
-  Brain, 
-  Calendar, 
-  Settings, 
-  Gamepad2,
   Plus,
   X,
-  Droplets,
-  Trophy,
-  BarChart3,
-  Image,
-  ImageIcon,
-  Bell,
-  MapPin,
+  History,
   Target,
-  BookHeart,
-  Heart,
-  CreditCard,
+  Calendar,
+  Droplets,
+  Bell,
+  Brain,
   Sparkles,
-  Clock,
-  Shield,
   Palette,
   Mic,
-  User,
-  HelpCircle
+  CreditCard,
+  Shield
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -65,26 +52,97 @@ export type TabId =
   | 'help';
 
 interface MenuItem {
-  id: TabId | 'new-chat';
+  id: string;
   icon: React.ElementType;
   label: string;
-  action?: boolean;
+  message?: string;
+  action?: 'new-chat';
   divider?: boolean;
   section?: string;
   showBadge?: boolean;
+  color?: string;
 }
 
-// Minimal sidebar - only settings/secondary items (Chat is the cockpit - no navigation needed)
+// Menu items that match the Master UI Contract - each sends a chat message
 const menuItems: MenuItem[] = [
-  { id: 'new-chat', icon: Plus, label: 'New Chat', action: true },
-  { id: 'history', icon: History, label: 'Chat History', divider: true },
-  { id: 'subscription', icon: CreditCard, label: 'Subscription & Credits', section: 'Settings', showBadge: true },
-  { id: 'personality', icon: Sparkles, label: 'Personality & Relationship' },
-  { id: 'appearance', icon: Palette, label: 'Appearance' },
-  { id: 'voice', icon: Mic, label: 'Voice & Language' },
-  { id: 'notifications', icon: Bell, label: 'Notifications', divider: true },
-  { id: 'account', icon: User, label: 'Account', section: 'Account' },
-  { id: 'help', icon: HelpCircle, label: 'Help & Support' },
+  { 
+    id: 'new-chat', 
+    icon: Plus, 
+    label: 'New Chat', 
+    action: 'new-chat',
+    color: 'from-primary to-primary/70'
+  },
+  { 
+    id: 'chat-history', 
+    icon: History, 
+    label: 'Chat History', 
+    message: 'Show my recent chat history',
+    divider: true
+  },
+  { 
+    id: 'todays-focus', 
+    icon: Target, 
+    label: "Today's Focus", 
+    message: "What should I focus on today? Show my priorities",
+    section: 'Life'
+  },
+  { 
+    id: 'daily-routine', 
+    icon: Calendar, 
+    label: 'Daily Routine', 
+    message: "Show today's routine"
+  },
+  { 
+    id: 'hydration-health', 
+    icon: Droplets, 
+    label: 'Hydration & Health', 
+    message: 'Show my hydration and health reminders'
+  },
+  { 
+    id: 'smart-reminders', 
+    icon: Bell, 
+    label: 'Smart Reminders', 
+    message: 'What reminders do I have?'
+  },
+  { 
+    id: 'memories', 
+    icon: Brain, 
+    label: 'Memories', 
+    message: 'What do you remember about me?',
+    divider: true
+  },
+  { 
+    id: 'personality-relationship', 
+    icon: Sparkles, 
+    label: 'Personality & Relationship', 
+    message: 'Show my personality settings and our relationship',
+    section: 'Settings'
+  },
+  { 
+    id: 'appearance', 
+    icon: Palette, 
+    label: 'Appearance', 
+    message: 'I want to change the appearance settings'
+  },
+  { 
+    id: 'voice-language', 
+    icon: Mic, 
+    label: 'Voice & Language', 
+    message: 'Show my voice and language settings'
+  },
+  { 
+    id: 'subscription-credits', 
+    icon: CreditCard, 
+    label: 'Subscription & Credits', 
+    message: 'Show my plan and usage',
+    showBadge: true
+  },
+  { 
+    id: 'privacy-account', 
+    icon: Shield, 
+    label: 'Privacy & Account', 
+    message: 'Show my privacy and account settings'
+  },
 ];
 
 interface AppSidebarProps {
@@ -93,6 +151,7 @@ interface AppSidebarProps {
   activeTab: TabId;
   onTabChange: (tab: TabId) => void;
   onNewChat: () => void;
+  onSendMessage?: (message: string) => void;
 }
 
 export const AppSidebar: React.FC<AppSidebarProps> = ({
@@ -101,6 +160,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
   activeTab,
   onTabChange,
   onNewChat,
+  onSendMessage,
 }) => {
   const [isFreePlan, setIsFreePlan] = useState(true);
 
@@ -123,11 +183,12 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
   }, []);
 
   const handleItemClick = (item: MenuItem) => {
-    if (item.action && item.id === 'new-chat') {
+    if (item.action === 'new-chat') {
       onNewChat();
       onTabChange('chat');
-    } else if (item.id !== 'new-chat') {
-      onTabChange(item.id as TabId);
+    } else if (item.message && onSendMessage) {
+      // Chat-binding: send message instead of navigating
+      onSendMessage(item.message);
     }
     onClose();
   };
@@ -153,8 +214,8 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
           <div className="flex items-center gap-3">
             <AuraOrb size="sm" />
             <div>
-              <h2 className="font-bold text-lg aura-gradient-text">Auralex</h2>
-              <p className="text-xs text-muted-foreground">Human-Centric AI</p>
+              <h2 className="font-bold text-lg aura-gradient-text">AURRA</h2>
+              <p className="text-xs text-muted-foreground">Your AI Companion</p>
             </div>
           </div>
           <div className="flex items-center gap-1">
@@ -170,7 +231,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
           <div className="p-2 space-y-1">
             {menuItems.map((item, index) => {
               const Icon = item.icon;
-              const isActive = activeTab === item.id && !item.action;
+              const isNewChat = item.action === 'new-chat';
               const showDivider = item.divider && index < menuItems.length - 1;
               const showSectionHeader = item.section && index > 0;
               
@@ -188,19 +249,16 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
                     className={cn(
                       'w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200',
                       'text-left hover:bg-muted/50',
-                      isActive && 'bg-primary/10 text-primary',
-                      item.action && 'bg-primary/5 border border-primary/20 hover:bg-primary/10'
+                      isNewChat && 'bg-primary/5 border border-primary/20 hover:bg-primary/10'
                     )}
                   >
                     <Icon className={cn(
                       'w-5 h-5',
-                      isActive ? 'text-primary' : 'text-muted-foreground',
-                      item.action && 'text-primary'
+                      isNewChat ? 'text-primary' : 'text-muted-foreground'
                     )} />
                     <span className={cn(
                       'font-medium text-sm flex-1',
-                      isActive ? 'text-primary' : 'text-foreground',
-                      item.action && 'text-primary'
+                      isNewChat ? 'text-primary' : 'text-foreground'
                     )}>
                       {item.label}
                     </span>

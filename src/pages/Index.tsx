@@ -4,7 +4,6 @@ import { AuraProvider, useAura } from '@/contexts/AuraContext';
 import { useAuth } from '@/hooks/useAuth';
 import { useTheme } from '@/contexts/ThemeContext';
 import { AppSidebar, TabId } from '@/components/AppSidebar';
-import { GlobalBottomNav } from '@/components/GlobalBottomNav';
 import { ReminderPopup } from '@/components/ReminderPopup';
 import { FloatingFocusButton } from '@/components/FloatingFocusButton';
 import { CalmChatScreen } from '@/screens/CalmChatScreen';
@@ -146,15 +145,14 @@ const AppContent: React.FC = () => {
       <FloatingFocusButton />
 
       {/* Chat is the only screen - the cockpit */}
-      <main className="flex-1 overflow-hidden pb-12">
+      <main className="flex-1 overflow-hidden">
         <PageTransition pageKey="chat">
-          <CalmChatScreen onMenuClick={() => setSidebarOpen(true)} />
+          <CalmChatScreen 
+            onMenuClick={() => setSidebarOpen(true)} 
+            onNewChat={handleNewChat}
+          />
         </PageTransition>
       </main>
-
-      <GlobalBottomNav
-        onMenuClick={() => setSidebarOpen(true)}
-      />
     </div>
   );
 };
