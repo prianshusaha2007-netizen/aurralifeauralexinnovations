@@ -30,7 +30,7 @@ import { Progress } from '@/components/ui/progress';
 import { motion } from 'framer-motion';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
-import { useCredits } from '@/hooks/useCredits';
+import { useCredits, TIER_LIMITS } from '@/hooks/useCredits';
 
 const TIER_LABELS: Record<string, string> = {
   core: 'Free',
@@ -153,6 +153,13 @@ export const MoreMenuSheet: React.FC<MoreMenuSheetProps> = ({
   const creditStatus = getCreditStatus();
   const planLabel = TIER_LABELS[tier] || 'Free';
   const usagePercent = Math.min(creditStatus.usagePercent, 100);
+  
+  // Calculate messages remaining
+  const dailyLimit = TIER_LIMITS[tier]?.normal_chat || 25;
+  const messagesUsed = Math.round((usagePercent / 100) * dailyLimit);
+  const messagesRemaining = Math.max(0, dailyLimit - messagesUsed);
+  const isNearLimit = usagePercent >= 80;
+  const isAtLimit = usagePercent >= 100;
 
   const handleItemClick = (item: typeof MENU_ITEMS[0]) => {
     if (item.action === 'new-chat') {
@@ -245,18 +252,28 @@ export const MoreMenuSheet: React.FC<MoreMenuSheetProps> = ({
                     {isSubscription && !creditStatus.isPremium && (
                       <div className="mt-1.5 mx-1 mb-2">
                         <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
-                          <span>Daily usage</span>
-                          <span>{Math.round(usagePercent)}%</span>
+                          <span>Messages today</span>
+                          <span className={cn(
+                            isAtLimit && "text-destructive font-medium",
+                            isNearLimit && !isAtLimit && "text-amber-500"
+                          )}>
+                            {isAtLimit 
+                              ? "0 left" 
+                              : `${messagesRemaining} left`}
+                          </span>
                         </div>
                         <Progress 
                           value={usagePercent} 
-                          className="h-1.5"
+                          className={cn(
+                            "h-1.5 transition-all",
+                            isNearLimit && "animate-pulse"
+                          )}
                         />
-                        {usagePercent >= 80 && (
+                        {isNearLimit && (
                           <p className="text-xs text-muted-foreground mt-1">
-                            {usagePercent >= 100 
+                            {isAtLimit 
                               ? "You've reached today's limit" 
-                              : "Running low on daily credits"}
+                              : `Only ${messagesRemaining} messages remaining`}
                           </p>
                         )}
                       </div>
