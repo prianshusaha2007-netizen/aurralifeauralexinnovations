@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { hasGreetedToday, markGreetingShown } from '@/utils/dailyGreeting';
 
 interface DailyFlowState {
   showPreferences: boolean;
@@ -6,6 +7,7 @@ interface DailyFlowState {
   showWindDown: boolean;
   isFirstTimeUser: boolean;
   currentDayChat: string;
+  hasGreetedToday: boolean;
 }
 
 export const useDailyFlow = () => {
@@ -15,6 +17,7 @@ export const useDailyFlow = () => {
     showWindDown: false,
     isFirstTimeUser: false,
     currentDayChat: '',
+    hasGreetedToday: hasGreetedToday(),
   });
 
   // Check daily flow conditions
@@ -58,6 +61,7 @@ export const useDailyFlow = () => {
         showWindDown: shouldShowWindDown,
         isFirstTimeUser: isFirstTime,
         currentDayChat: today,
+        hasGreetedToday: hasGreetedToday(),
       });
     };
     
@@ -105,13 +109,21 @@ export const useDailyFlow = () => {
     localStorage.removeItem('aura-winddown-date');
     localStorage.removeItem('aura-morning-flow-date');
     localStorage.removeItem('aura-winddown-history');
+    localStorage.removeItem('aura-last-greeting-date');
     setState({
       showPreferences: false,
       showMorningBriefing: false,
       showWindDown: false,
       isFirstTimeUser: false,
       currentDayChat: new Date().toISOString().split('T')[0],
+      hasGreetedToday: false,
     });
+  }, []);
+
+  // Function to mark greeting as shown
+  const markGreeting = useCallback(() => {
+    markGreetingShown();
+    setState(prev => ({ ...prev, hasGreetedToday: true }));
   }, []);
 
   return {
@@ -119,6 +131,7 @@ export const useDailyFlow = () => {
     dismissPreferences,
     dismissMorningBriefing,
     dismissWindDown,
+    markGreeting,
     // Debug functions
     triggerMorningFlow,
     triggerNightFlow,
