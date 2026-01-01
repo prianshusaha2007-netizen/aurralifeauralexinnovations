@@ -452,6 +452,12 @@ export const useAuraChat = () => {
                 toneIntensity: phaseAdaptations.toneIntensity,
               },
             },
+            // Focus Mode Context - when user is in focus mode
+            focusContext: focusState.isActive ? {
+              isActive: true,
+              remainingMinutes: Math.ceil(focusState.remainingTime / 60),
+              sessionType: focusState.currentSession?.blockType || 'general',
+            } : null,
           },
         }),
       });

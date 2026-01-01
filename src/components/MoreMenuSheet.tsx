@@ -15,7 +15,8 @@ import {
   Shield,
   User,
   X,
-  ChevronRight
+  ChevronRight,
+  Timer
 } from 'lucide-react';
 import {
   Drawer,
@@ -68,6 +69,13 @@ const MENU_ITEMS = [
     label: "Today's Focus", 
     message: "What should I focus on today? Show my priorities",
     color: 'from-emerald-500 to-green-500'
+  },
+  { 
+    id: 'focus-stats', 
+    icon: Timer, 
+    label: 'Focus Stats', 
+    action: 'focus-stats',
+    color: 'from-violet-500 to-indigo-500'
   },
   { 
     id: 'daily-routine', 

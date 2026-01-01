@@ -553,6 +553,12 @@ function validateInput(data: any): { valid: boolean; error?: string; sanitized?:
         isFirstMessageOfDay: userProfile.sessionContext.isFirstMessageOfDay === true,
         messageCountToday: typeof userProfile.sessionContext.messageCountToday === 'number' ? userProfile.sessionContext.messageCountToday : 0,
       } : undefined,
+      // Focus Mode context
+      focusContext: userProfile.focusContext && typeof userProfile.focusContext === 'object' ? {
+        isActive: userProfile.focusContext.isActive === true,
+        remainingMinutes: typeof userProfile.focusContext.remainingMinutes === 'number' ? userProfile.focusContext.remainingMinutes : 0,
+        sessionType: typeof userProfile.focusContext.sessionType === 'string' ? userProfile.focusContext.sessionType.slice(0, 20) : 'general',
+      } : undefined,
     };
   }
 
@@ -1416,6 +1422,55 @@ Show reminders: ${adaptations?.showReminders ? 'Yes' : 'NO'}
 Suggestions today: ${adaptations?.suggestionsPerDay || 0}
 Tone intensity: ${adaptations?.toneIntensity?.toUpperCase() || 'BALANCED'}
 
+`;
+    }
+
+    // FOCUS MODE CONTEXT - when user is in focus mode
+    const focusContext = userProfile?.focusContext;
+    if (focusContext?.isActive) {
+      additionalContext += `
+
+====================================
+🎯 FOCUS MODE ACTIVE
+====================================
+
+FOCUS SESSION:
+- Type: ${focusContext.sessionType?.toUpperCase() || 'GENERAL'}
+- Time remaining: ${focusContext.remainingMinutes || 0} minutes
+
+⚠️ CRITICAL FOCUS MODE RULES:
+1. RESPONSES MUST BE SHORT AND PRECISE
+   - Maximum 2-3 sentences unless user asks for more
+   - No lengthy explanations
+   - Get to the point immediately
+
+2. BEHAVIOR RESTRICTIONS:
+   - NO routine nudges
+   - NO upsell suggestions
+   - NO "how are you" small talk
+   - NO motivational speeches
+   - NO feature suggestions
+
+3. PERSONA DURING FOCUS:
+   ${focusContext.sessionType === 'study' ? `📚 MENTOR MODE: Guide step-by-step, don't dump information. "Let's understand just this part."` : ''}
+   ${focusContext.sessionType === 'coding' ? `💻 MENTOR MODE: Debug together. Short fixes. "Try this and test once."` : ''}
+   ${focusContext.sessionType === 'work' ? `💼 GUIDE MODE: Clear priorities. "Focus on this first."` : ''}
+   ${focusContext.sessionType === 'creative' ? `🎨 SILENT MODE: Only respond when directly asked. Stay minimal.` : ''}
+   ${focusContext.sessionType === 'quiet' ? `🔇 SILENT MODE: Minimal responses. User wants space.` : ''}
+
+4. IF USER SHOWS STRUGGLE (confusion, frustration):
+   - Acknowledge briefly: "Let's slow it down."
+   - Offer simple help, not overwhelming
+   - "Want a simpler explanation or a break?"
+
+5. RESPONSE STYLE:
+   - Direct
+   - Actionable
+   - No fluff
+   - "Got it." instead of "That's a great question!"
+   - "Try this:" instead of "Here's what I'd suggest you might want to consider..."
+
+FOCUS MODE = MINIMAL AURRA. Just be helpful when asked.
 `;
     }
 

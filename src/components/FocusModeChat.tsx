@@ -2,11 +2,14 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   BookOpen, Code, Briefcase, Palette, VolumeX,
-  Timer, Check, Minus, X
+  Timer, Check, Minus, X, Music, ChevronUp
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { FocusType } from '@/hooks/useFocusModeAI';
+import { FocusAmbientPicker, FocusMusicButton } from './FocusAmbientPicker';
+import { CompactFocusStats } from './FocusAnalyticsDashboard';
+import { useFocusAmbientMusic } from '@/hooks/useFocusAmbientMusic';
 
 interface FocusTypeOption {
   id: FocusType;
@@ -168,6 +171,9 @@ export const FocusActiveBanner: React.FC<FocusActiveBannerProps> = ({
   formatTime,
   onEnd,
 }) => {
+  const [showMusicPicker, setShowMusicPicker] = useState(false);
+  const ambientMusic = useFocusAmbientMusic();
+  
   const getTypeIcon = () => {
     switch (focusType) {
       case 'study': return <BookOpen className="w-4 h-4" />;
@@ -183,7 +189,7 @@ export const FocusActiveBanner: React.FC<FocusActiveBannerProps> = ({
       initial={{ opacity: 0, y: -20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
-      className="px-4 py-2"
+      className="px-4 py-2 space-y-2"
     >
       <div className="bg-gradient-to-r from-violet-500/20 to-purple-500/20 rounded-xl p-3 border border-violet-500/30">
         <div className="flex items-center justify-between">
@@ -201,16 +207,32 @@ export const FocusActiveBanner: React.FC<FocusActiveBannerProps> = ({
               <p className="text-xs text-muted-foreground truncate max-w-48">{goal}</p>
             </div>
           </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onEnd}
-            className="text-xs text-muted-foreground hover:text-foreground"
-          >
-            End
-          </Button>
+          <div className="flex items-center gap-2">
+            <FocusMusicButton
+              onClick={() => setShowMusicPicker(!showMusicPicker)}
+              isPlaying={ambientMusic.isPlaying}
+              trackIcon={ambientMusic.currentTrack?.icon}
+            />
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onEnd}
+              className="text-xs text-muted-foreground hover:text-foreground"
+            >
+              End
+            </Button>
+          </div>
         </div>
       </div>
+      
+      {/* Ambient Music Picker */}
+      <FocusAmbientPicker 
+        isOpen={showMusicPicker} 
+        onClose={() => setShowMusicPicker(false)} 
+      />
+      
+      {/* Compact stats */}
+      <CompactFocusStats />
     </motion.div>
   );
 };
