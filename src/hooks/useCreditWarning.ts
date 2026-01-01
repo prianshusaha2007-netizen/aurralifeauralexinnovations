@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useCredits, CreditStatus } from './useCredits';
 import { useSoftUpsell } from './useSoftUpsell';
 
@@ -13,6 +13,18 @@ export interface CreditWarningState {
   getSoftLimitMessage: () => string;
 }
 
+const DEFAULT_CREDIT_STATUS: CreditStatus = {
+  isLoading: true,
+  tier: 'core',
+  isPremium: false,
+  usagePercent: 0,
+  canUseCredits: true,
+  showSoftWarning: false,
+  isLimitReached: false,
+  allowFinalReply: true,
+  actionAllowed: () => true,
+};
+
 /**
  * Hook to manage soft credit warnings in chat.
  * - Shows soft warning at 80-90% usage (once per session)
@@ -21,33 +33,23 @@ export interface CreditWarningState {
  * - Respects user dismissals
  */
 export function useCreditWarning(): CreditWarningState {
-  const { getCreditStatus, credits, isLoading } = useCredits();
-  const { recordLimitHit, consecutiveLimitDays, getSoftLimitMessage } = useSoftUpsell();
-  
-  // Memoize credit status to avoid calling function during render
-  const [creditStatus, setCreditStatus] = useState<CreditStatus>({
-    isLoading: true,
-    tier: 'core',
-    isPremium: false,
-    usagePercent: 0,
-    canUseCredits: true,
-    showSoftWarning: false,
-    isLimitReached: false,
-    allowFinalReply: true,
-    actionAllowed: () => true,
-  });
-  
-  // Update credit status when credits change
-  useEffect(() => {
-    if (!isLoading) {
-      setCreditStatus(getCreditStatus());
-    }
-  }, [credits, isLoading, getCreditStatus]);
-  
+  // All useState hooks first - in a stable order
   const [showSoftWarning, setShowSoftWarning] = useState(false);
   const [showLimitWarning, setShowLimitWarning] = useState(false);
   const [softWarningShownThisSession, setSoftWarningShownThisSession] = useState(false);
   const [limitWarningShownThisSession, setLimitWarningShownThisSession] = useState(false);
+
+  // Custom hooks after useState
+  const { getCreditStatus, credits, isLoading } = useCredits();
+  const { recordLimitHit, consecutiveLimitDays, getSoftLimitMessage } = useSoftUpsell();
+
+  // Memoize credit status to avoid issues with function calls during render
+  const creditStatus = useMemo<CreditStatus>(() => {
+    if (isLoading) {
+      return DEFAULT_CREDIT_STATUS;
+    }
+    return getCreditStatus();
+  }, [isLoading, getCreditStatus]);
 
   // Reset session flags when credits reset (new day)
   useEffect(() => {
