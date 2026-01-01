@@ -1,13 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Crown, Star, Heart, CreditCard, Calendar, Check, X, Loader2, AlertCircle, ChevronRight, Sparkles, MessageCircle, Brain, Dumbbell, Palette, Users, Mic, Image, FileText, BarChart3, Zap, Clock, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Check, CreditCard, Sparkles, Loader2 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useAura } from '@/contexts/AuraContext';
@@ -37,97 +36,83 @@ interface Subscription {
   cancelled_at: string | null;
 }
 
-const TIER_INFO = {
-  core: { 
-    name: 'AURRA Core', 
-    icon: Heart, 
-    color: 'text-muted-foreground', 
-    bgColor: 'bg-muted',
-    tagline: 'A calm, supportive companion — no pressure.',
-    price: 'Free',
+// Plan definitions following the exact spec
+const PLANS = [
+  {
+    id: 'core',
+    name: 'Free',
+    tag: 'Light daily use',
+    price: null,
+    priceLabel: 'Free',
+    description: 'For checking in, quick chats, and getting a feel for AURRA.',
+    features: [
+      'Daily conversations (limited)',
+      'Basic reminders',
+      'Short-term memory',
+      'Calm responses',
+    ],
+    ctaText: "You're on this plan",
+    highlight: false,
   },
-  plus: { 
-    name: 'AURRA Plus', 
-    icon: Star, 
-    color: 'text-primary', 
-    bgColor: 'bg-primary/10',
-    tagline: 'For consistency & growth',
-    price: '₹99/month',
+  {
+    id: 'basic',
+    name: 'Basic',
+    tag: 'Everyday companion',
+    price: 99,
+    priceLabel: '₹99/month',
+    description: 'For regular check-ins, routines, and staying consistent.',
+    features: [
+      'More daily conversations',
+      'Daily routine & hydration',
+      'Medium-depth replies',
+      'Memory across days',
+      'Light image generation',
+    ],
+    ctaText: 'Upgrade to Basic',
+    highlight: false,
   },
-  pro: { 
-    name: 'AURRA Pro', 
-    icon: Crown, 
-    color: 'text-amber-500', 
-    bgColor: 'bg-amber-500/10',
-    tagline: 'For builders & serious self-growth',
-    price: '₹299/month',
+  {
+    id: 'pro',
+    name: 'Pro',
+    tag: 'Most popular',
+    price: 199,
+    priceLabel: '₹199/month',
+    description: 'For students, builders, and focused daily use.',
+    features: [
+      'Long reasoning & explanations',
+      'Coding & learning help',
+      'Strong memory continuity',
+      'Image + document creation',
+      'Faster responses',
+    ],
+    ctaText: 'Upgrade to Pro',
+    highlight: true,
   },
-};
-
-// Persona access matrix
-const PERSONA_ACCESS = [
-  { name: 'Companion', icon: Heart, free: 'full', plus: 'full', pro: 'full' },
-  { name: 'Best Friend', icon: Users, free: 'light', plus: 'deep', pro: 'deep' },
-  { name: 'Mentor', icon: Brain, free: 'basic', plus: 'full', pro: 'full' },
-  { name: 'Coach', icon: Dumbbell, free: 'none', plus: 'full', pro: 'full' },
-  { name: 'Creative Partner', icon: Palette, free: 'none', plus: 'full', pro: 'full' },
-  { name: 'Thinking Partner', icon: Sparkles, free: 'none', plus: 'none', pro: 'full' },
+  {
+    id: 'max',
+    name: 'Max',
+    tag: 'All-day access',
+    price: 299,
+    priceLabel: '₹299/month',
+    description: 'For founders and power users who stay connected all day.',
+    features: [
+      'Highest daily access',
+      'Deep memory & recall',
+      'Priority response speed',
+      'Full Life-OS features',
+      'Everything unlocked',
+    ],
+    ctaText: 'Upgrade to Max',
+    highlight: false,
+  },
 ];
 
-// Features by plan
-const PLAN_FEATURES: Record<string, { icon: React.ComponentType<{ className?: string }>; label: string; highlight?: boolean }[]> = {
-  core: [
-    { icon: Heart, label: 'Companion persona' },
-    { icon: Users, label: 'Best Friend (light)' },
-    { icon: MessageCircle, label: 'Daily check-ins' },
-    { icon: Heart, label: 'Emotional support' },
-    { icon: Clock, label: 'Basic reminders' },
-    { icon: BarChart3, label: 'Routine viewing' },
-    { icon: Brain, label: 'Limited memory' },
-    { icon: Zap, label: 'Limited daily conversations' },
-  ],
-  plus: [
-    { icon: Users, label: 'Best Friend (deep)', highlight: true },
-    { icon: Brain, label: 'Mentor persona (full)', highlight: true },
-    { icon: Dumbbell, label: 'Coach persona (gym, habits)', highlight: true },
-    { icon: Palette, label: 'Creative partner persona', highlight: true },
-    { icon: MessageCircle, label: 'Longer conversations' },
-    { icon: Brain, label: 'Full Life Memory Graph', highlight: true },
-    { icon: BarChart3, label: 'Skill sessions (coding, design, gym)' },
-    { icon: Mic, label: 'Voice replies' },
-    { icon: Image, label: 'Image & document tools' },
-  ],
-  pro: [
-    { icon: Check, label: 'Everything in Plus', highlight: true },
-    { icon: Sparkles, label: 'Co-Founder / Thinking Partner', highlight: true },
-    { icon: BarChart3, label: 'Long-term planning & decision tracking' },
-    { icon: Zap, label: 'Skill acceleration paths' },
-    { icon: Brain, label: 'Advanced progress insights' },
-    { icon: Clock, label: 'Priority responses' },
-    { icon: Zap, label: 'Higher usage limits' },
-  ],
-};
-
-// Usage display (human-friendly, no numbers - NEVER show credits!)
-const USAGE_DISPLAY = {
-  core: {
-    conversations: 'Limited',
-    memory: 'Basic',
-    skills: 'Not included',
-    voiceImages: 'Not included',
-  },
-  plus: {
-    conversations: 'Extended',
-    memory: 'Full',
-    skills: 'Included',
-    voiceImages: 'Included',
-  },
-  pro: {
-    conversations: 'Unlimited',
-    memory: 'Advanced',
-    skills: 'Unlimited',
-    voiceImages: 'Unlimited',
-  },
+// Map subscription tiers to plan IDs
+const TIER_TO_PLAN: Record<string, string> = {
+  core: 'core',
+  plus: 'basic',
+  pro: 'pro',
+  max: 'max',
 };
 
 const SubscriptionScreen: React.FC = () => {
@@ -139,7 +124,7 @@ const SubscriptionScreen: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isCancelling, setIsCancelling] = useState(false);
   const [showUpgrade, setShowUpgrade] = useState(false);
-  const [activeTab, setActiveTab] = useState('plans');
+  const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
 
   const aiName = userProfile.aiName || 'AURRA';
 
@@ -199,7 +184,6 @@ const SubscriptionScreen: React.FC = () => {
         .update({ is_premium: false })
         .eq('user_id', user.id);
 
-      // Add gentle AURRA message
       addChatMessage({
         content: "I'll still be here — just a little lighter. Thanks for spending time with me. 🤍",
         sender: 'aura',
@@ -215,32 +199,18 @@ const SubscriptionScreen: React.FC = () => {
     }
   };
 
-  const currentTier = (subscription?.tier || 'core') as keyof typeof TIER_INFO;
-  const tierInfo = TIER_INFO[currentTier];
-  const TierIcon = tierInfo.icon;
-  const isPaid = currentTier !== 'core' && subscription?.status === 'active';
-
-  const getAccessBadge = (access: string) => {
-    switch (access) {
-      case 'full':
-        return <Check className="w-4 h-4 text-green-500" />;
-      case 'deep':
-        return <span className="text-xs text-green-600 font-medium">Deep</span>;
-      case 'light':
-        return <span className="text-xs text-blue-500 font-medium">Light</span>;
-      case 'basic':
-        return <span className="text-xs text-muted-foreground font-medium">Basic</span>;
-      case 'none':
-        return <X className="w-4 h-4 text-muted-foreground/40" />;
-      default:
-        return null;
-    }
+  const handleUpgrade = (planId: string) => {
+    setSelectedPlan(planId);
+    setShowUpgrade(true);
   };
+
+  const currentTier = subscription?.tier || 'core';
+  const currentPlanId = TIER_TO_PLAN[currentTier] || 'core';
+  const isPaid = currentTier !== 'core' && subscription?.status === 'active';
 
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background pb-20">
-        {/* Header Skeleton */}
         <div className="sticky top-0 z-10 bg-background/95 backdrop-blur border-b border-border">
           <div className="flex items-center gap-3 p-4">
             <Skeleton className="w-10 h-10 rounded-lg" />
@@ -250,52 +220,21 @@ const SubscriptionScreen: React.FC = () => {
             </div>
           </div>
         </div>
-
-        <div className="p-4 space-y-6">
-          {/* Current Plan Card Skeleton */}
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-3 mb-4">
-                <Skeleton className="w-12 h-12 rounded-xl" />
+        <div className="p-4 space-y-4">
+          {[1, 2, 3, 4].map((i) => (
+            <Card key={i}>
+              <CardContent className="pt-6">
+                <Skeleton className="h-6 w-24 mb-2" />
+                <Skeleton className="h-4 w-full mb-4" />
                 <div className="space-y-2">
-                  <Skeleton className="h-5 w-28" />
-                  <Skeleton className="h-3 w-44" />
+                  {[1, 2, 3, 4].map((j) => (
+                    <Skeleton key={j} className="h-4 w-48" />
+                  ))}
                 </div>
-              </div>
-              <Skeleton className="h-4 w-48 mb-4" />
-              <Skeleton className="h-10 w-full rounded-lg" />
-            </CardContent>
-          </Card>
-
-          {/* Tabs Skeleton */}
-          <Skeleton className="h-10 w-full rounded-lg" />
-
-          {/* Plan Cards Skeleton */}
-          <div className="space-y-4">
-            {[1, 2, 3].map((i) => (
-              <Card key={i}>
-                <CardContent className="pt-6">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-2">
-                      <Skeleton className="w-5 h-5 rounded" />
-                      <Skeleton className="h-5 w-24" />
-                    </div>
-                    <Skeleton className="h-5 w-20" />
-                  </div>
-                  <Skeleton className="h-4 w-40 mb-4" />
-                  <div className="space-y-2">
-                    {[1, 2, 3, 4, 5].map((j) => (
-                      <div key={j} className="flex items-center gap-2">
-                        <Skeleton className="w-4 h-4 rounded" />
-                        <Skeleton className="h-4 w-32" />
-                      </div>
-                    ))}
-                  </div>
-                  {i > 1 && <Skeleton className="h-10 w-full mt-4 rounded-lg" />}
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+                <Skeleton className="h-10 w-full mt-4 rounded-lg" />
+              </CardContent>
+            </Card>
+          ))}
         </div>
       </div>
     );
@@ -310,227 +249,128 @@ const SubscriptionScreen: React.FC = () => {
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <div>
-            <h1 className="text-xl font-bold">Your {aiName} Plan</h1>
+            <h1 className="text-xl font-bold">Your plan & access</h1>
             <p className="text-xs text-muted-foreground">
-              Choose how deep you want {aiName} to grow with you.
+              Choose what fits your day. You can change this anytime.
             </p>
           </div>
         </div>
       </div>
 
-      <div className="p-4 space-y-6">
-        {/* Current Plan Card */}
-        <Card className={cn("border-2", tierInfo.bgColor, isPaid && "border-primary")}>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3 mb-3">
-              <div className={cn("p-3 rounded-xl", tierInfo.bgColor)}>
-                <TierIcon className={cn("w-6 h-6", tierInfo.color)} />
-              </div>
-              <div>
-                <h2 className={cn("text-lg font-bold", tierInfo.color)}>{tierInfo.name}</h2>
-                <p className="text-sm text-muted-foreground">{tierInfo.tagline}</p>
-              </div>
-            </div>
-            
-            {isPaid ? (
-              <p className="text-sm text-muted-foreground mb-4">
-                Thanks for supporting our journey 🤍
-              </p>
-            ) : (
-              <p className="text-sm text-muted-foreground mb-4">
-                Always free. No pressure to upgrade.
-              </p>
-            )}
+      <div className="p-4 space-y-4">
+        {/* Intro text */}
+        <p className="text-sm text-muted-foreground text-center px-4">
+          Pick what feels right. You can upgrade, downgrade, or cancel anytime.
+        </p>
 
-            <Button 
-              onClick={() => isPaid ? setActiveTab('billing') : setShowUpgrade(true)}
-              className="w-full"
-              variant={isPaid ? "outline" : "default"}
+        {/* Plan Cards */}
+        {PLANS.map((plan) => {
+          const isCurrent = plan.id === currentPlanId;
+          const isHighlighted = plan.highlight;
+          
+          return (
+            <Card 
+              key={plan.id}
+              className={cn(
+                "relative overflow-hidden transition-all",
+                isHighlighted && "ring-2 ring-primary shadow-lg shadow-primary/10",
+                isCurrent && !isHighlighted && "border-2 border-primary/50"
+              )}
             >
-              {isPaid ? 'Manage plan' : 'Explore upgrades'}
-            </Button>
-          </CardContent>
-        </Card>
-
-        {/* Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="plans">Plans</TabsTrigger>
-            <TabsTrigger value="usage">Usage</TabsTrigger>
-            <TabsTrigger value="billing">Billing</TabsTrigger>
-          </TabsList>
-
-          {/* Plans Tab */}
-          <TabsContent value="plans" className="space-y-4 mt-4">
-            {/* Persona Access Table */}
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base">Persona Access</CardTitle>
-                <p className="text-xs text-muted-foreground">
-                  You never lose emotional support — upgrades only add depth.
-                </p>
-              </CardHeader>
-              <CardContent>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b">
-                        <th className="text-left py-2 font-medium">Persona</th>
-                        <th className="text-center py-2 font-medium text-muted-foreground">Free</th>
-                        <th className="text-center py-2 font-medium text-primary">Plus</th>
-                        <th className="text-center py-2 font-medium text-amber-500">Pro</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {PERSONA_ACCESS.map((persona) => {
-                        const Icon = persona.icon;
-                        return (
-                          <tr key={persona.name} className="border-b border-border/50">
-                            <td className="py-3">
-                              <div className="flex items-center gap-2">
-                                <Icon className="w-4 h-4 text-muted-foreground" />
-                                <span>{persona.name}</span>
-                              </div>
-                            </td>
-                            <td className="text-center py-3">{getAccessBadge(persona.free)}</td>
-                            <td className="text-center py-3">{getAccessBadge(persona.plus)}</td>
-                            <td className="text-center py-3">{getAccessBadge(persona.pro)}</td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Plan Cards */}
-            {(['core', 'plus', 'pro'] as const).map((tier) => {
-              const info = TIER_INFO[tier];
-              const Icon = info.icon;
-              const features = PLAN_FEATURES[tier];
-              const isCurrent = tier === currentTier;
-              const isPlus = tier === 'plus';
+              {/* Highlight glow effect for Pro */}
+              {isHighlighted && (
+                <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-primary/5 pointer-events-none" />
+              )}
               
-              return (
-                <Card 
-                  key={tier}
-                  className={cn(
-                    "transition-all relative overflow-hidden",
-                    isCurrent && "border-2 border-primary",
-                    tier === 'pro' && "bg-gradient-to-br from-amber-500/5 to-orange-500/5",
-                    tier === 'plus' && "bg-gradient-to-br from-primary/5 to-accent/5"
-                  )}
-                >
-                  {/* Most Popular Banner */}
-                  {isPlus && (
-                    <div className="absolute -right-8 top-4 rotate-45 bg-primary px-10 py-1 text-xs font-semibold text-primary-foreground shadow-md">
-                      Most Popular
-                    </div>
-                  )}
-                  
-                  <CardContent className="pt-6">
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-2">
-                        <Icon className={cn("w-5 h-5", info.color)} />
-                        <span className={cn("font-semibold", info.color)}>{info.name}</span>
-                        {isCurrent && <Badge variant="secondary">Current</Badge>}
-                        {isPlus && !isCurrent && (
-                          <Badge className="bg-primary/20 text-primary border-0 text-[10px]">
-                            <Sparkles className="w-3 h-3 mr-1" />
-                            Recommended
-                          </Badge>
-                        )}
-                      </div>
-                      <span className="font-bold">{info.price}</span>
-                    </div>
-                    
-                    <p className="text-sm text-muted-foreground mb-4">{info.tagline}</p>
-                    
-                    <div className="space-y-2">
-                      {features.slice(0, 5).map((feature, i) => {
-                        const FeatureIcon = feature.icon;
-                        return (
-                          <div 
-                            key={i} 
-                            className={cn(
-                              "flex items-center gap-2 text-sm",
-                              feature.highlight ? "text-foreground font-medium" : "text-muted-foreground"
-                            )}
-                          >
-                            <FeatureIcon className={cn("w-4 h-4", feature.highlight && info.color)} />
-                            <span>{feature.label}</span>
-                          </div>
-                        );
-                      })}
-                      {features.length > 5 && (
-                        <p className="text-xs text-muted-foreground">
-                          +{features.length - 5} more features
-                        </p>
+              <CardContent className="pt-6 relative">
+                {/* Plan header */}
+                <div className="flex items-start justify-between mb-3">
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <h3 className="text-lg font-bold">{plan.name}</h3>
+                      {isHighlighted && (
+                        <Badge className="bg-primary text-primary-foreground text-xs">
+                          <Sparkles className="w-3 h-3 mr-1" />
+                          {plan.tag}
+                        </Badge>
+                      )}
+                      {!isHighlighted && (
+                        <Badge variant="secondary" className="text-xs">
+                          {plan.tag}
+                        </Badge>
                       )}
                     </div>
-
-                    {tier !== 'core' && !isCurrent && (
-                      <Button 
-                        onClick={() => setShowUpgrade(true)}
-                        className={cn(
-                          "w-full mt-4",
-                          tier === 'pro' && "bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600"
-                        )}
-                      >
-                        Upgrade to {tier === 'plus' ? 'Plus' : 'Pro'}
-                      </Button>
+                    {isCurrent && (
+                      <Badge variant="outline" className="text-xs text-primary border-primary/50">
+                        Current plan
+                      </Badge>
                     )}
-                    
-                    {tier !== 'core' && (
-                      <p className="text-xs text-center text-muted-foreground mt-2">
-                        {tier === 'plus' ? 'Cancel anytime · No lock-in' : 'Built for people building something meaningful'}
-                      </p>
-                    )}
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </TabsContent>
-
-          {/* Usage Tab */}
-          <TabsContent value="usage" className="space-y-4 mt-4">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Daily Usage</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {[
-                  { label: 'Daily conversations', key: 'conversations' as const },
-                  { label: 'Memory depth', key: 'memory' as const },
-                  { label: 'Skill sessions', key: 'skills' as const },
-                  { label: 'Voice & images', key: 'voiceImages' as const },
-                ].map((item) => (
-                  <div key={item.key} className="flex items-center justify-between py-2 border-b border-border/50 last:border-0">
-                    <span className="text-sm">{item.label}</span>
-                    <Badge variant="secondary" className={cn(
-                      currentTier === 'pro' && "bg-amber-500/10 text-amber-600",
-                      currentTier === 'plus' && "bg-primary/10 text-primary"
-                    )}>
-                      {USAGE_DISPLAY[currentTier][item.key]}
-                    </Badge>
                   </div>
-                ))}
+                  <span className="text-lg font-bold text-foreground">
+                    {plan.priceLabel}
+                  </span>
+                </div>
+
+                {/* Description */}
+                <p className="text-sm text-muted-foreground mb-4">
+                  {plan.description}
+                </p>
+
+                <Separator className="my-4" />
+
+                {/* Features */}
+                <ul className="space-y-2.5 mb-5">
+                  {plan.features.map((feature, i) => (
+                    <li key={i} className="flex items-start gap-2.5 text-sm">
+                      <Check className={cn(
+                        "w-4 h-4 mt-0.5 shrink-0",
+                        isHighlighted ? "text-primary" : "text-muted-foreground"
+                      )} />
+                      <span className="text-foreground">{feature}</span>
+                    </li>
+                  ))}
+                </ul>
+
+                <Separator className="my-4" />
+
+                {/* CTA Button */}
+                {isCurrent ? (
+                  <Button 
+                    variant="outline" 
+                    className="w-full" 
+                    disabled
+                  >
+                    {plan.ctaText}
+                  </Button>
+                ) : (
+                  <Button 
+                    onClick={() => handleUpgrade(plan.id)}
+                    className={cn(
+                      "w-full",
+                      isHighlighted && "bg-primary hover:bg-primary/90"
+                    )}
+                  >
+                    {plan.ctaText}
+                  </Button>
+                )}
               </CardContent>
             </Card>
-          </TabsContent>
+          );
+        })}
 
-          {/* Billing Tab */}
-          <TabsContent value="billing" className="space-y-4 mt-4">
-            {isPaid && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">Subscription Details</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
+        {/* Billing section for paid users */}
+        {isPaid && (
+          <>
+            <Separator className="my-6" />
+            
+            <Card>
+              <CardContent className="pt-6">
+                <h3 className="font-semibold mb-4">Manage subscription</h3>
+                
+                <div className="space-y-3 mb-4">
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Current plan</span>
-                    <span className="font-medium">{tierInfo.name}</span>
+                    <span className="font-medium capitalize">{currentPlanId}</span>
                   </div>
                   {subscription?.started_at && (
                     <div className="flex justify-between text-sm">
@@ -544,93 +384,81 @@ const SubscriptionScreen: React.FC = () => {
                       <span>{format(new Date(subscription.expires_at), 'MMM d, yyyy')}</span>
                     </div>
                   )}
-                  
-                  <Separator className="my-4" />
-                  
-                  <div className="space-y-2">
-                    {currentTier !== 'pro' && (
-                      <Button variant="outline" className="w-full" onClick={() => setShowUpgrade(true)}>
-                        Change plan
-                      </Button>
-                    )}
-                    
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button variant="ghost" className="w-full text-muted-foreground">
-                          Cancel subscription
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Cancel your subscription?</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            You'll keep your benefits until the end of the billing period. 
-                            No guilt — {aiName} will still be here for you.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Keep plan</AlertDialogCancel>
-                          <AlertDialogAction 
-                            onClick={handleCancelSubscription}
-                            disabled={isCancelling}
-                            className="bg-muted text-muted-foreground hover:bg-muted/80"
-                          >
-                            {isCancelling ? 'Cancelling...' : 'Cancel subscription'}
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Payment History */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base flex items-center gap-2">
-                  <CreditCard className="w-4 h-4" />
-                  Payment History
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {payments.length === 0 ? (
-                  <div className="text-center py-6">
-                    <CreditCard className="w-10 h-10 mx-auto text-muted-foreground/40 mb-2" />
-                    <p className="text-sm text-muted-foreground">No payments yet</p>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {payments.slice(0, 5).map((payment) => (
-                      <div key={payment.id} className="flex items-center justify-between py-2 border-b border-border/50 last:border-0">
-                        <div>
-                          <p className="text-sm font-medium">
-                            {TIER_INFO[payment.tier as keyof typeof TIER_INFO]?.name || payment.tier}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {format(new Date(payment.created_at), 'MMM d, yyyy')}
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-sm font-medium">₹{(payment.amount / 100).toFixed(0)}</p>
-                          <Badge 
-                            variant="secondary" 
-                            className={cn(
-                              "text-xs",
-                              payment.status === 'completed' && "bg-green-500/10 text-green-600"
-                            )}
-                          >
-                            {payment.status}
-                          </Badge>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                </div>
+                
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="ghost" className="w-full text-muted-foreground text-sm">
+                      Cancel subscription
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Cancel your subscription?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        You&apos;ll keep your benefits until the end of the billing period. 
+                        No guilt — {aiName} will still be here for you.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Keep plan</AlertDialogCancel>
+                      <AlertDialogAction 
+                        onClick={handleCancelSubscription}
+                        disabled={isCancelling}
+                        className="bg-muted text-muted-foreground hover:bg-muted/80"
+                      >
+                        {isCancelling ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            Cancelling...
+                          </>
+                        ) : (
+                          'Cancel subscription'
+                        )}
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               </CardContent>
             </Card>
-          </TabsContent>
-        </Tabs>
+          </>
+        )}
+
+        {/* Payment History */}
+        {payments.length > 0 && (
+          <Card>
+            <CardContent className="pt-6">
+              <h3 className="font-semibold mb-4 flex items-center gap-2">
+                <CreditCard className="w-4 h-4" />
+                Payment history
+              </h3>
+              <div className="space-y-3">
+                {payments.slice(0, 5).map((payment) => (
+                  <div key={payment.id} className="flex items-center justify-between py-2 border-b border-border/50 last:border-0">
+                    <div>
+                      <p className="text-sm font-medium capitalize">{payment.tier}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {format(new Date(payment.created_at), 'MMM d, yyyy')}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-medium">₹{(payment.amount / 100).toFixed(0)}</p>
+                      <Badge 
+                        variant="secondary" 
+                        className={cn(
+                          "text-xs",
+                          payment.status === 'completed' && "bg-green-500/10 text-green-600"
+                        )}
+                      >
+                        {payment.status}
+                      </Badge>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       <UpgradeSheet open={showUpgrade} onOpenChange={setShowUpgrade} />
