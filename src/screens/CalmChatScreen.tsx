@@ -297,21 +297,34 @@ export const CalmChatScreen: React.FC<CalmChatScreenProps> = ({ onMenuClick, onN
     setShowVoiceTooltip(false);
   }, [chatMessages, inputValue]);
 
-  // Initial greeting - simple, human, not overwhelming
+  // Initial greeting - ONLY ONCE per day, not on every app open
   useEffect(() => {
     if (chatMessages.length === 0 && userProfile.onboardingComplete) {
+      const today = new Date().toDateString();
+      const lastGreetingDate = localStorage.getItem('aurra-last-greeting-date');
+      
+      // Only show greeting if it's a new day
+      if (lastGreetingDate === today) {
+        // Same day - use minimal return message
+        addChatMessage({ content: "Ready when you are.", sender: 'aura' });
+        return;
+      }
+      
+      // New day - mark as greeted and show contextual greeting
+      localStorage.setItem('aurra-last-greeting-date', today);
+      
       const hour = new Date().getHours();
       let greeting = '';
       
-      // Simple, calm greetings - no feature explanations
+      // Simple, contextual greetings - no feature explanations
       if (hour >= 5 && hour < 12) {
-        greeting = `Good morning, ${userProfile.name}. How are you feeling today?`;
+        greeting = `Morning, ${userProfile.name}. ☀️`;
       } else if (hour >= 12 && hour < 17) {
-        greeting = `Hey ${userProfile.name}. How's your day going?`;
+        greeting = `Hey ${userProfile.name}.`;
       } else if (hour >= 17 && hour < 21) {
-        greeting = `Good evening, ${userProfile.name}. How are you?`;
+        greeting = `Evening, ${userProfile.name}.`;
       } else {
-        greeting = `Hey ${userProfile.name}. Still up? 🌙`;
+        greeting = `Still up, ${userProfile.name}? 🌙`;
       }
       
       addChatMessage({ content: greeting, sender: 'aura' });
@@ -480,7 +493,14 @@ export const CalmChatScreen: React.FC<CalmChatScreenProps> = ({ onMenuClick, onN
             <div>
               <div className="flex items-center gap-2">
                 <h1 className="font-semibold text-foreground">AURRA</h1>
-                {/* Subtle weather indicator */}
+                {/* Time of day icon */}
+                <span className="text-sm">
+                  {realtimeContext.timeOfDay === 'morning' && '🌅'}
+                  {realtimeContext.timeOfDay === 'afternoon' && '☀️'}
+                  {realtimeContext.timeOfDay === 'evening' && '🌆'}
+                  {realtimeContext.timeOfDay === 'night' && '🌙'}
+                </span>
+                {/* Weather & Temperature indicator */}
                 {realtimeContext.hasWeather && realtimeContext.temperature !== null && (
                   <motion.div
                     initial={{ opacity: 0, scale: 0.8 }}
