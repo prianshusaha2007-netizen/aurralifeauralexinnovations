@@ -5,7 +5,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { PersonaProvider } from "@/contexts/PersonaContext";
-import { AuraProvider } from "@/contexts/AuraContext";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import ResetPassword from "./pages/ResetPassword";
@@ -34,11 +33,7 @@ const App = () => (
               <Route path="/gallery" element={<ImageGalleryScreen />} />
               <Route path="/chat-history" element={<ChatHistoryScreen />} />
               <Route path="/skills" element={<SkillsDashboardScreen />} />
-              <Route path="/subscription" element={
-                <AuraProvider>
-                  <SubscriptionScreen />
-                </AuraProvider>
-              } />
+              <Route path="/subscription" element={<SubscriptionScreen />} />
               <Route path="/privacy" element={<PrivacyPolicy />} />
               <Route path="/terms" element={<TermsOfService />} />
               <Route path="*" element={<NotFound />} />
