@@ -40,6 +40,7 @@ import { useSettingsIntent } from '@/hooks/useSettingsIntent';
 import { useWeatherSuggestions } from '@/hooks/useWeatherSuggestions';
 import { useSmartRoutine } from '@/hooks/useSmartRoutine';
 import { useUserStateDetection } from '@/hooks/useUserStateDetection';
+import { useUserJourney } from '@/hooks/useUserJourney';
 import { FirstTimePreferences } from '@/components/FirstTimePreferences';
 import { NightWindDownFlow } from '@/components/NightWindDownFlow';
 import { RoutineOnboardingChat } from '@/components/RoutineOnboardingChat';
@@ -47,6 +48,7 @@ import { ChatRoutineNudge } from '@/components/ChatRoutineNudge';
 import { BurnoutSupportCard } from '@/components/BurnoutSupportCard';
 import { ExamModeCard } from '@/components/ExamModeCard';
 import { FounderModeCard } from '@/components/FounderModeCard';
+import { CompactJourneyBadge } from '@/components/JourneyStatusBadge';
 import { MorningBriefingCard } from '@/components/MorningBriefingCard';
 import { DailyFlowDebugPanel } from '@/components/DailyFlowDebugPanel';
 import { cn } from '@/lib/utils';
@@ -165,6 +167,17 @@ export const CalmChatScreen: React.FC<CalmChatScreenProps> = ({ onMenuClick, onN
     logSkippedRoutine,
     setMoodRating,
   } = useUserStateDetection();
+  
+  // User journey tracking (30-day retention arc, stress states, persona scoring)
+  const {
+    daysSinceFirstUse,
+    retentionPhase,
+    stressState,
+    dominantPersona,
+    consecutiveActiveDays,
+    phaseAdaptations,
+    getPersonaGreeting,
+  } = useUserJourney();
   
   // Real-time context (location, weather, time awareness)
   const { context: realtimeContext } = useRealtimeContext();
@@ -335,25 +348,18 @@ export const CalmChatScreen: React.FC<CalmChatScreenProps> = ({ onMenuClick, onN
       // New day - show contextual greeting and mark as greeted
       markGreeting();
       
-      const hour = new Date().getHours();
+      // Use journey-aware, persona-specific greeting
       const name = userProfile.name || 'friend';
-      let greeting = '';
+      let greeting = getPersonaGreeting();
       
-      // Time-contextual greetings with routine awareness
-      if (hour >= 5 && hour < 12) {
-        // Morning greeting with routine context
-        greeting = `Morning, ${name} ☀️\nReady when you are.`;
-      } else if (hour >= 12 && hour < 17) {
-        greeting = `Hey ${name}. What's on your mind?`;
-      } else if (hour >= 17 && hour < 21) {
-        greeting = `Evening, ${name}. Want to chat or just chill?`;
-      } else {
-        greeting = `Still up, ${name}? 🌙`;
+      // Add name for first few days (safety phase)
+      if (retentionPhase === 'safety' && name !== 'friend') {
+        greeting = `Hey ${name} 👋`;
       }
       
       addChatMessage({ content: greeting, sender: 'aura' });
     }
-  }, [userProfile.onboardingComplete, userProfile.name, chatMessages.length, addChatMessage, hasGreetedToday, markGreeting]);
+  }, [userProfile.onboardingComplete, userProfile.name, chatMessages.length, addChatMessage, hasGreetedToday, markGreeting, getPersonaGreeting, retentionPhase]);
 
   // Weather-based proactive suggestions
   useEffect(() => {
@@ -556,6 +562,11 @@ export const CalmChatScreen: React.FC<CalmChatScreenProps> = ({ onMenuClick, onN
                     <span>{Math.round(realtimeContext.temperature)}°</span>
                   </motion.div>
                 )}
+                {/* Journey status badge */}
+                <CompactJourneyBadge 
+                  daysSinceFirstUse={daysSinceFirstUse}
+                  stressState={stressState}
+                />
               </div>
               {/* Status Indicator */}
               <StatusIndicator status={auraStatus} />

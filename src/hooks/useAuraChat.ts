@@ -13,6 +13,7 @@ import { useSmartRoutine, SmartRoutineBlock } from './useSmartRoutine';
 import { useMasterIntentEngine } from './useMasterIntentEngine';
 import { useChatActions } from './useChatActions';
 import { useRealtimeContext } from './useRealtimeContext';
+import { useUserJourney } from './useUserJourney';
 import { hasGreetedToday } from '@/utils/dailyGreeting';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -158,6 +159,19 @@ export const useAuraChat = () => {
     skipBlock,
     shiftBlock,
   } = useSmartRoutine();
+  
+  // User journey tracking for retention and adaptive behavior
+  const {
+    daysSinceFirstUse,
+    retentionPhase,
+    stressState,
+    dominantPersona,
+    studentScore,
+    founderScore,
+    consecutiveActiveDays,
+    energyLevel,
+    phaseAdaptations,
+  } = useUserJourney();
   const { classifyIntent, getResponseStrategy } = useMasterIntentEngine();
   const { handleChatAction, showUpgradeSheet, setShowUpgradeSheet, focusState } = useChatActions();
   const { context: realtimeContext, getContextForAI } = useRealtimeContext();
@@ -418,6 +432,25 @@ export const useAuraChat = () => {
               systemPersona: responseStrategy.systemPersona,
               responseLength: responseStrategy.responseLength,
               featureHint: responseStrategy.featureHint,
+            },
+            // User Journey - 30-day retention arc, stress states, persona scoring
+            journeyContext: {
+              daysSinceFirstUse,
+              retentionPhase,
+              stressState,
+              dominantPersona,
+              studentScore,
+              founderScore,
+              consecutiveActiveDays,
+              energyLevel,
+              // Phase-specific behavior adaptations
+              adaptations: {
+                responseLength: phaseAdaptations.responseLength,
+                pushRoutines: phaseAdaptations.pushRoutines,
+                showReminders: phaseAdaptations.showReminders,
+                suggestionsPerDay: phaseAdaptations.suggestionsPerDay,
+                toneIntensity: phaseAdaptations.toneIntensity,
+              },
             },
           },
         }),
