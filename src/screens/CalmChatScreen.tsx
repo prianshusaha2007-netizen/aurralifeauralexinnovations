@@ -538,11 +538,16 @@ export const CalmChatScreen: React.FC<CalmChatScreenProps> = ({ onMenuClick, onN
               <Button
                 variant="ghost"
                 size="sm"
-                className="rounded-full h-8 px-2.5 text-xs text-muted-foreground hover:text-primary hover:bg-primary/10 gap-1"
+                className={cn(
+                  "rounded-full h-8 px-2.5 text-xs text-muted-foreground hover:text-primary hover:bg-primary/10 gap-1",
+                  creditStatus.usagePercent >= 80 && "animate-pulse text-amber-500 hover:text-amber-600"
+                )}
                 onClick={() => navigate('/subscription')}
               >
                 <CreditCard className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Free</span>
+                <span className="hidden sm:inline">
+                  {creditStatus.usagePercent >= 100 ? 'Upgrade' : 'Free'}
+                </span>
               </Button>
             )}
             
