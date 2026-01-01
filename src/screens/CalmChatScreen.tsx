@@ -39,10 +39,14 @@ import { useRealtimeContext } from '@/hooks/useRealtimeContext';
 import { useSettingsIntent } from '@/hooks/useSettingsIntent';
 import { useWeatherSuggestions } from '@/hooks/useWeatherSuggestions';
 import { useSmartRoutine } from '@/hooks/useSmartRoutine';
+import { useUserStateDetection } from '@/hooks/useUserStateDetection';
 import { FirstTimePreferences } from '@/components/FirstTimePreferences';
 import { NightWindDownFlow } from '@/components/NightWindDownFlow';
 import { RoutineOnboardingChat } from '@/components/RoutineOnboardingChat';
 import { ChatRoutineNudge } from '@/components/ChatRoutineNudge';
+import { BurnoutSupportCard } from '@/components/BurnoutSupportCard';
+import { ExamModeCard } from '@/components/ExamModeCard';
+import { FounderModeCard } from '@/components/FounderModeCard';
 import { MorningBriefingCard } from '@/components/MorningBriefingCard';
 import { DailyFlowDebugPanel } from '@/components/DailyFlowDebugPanel';
 import { cn } from '@/lib/utils';
@@ -153,6 +157,14 @@ export const CalmChatScreen: React.FC<CalmChatScreenProps> = ({ onMenuClick, onN
   
   // Smart routine with nudges
   const { activeNudge, respondToNudge, pendingNudges } = useSmartRoutine();
+  
+  // User state detection (burnout, exam mode, founder mode)
+  const { 
+    state: userState, 
+    adaptations, 
+    logSkippedRoutine,
+    setMoodRating,
+  } = useUserStateDetection();
   
   // Real-time context (location, weather, time awareness)
   const { context: realtimeContext } = useRealtimeContext();
@@ -780,7 +792,12 @@ export const CalmChatScreen: React.FC<CalmChatScreenProps> = ({ onMenuClick, onN
               <NightWindDownFlow
                 onDismiss={dismissWindDown}
                 onSendMessage={handleSend}
-                onAdjustTomorrow={adjustTomorrowRoutine}
+                onAdjustTomorrow={(intensity) => {
+                  adjustTomorrowRoutine(intensity);
+                  // Also set mood for state detection
+                  const moodMap = { lighter: 'heavy', same: 'okay', heavier: 'good' } as const;
+                  setMoodRating(moodMap[intensity] || 'okay');
+                }}
               />
             )}
           </AnimatePresence>
@@ -800,15 +817,61 @@ export const CalmChatScreen: React.FC<CalmChatScreenProps> = ({ onMenuClick, onN
             {activeNudge && !showWindDown && !showRoutineOnboarding && !showPreferences && (
               <ChatRoutineNudge
                 nudge={activeNudge}
-                onRespond={(action, blockId) => respondToNudge(action)}
+                onRespond={(action, blockId) => {
+                  respondToNudge(action);
+                  if (action === 'skip') {
+                    logSkippedRoutine();
+                  }
+                }}
                 onSendMessage={handleSend}
+              />
+            )}
+          </AnimatePresence>
+
+          {/* State-Adaptive Cards - Burnout, Exam Mode, Founder Mode */}
+          <AnimatePresence>
+            {userState === 'burnout' && !showWindDown && !showPreferences && !showRoutineOnboarding && chatMessages.length <= 2 && (
+              <BurnoutSupportCard
+                timeOfDay={realtimeContext.timeOfDay || 'morning'}
+                onChoice={(choice) => {
+                  if (choice === 'light' || choice === 'later') {
+                    addChatMessage({ content: "I'll keep things simple today.", sender: 'aura' });
+                  }
+                }}
+                onDismiss={() => {}}
+              />
+            )}
+          </AnimatePresence>
+
+          <AnimatePresence>
+            {userState === 'exam_mode' && !showWindDown && !showPreferences && !showRoutineOnboarding && chatMessages.length <= 2 && (
+              <ExamModeCard
+                timeOfDay={realtimeContext.timeOfDay || 'morning'}
+                onChoice={(choice) => {
+                  addChatMessage({ content: `Exam mode: ${choice}`, sender: 'user' });
+                }}
+                onSendMessage={handleSend}
+                onDismiss={() => {}}
+              />
+            )}
+          </AnimatePresence>
+
+          <AnimatePresence>
+            {userState === 'founder_mode' && !showWindDown && !showPreferences && !showRoutineOnboarding && chatMessages.length <= 2 && (
+              <FounderModeCard
+                timeOfDay={realtimeContext.timeOfDay || 'morning'}
+                onChoice={(choice) => {
+                  addChatMessage({ content: `Priority set: ${choice}`, sender: 'aura' });
+                }}
+                onSendMessage={handleSend}
+                onDismiss={() => {}}
               />
             )}
           </AnimatePresence>
 
           {/* Quick Actions - Show when chat is empty or minimal */}
           <AnimatePresence>
-            {showQuickActions && !showMorningBriefing && !showPreferences && !showWindDown && chatMessages.length <= 1 && (
+            {showQuickActions && !showMorningBriefing && !showPreferences && !showWindDown && userState === 'normal' && chatMessages.length <= 1 && (
               <ChatQuickActions 
                 onAction={handleQuickAction}
                 className="py-6"
