@@ -89,3 +89,9 @@ verify_jwt = true
 
 [functions.razorpay-webhook]
 verify_jwt = false
+
+[functions.dashboard-webhook]
+verify_jwt = false
+
+[functions.elevenlabs-scribe-token]
+verify_jwt = true
