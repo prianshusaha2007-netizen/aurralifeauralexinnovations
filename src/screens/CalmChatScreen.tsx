@@ -55,6 +55,7 @@ import { DailyFlowDebugPanel } from '@/components/DailyFlowDebugPanel';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { motion, AnimatePresence } from 'framer-motion';
+import { DailyPlanIndicator, DailyPlanBadge, DailyPlanAdaptCard } from '@/components/DailyPlanIndicator';
 import auraAvatar from '@/assets/aura-avatar.jpeg';
 
 interface CalmChatScreenProps {
@@ -582,6 +583,8 @@ export const CalmChatScreen: React.FC<CalmChatScreenProps> = ({ onMenuClick, onN
                   daysSinceFirstUse={daysSinceFirstUse}
                   stressState={stressState}
                 />
+                {/* Daily plan intensity badge */}
+                <DailyPlanBadge />
               </div>
               {/* Status Indicator */}
               <StatusIndicator status={auraStatus} />
@@ -722,6 +725,9 @@ export const CalmChatScreen: React.FC<CalmChatScreenProps> = ({ onMenuClick, onN
         </AnimatePresence>
         
         <div className="max-w-2xl mx-auto space-y-5">
+          {/* Daily Plan Adaptation Card - shows after user provides plan */}
+          <DailyPlanAdaptCard className="mb-4" />
+          
           {chatMessages.map((message, index) => (
             <SplitChatBubble
               key={message.id}
