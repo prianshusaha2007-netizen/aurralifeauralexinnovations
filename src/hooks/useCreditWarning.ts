@@ -22,6 +22,7 @@ const DEFAULT_CREDIT_STATUS: CreditStatus = {
   showSoftWarning: false,
   isLimitReached: false,
   allowFinalReply: true,
+  dailyCreditsRemaining: 30,
   actionAllowed: () => true,
 };
 

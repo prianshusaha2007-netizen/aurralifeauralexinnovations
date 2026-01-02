@@ -1,11 +1,11 @@
 import React, { useState, useContext } from 'react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
-import { Check, Heart, Sparkles, Star, Rocket, Crown, Loader2, RefreshCw, Users, Brain, Dumbbell, Palette } from 'lucide-react';
+import { Check, Heart, Sparkles, Star, Rocket, Crown, Loader2, RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useCredits } from '@/hooks/useCredits';
+import { useCredits, SubscriptionTier } from '@/hooks/useCredits';
 import { AuraContext } from '@/contexts/AuraContext';
-import { useRelationshipEvolution, SubscriptionTier } from '@/hooks/useRelationshipEvolution';
+import { useRelationshipEvolution } from '@/hooks/useRelationshipEvolution';
 import { useRazorpay, PaymentMode } from '@/hooks/useRazorpay';
 import { useAuth } from '@/hooks/useAuth';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -16,11 +16,11 @@ interface UpgradeSheetProps {
   onOpenChange: (open: boolean) => void;
 }
 
+// Plan configuration matching the spec exactly
 const TIER_CONFIG: Record<SubscriptionTier, {
   name: string;
   icon: React.ComponentType<{ className?: string }>;
   price: string;
-  priceRange: string;
   priceValue: number;
   color: string;
   tagline: string;
@@ -28,71 +28,73 @@ const TIER_CONFIG: Record<SubscriptionTier, {
   features: { label: string; highlight?: boolean }[];
 }> = {
   core: {
-    name: 'AURRA Core',
+    name: 'Free',
     icon: Heart,
     price: 'Free',
-    priceRange: 'Free',
     priceValue: 0,
     color: 'text-muted-foreground',
-    tagline: 'For getting started',
-    description: 'A calm, supportive companion — no pressure.',
+    tagline: 'Light use',
+    description: 'For checking in, quick chats, and getting a feel for AURRA.',
     features: [
-      { label: 'Companion persona' },
-      { label: 'Best Friend (light)' },
-      { label: 'Daily check-ins' },
-      { label: 'Emotional support' },
+      { label: 'Daily conversations (limited)' },
       { label: 'Basic reminders' },
-      { label: 'Limited memory' },
-      { label: 'Limited conversations' },
+      { label: 'Short-term memory' },
+      { label: 'Calm responses' },
+    ],
+  },
+  basic: {
+    name: 'Basic',
+    icon: Star,
+    price: '₹99/month',
+    priceValue: 99,
+    color: 'text-blue-500',
+    tagline: 'For students',
+    description: 'For regular check-ins, routines, and staying consistent.',
+    features: [
+      { label: 'More daily conversations', highlight: true },
+      { label: 'Daily routine & hydration' },
+      { label: 'Medium-depth replies' },
+      { label: 'Memory across days', highlight: true },
+      { label: 'Light image generation' },
     ],
   },
   plus: {
-    name: 'AURRA Plus',
-    icon: Star,
-    price: '₹99',
-    priceRange: '₹99/month',
-    priceValue: 99,
+    name: 'Plus',
+    icon: Sparkles,
+    price: '₹199/month',
+    priceValue: 199,
     color: 'text-primary',
-    tagline: 'For consistency & growth',
-    description: 'Most users choose this',
+    tagline: 'Most popular',
+    description: 'Most people choose this.',
     features: [
-      { label: 'Best Friend (deep)', highlight: true },
-      { label: 'Mentor persona (full)', highlight: true },
-      { label: 'Coach persona (gym, habits)', highlight: true },
-      { label: 'Creative partner persona', highlight: true },
-      { label: 'Longer conversations' },
-      { label: 'Full Life Memory Graph', highlight: true },
-      { label: 'Skill sessions' },
-      { label: 'Voice replies' },
-      { label: 'Image & document tools' },
+      { label: 'Long reasoning & explanations', highlight: true },
+      { label: 'Coding & learning help', highlight: true },
+      { label: 'Strong memory continuity' },
+      { label: 'Image + document creation' },
+      { label: 'Faster responses', highlight: true },
     ],
   },
   pro: {
-    name: 'AURRA Pro',
+    name: 'Pro',
     icon: Crown,
-    price: '₹299',
-    priceRange: '₹299/month',
+    price: '₹299/month',
     priceValue: 299,
     color: 'text-amber-500',
-    tagline: 'For builders & serious self-growth',
-    description: 'Built for people building something meaningful',
+    tagline: 'Power users',
+    description: 'For founders and power users who stay connected all day.',
     features: [
       { label: 'Everything in Plus', highlight: true },
-      { label: 'Co-Founder / Thinking Partner', highlight: true },
-      { label: 'Long-term planning' },
-      { label: 'Decision tracking' },
-      { label: 'Skill acceleration paths' },
-      { label: 'Advanced insights' },
-      { label: 'Priority responses' },
-      { label: 'Higher limits' },
+      { label: 'Highest daily access', highlight: true },
+      { label: 'Deep memory & recall' },
+      { label: 'Priority response speed' },
+      { label: 'Full Life-OS features', highlight: true },
     ],
   },
 };
 
 export const UpgradeSheet: React.FC<UpgradeSheetProps> = ({ open, onOpenChange }) => {
-  const { upgradeToPremium } = useCredits();
+  const { upgradeToPremium, tier: currentTier } = useCredits();
   const { upgradeTier, recordUpgradePrompt, engagement } = useRelationshipEvolution();
-  // Use optional context to avoid crash outside AuraProvider
   const auraContext = useContext(AuraContext);
   const userProfile = auraContext?.userProfile ?? { name: 'User', aiName: 'AURRA' };
   const { user } = useAuth();
@@ -102,7 +104,7 @@ export const UpgradeSheet: React.FC<UpgradeSheetProps> = ({ open, onOpenChange }
 
   const aiName = userProfile.aiName ?? 'AURRA';
   const userName = userProfile.name ?? 'User';
-  const currentTier = engagement?.subscriptionTier || 'core';
+  const displayCurrentTier = engagement?.subscriptionTier || currentTier || 'core';
 
   const handleUpgrade = async (tier: SubscriptionTier) => {
     if (tier === 'core' || !user) return;
@@ -110,12 +112,12 @@ export const UpgradeSheet: React.FC<UpgradeSheetProps> = ({ open, onOpenChange }
     let success = false;
     
     if (paymentMode === 'subscription') {
-      success = await initiateSubscription(tier as 'plus' | 'pro', user.id, {
+      success = await initiateSubscription(tier as 'basic' | 'plus' | 'pro', user.id, {
         name: userName,
         email: user.email,
       });
     } else {
-      success = await initiatePayment(tier as 'plus' | 'pro', user.id, {
+      success = await initiatePayment(tier as 'basic' | 'plus' | 'pro', user.id, {
         name: userName,
         email: user.email,
       });
@@ -123,19 +125,22 @@ export const UpgradeSheet: React.FC<UpgradeSheetProps> = ({ open, onOpenChange }
 
     if (success) {
       await upgradeTier(tier);
-      await upgradeToPremium();
+      await upgradeToPremium(tier);
       await recordUpgradePrompt();
       onOpenChange(false);
     }
   };
 
   const getTierIndex = (tier: SubscriptionTier) => {
-    return tier === 'core' ? 0 : tier === 'plus' ? 1 : 2;
+    const order = { core: 0, basic: 1, plus: 2, pro: 3 };
+    return order[tier] ?? 0;
   };
 
   const canUpgradeTo = (tier: SubscriptionTier) => {
-    return getTierIndex(tier) > getTierIndex(currentTier);
+    return getTierIndex(tier) > getTierIndex(displayCurrentTier as SubscriptionTier);
   };
+
+  const tiers: SubscriptionTier[] = ['core', 'basic', 'plus', 'pro'];
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -156,19 +161,19 @@ export const UpgradeSheet: React.FC<UpgradeSheetProps> = ({ open, onOpenChange }
 
         <div className="mt-3 space-y-3 overflow-y-auto max-h-[60vh] pb-4">
           {/* Tier Selection Pills */}
-          <div className="flex gap-2 justify-center">
-            {(['core', 'plus', 'pro'] as SubscriptionTier[]).map((tier) => {
+          <div className="flex gap-2 justify-center flex-wrap">
+            {tiers.map((tier) => {
               const config = TIER_CONFIG[tier];
               const Icon = config.icon;
               const isSelected = selectedTier === tier;
-              const isCurrent = currentTier === tier;
+              const isCurrent = displayCurrentTier === tier;
               
               return (
                 <button
                   key={tier}
                   onClick={() => setSelectedTier(tier)}
                   className={cn(
-                    "flex flex-col items-center gap-0.5 px-4 py-2 rounded-xl transition-all",
+                    "flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl transition-all",
                     isSelected 
                       ? "bg-primary/10 border-2 border-primary" 
                       : "bg-muted/50 border-2 border-transparent hover:bg-muted",
@@ -177,7 +182,7 @@ export const UpgradeSheet: React.FC<UpgradeSheetProps> = ({ open, onOpenChange }
                 >
                   <Icon className={cn("w-4 h-4", config.color)} />
                   <span className={cn("text-xs font-medium", config.color)}>
-                    {tier === 'core' ? 'Free' : tier.charAt(0).toUpperCase() + tier.slice(1)}
+                    {config.name}
                   </span>
                   {isCurrent && (
                     <span className="text-[9px] text-green-600 dark:text-green-400">Current</span>
@@ -188,11 +193,11 @@ export const UpgradeSheet: React.FC<UpgradeSheetProps> = ({ open, onOpenChange }
           </div>
 
           {/* Selected Tier Details */}
-          {(['core', 'plus', 'pro'] as SubscriptionTier[]).map((tier) => {
+          {tiers.map((tier) => {
             const config = TIER_CONFIG[tier];
             const Icon = config.icon;
             const isVisible = selectedTier === tier;
-            const isCurrent = currentTier === tier;
+            const isCurrent = displayCurrentTier === tier;
             const canUpgrade = canUpgradeTo(tier);
             
             if (!isVisible) return null;
@@ -228,7 +233,7 @@ export const UpgradeSheet: React.FC<UpgradeSheetProps> = ({ open, onOpenChange }
                 </p>
                 
                 <div className="text-lg font-bold mb-3">
-                  {config.priceRange}
+                  {config.price}
                 </div>
                 
                 <div className="grid grid-cols-2 gap-x-2 gap-y-1.5">
@@ -313,20 +318,17 @@ export const UpgradeSheet: React.FC<UpgradeSheetProps> = ({ open, onOpenChange }
                           ) : (
                             <>
                               <Sparkles className="w-5 h-5 mr-2" />
-                              Upgrade to {tier === 'plus' ? 'Plus' : 'Pro'}
+                              Upgrade to {config.name}
                             </>
                           )}
                         </Button>
                         <p className="text-[10px] text-center text-muted-foreground mt-2">
-                          {tier === 'plus' 
-                            ? 'Cancel anytime · No lock-in' 
-                            : 'Built for people building something meaningful'
-                          }
+                          Cancel anytime · No lock-in
                         </p>
                       </>
                     ) : (
                       <div className="text-center text-sm text-muted-foreground py-2">
-                        Upgrade to Plus first
+                        Already included in your plan
                       </div>
                     )}
                   </div>

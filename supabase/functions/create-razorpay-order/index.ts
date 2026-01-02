@@ -89,9 +89,11 @@ serve(async (req) => {
     }
 
     // Define pricing (in paise - 1 INR = 100 paise)
-    const tierPricing: Record<string, { amount: number; name: string }> = {
-      plus: { amount: 9900, name: 'AURRA Plus' },   // ₹99
-      pro: { amount: 29900, name: 'AURRA Pro' },    // ₹299
+    // Free ₹0, Basic ₹99, Plus ₹199, Pro ₹299
+    const tierPricing: Record<string, { amount: number; name: string; credits: number }> = {
+      basic: { amount: 9900, name: 'AURRA Basic', credits: 120 },   // ₹99
+      plus: { amount: 19900, name: 'AURRA Plus', credits: 300 },    // ₹199
+      pro: { amount: 29900, name: 'AURRA Pro', credits: 999 },      // ₹299
     };
 
     const tierInfo = tierPricing[tier];

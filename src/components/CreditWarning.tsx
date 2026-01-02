@@ -12,6 +12,10 @@ interface CreditWarningProps {
   className?: string;
 }
 
+/**
+ * Credit warning component with WhatsApp-style friendly messaging.
+ * UX Rule: Instead of showing technical credit info, AURRA says calm, human messages.
+ */
 export const CreditWarning: React.FC<CreditWarningProps> = ({
   type,
   aiName = 'AURRA',
@@ -20,7 +24,7 @@ export const CreditWarning: React.FC<CreditWarningProps> = ({
   onStayLonger,
   className
 }) => {
-  // Soft warning at ~80% usage (WhatsApp style - casual, no pressure)
+  // Soft warning at ~80% usage - casual, no pressure
   if (type === 'soft') {
     return (
       <div className={cn(
@@ -31,7 +35,7 @@ export const CreditWarning: React.FC<CreditWarningProps> = ({
           We've talked quite a bit today 🙂
           <br />
           <span className="text-muted-foreground">
-            Want to continue tomorrow, or stay longer?
+            Want to continue tomorrow or stay longer?
           </span>
         </p>
         <div className="flex gap-2 mt-1">
@@ -42,7 +46,7 @@ export const CreditWarning: React.FC<CreditWarningProps> = ({
             onClick={onContinueTomorrow}
           >
             <Clock className="w-3 h-3 mr-1" />
-            Tomorrow's fine
+            Continue Tomorrow
           </Button>
           <Button 
             variant="outline" 
@@ -58,17 +62,17 @@ export const CreditWarning: React.FC<CreditWarningProps> = ({
     );
   }
 
-  // Limit reached - still allow one final response (WhatsApp style)
+  // Limit reached - friendly pause message (no technical jargon)
   return (
     <div className={cn(
       "flex flex-col gap-2 p-4 rounded-2xl bg-gradient-to-br from-primary/5 to-accent/5 border border-primary/20 text-sm animate-fade-in",
       className
     )}>
       <p className="text-foreground">
-        Let's pause here for today.
+        Let's pause here for today 🙂
         <br />
         <span className="text-muted-foreground">
-          I'll be right here tomorrow — or you can unlock more time anytime.
+          Want to continue tomorrow or upgrade?
         </span>
       </p>
       <div className="flex gap-2 mt-2">

@@ -151,13 +151,22 @@ serve(async (req) => {
       console.error('Error updating engagement:', engagementError);
     }
 
-    // Update user_credits to premium
+    // Update user_credits to premium with new tier limits
+    // Free: 30, Basic: 120, Plus: 300, Pro: 999 (unlimited)
+    const creditLimits: Record<string, number> = {
+      core: 30,
+      basic: 120,
+      plus: 300,
+      pro: 999,
+    };
+    
     const { error: creditsError } = await supabase
       .from('user_credits')
       .update({
         is_premium: true,
         premium_since: new Date().toISOString(),
-        daily_credits_limit: tier === 'pro' ? 500 : 200,
+        daily_credits_limit: creditLimits[tier] || 300,
+        daily_credits_used: 0, // Reset on upgrade
         updated_at: new Date().toISOString(),
       })
       .eq('user_id', authenticatedUserId);

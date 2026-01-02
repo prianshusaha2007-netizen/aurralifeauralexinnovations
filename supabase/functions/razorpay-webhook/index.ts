@@ -269,13 +269,22 @@ async function handleSubscriptionActivated(supabase: any, subscriptionData: Reco
     logWebhookEvent('DB_ERROR', { requestId, handler: 'activated', table: 'user_engagement', error: engError.message });
   }
 
-  // Update user_credits
+  // Update user_credits with new tier limits
+  // Free: 30, Basic: 120, Plus: 300, Pro: 999 (unlimited)
+  const creditLimits: Record<string, number> = {
+    core: 30,
+    basic: 120,
+    plus: 300,
+    pro: 999,
+  };
+  
   const { error: credError } = await supabase
     .from('user_credits')
     .update({
       is_premium: true,
       premium_since: new Date().toISOString(),
-      daily_credits_limit: tier === 'pro' ? 500 : 200,
+      daily_credits_limit: creditLimits[tier] || 300,
+      daily_credits_used: 0, // Reset on activation
       updated_at: new Date().toISOString(),
     })
     .eq('user_id', userId);
@@ -374,7 +383,7 @@ async function handleSubscriptionEnded(supabase: any, subscriptionData: Record<s
     .from('user_credits')
     .update({
       is_premium: false,
-      daily_credits_limit: 50,
+      daily_credits_limit: 30, // Free tier limit
       updated_at: new Date().toISOString(),
     })
     .eq('user_id', userId);

@@ -72,9 +72,9 @@ export const useRazorpay = () => {
     };
   }, []);
 
-  // One-time payment - userId parameter kept for backward compatibility but not sent to server
+  // One-time payment - supports basic, plus, pro tiers
   const initiatePayment = useCallback(async (
-    tier: 'plus' | 'pro',
+    tier: 'basic' | 'plus' | 'pro',
     _userId: string, // Ignored - server uses authenticated user
     userProfile?: { name?: string; email?: string }
   ): Promise<boolean> => {
@@ -198,9 +198,9 @@ export const useRazorpay = () => {
     }
   }, [isScriptLoaded]);
 
-  // Subscription (recurring) payment - userId parameter kept for backward compatibility but not sent to server
+  // Subscription (recurring) payment - supports basic, plus, pro tiers
   const initiateSubscription = useCallback(async (
-    tier: 'plus' | 'pro',
+    tier: 'basic' | 'plus' | 'pro',
     _userId: string, // Ignored - server uses authenticated user
     userProfile?: { name?: string; email?: string }
   ): Promise<boolean> => {

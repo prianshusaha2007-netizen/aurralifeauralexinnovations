@@ -29,10 +29,11 @@ function checkRateLimit(userId: string): { allowed: boolean; retryAfter?: number
   return { allowed: true };
 }
 
-// Tier pricing configuration
-const TIER_CONFIG: Record<string, { name: string; amount: number }> = {
-  plus: { name: 'AURRA Plus', amount: 9900 },   // ₹99
-  pro: { name: 'AURRA Pro', amount: 29900 },    // ₹299
+// Tier pricing configuration - Free ₹0, Basic ₹99, Plus ₹199, Pro ₹299
+const TIER_CONFIG: Record<string, { name: string; amount: number; credits: number }> = {
+  basic: { name: 'AURRA Basic', amount: 9900, credits: 120 },   // ₹99
+  plus: { name: 'AURRA Plus', amount: 19900, credits: 300 },    // ₹199
+  pro: { name: 'AURRA Pro', amount: 29900, credits: 999 },      // ₹299
 };
 
 serve(async (req) => {

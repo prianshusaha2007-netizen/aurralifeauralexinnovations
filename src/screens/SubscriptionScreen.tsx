@@ -35,12 +35,13 @@ interface Subscription {
   cancelled_at: string | null;
 }
 
-// Plan definitions following the exact spec
+// Plan definitions following the exact spec:
+// Free ₹0 (30 credits), Basic ₹99 (120), Plus ₹199 (300), Pro ₹299 (unlimited)
 const PLANS = [
   {
     id: 'core',
     name: 'Free',
-    tag: 'Light daily use',
+    tag: 'Light use',
     price: null,
     priceLabel: 'Free',
     description: 'For checking in, quick chats, and getting a feel for AURRA.',
@@ -56,7 +57,7 @@ const PLANS = [
   {
     id: 'basic',
     name: 'Basic',
-    tag: 'Everyday companion',
+    tag: 'For students',
     price: 99,
     priceLabel: '₹99/month',
     description: 'For regular check-ins, routines, and staying consistent.',
@@ -71,8 +72,8 @@ const PLANS = [
     highlight: false,
   },
   {
-    id: 'pro',
-    name: 'Pro',
+    id: 'plus',
+    name: 'Plus',
     tag: 'Most popular',
     price: 199,
     priceLabel: '₹199/month',
@@ -84,13 +85,13 @@ const PLANS = [
       'Image + document creation',
       'Faster responses',
     ],
-    ctaText: 'Upgrade to Pro',
+    ctaText: 'Upgrade to Plus',
     highlight: true,
   },
   {
-    id: 'max',
-    name: 'Max',
-    tag: 'All-day access',
+    id: 'pro',
+    name: 'Pro',
+    tag: 'Power users',
     price: 299,
     priceLabel: '₹299/month',
     description: 'For founders and power users who stay connected all day.',
@@ -101,7 +102,7 @@ const PLANS = [
       'Full Life-OS features',
       'Everything unlocked',
     ],
-    ctaText: 'Upgrade to Max',
+    ctaText: 'Upgrade to Pro',
     highlight: false,
   },
 ];
@@ -109,9 +110,9 @@ const PLANS = [
 // Map subscription tiers to plan IDs
 const TIER_TO_PLAN: Record<string, string> = {
   core: 'core',
-  plus: 'basic',
+  basic: 'basic',
+  plus: 'plus',
   pro: 'pro',
-  max: 'max',
 };
 
 const SubscriptionScreen: React.FC = () => {
@@ -179,12 +180,13 @@ const SubscriptionScreen: React.FC = () => {
 
       await supabase
         .from('user_credits')
-        .update({ is_premium: false })
+        .update({ 
+          is_premium: false,
+          daily_credits_limit: 30, // Free tier limit
+        })
         .eq('user_id', user.id);
 
-      // Show a friendly toast instead of chat message (since we're outside AuraProvider)
       toast.info("I'll still be here — just a little lighter. 🤍");
-
       toast.success("Your subscription has been cancelled. You'll keep your benefits until the end of the billing period.");
       fetchData();
     } catch (error) {
@@ -273,7 +275,7 @@ const SubscriptionScreen: React.FC = () => {
                 isCurrent && !isHighlighted && "border-2 border-primary/50"
               )}
             >
-              {/* Highlight glow effect for Pro */}
+              {/* Highlight glow effect for Plus */}
               {isHighlighted && (
                 <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-primary/5 pointer-events-none" />
               )}

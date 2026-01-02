@@ -32,11 +32,12 @@ import { Progress } from '@/components/ui/progress';
 import { motion } from 'framer-motion';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
-import { useCredits, TIER_LIMITS } from '@/hooks/useCredits';
+import { useCredits, DAILY_CREDITS } from '@/hooks/useCredits';
 
 const TIER_LABELS: Record<string, string> = {
   core: 'Free',
-  plus: 'Basic',
+  basic: 'Basic',
+  plus: 'Plus',
   pro: 'Pro',
 };
 
@@ -178,9 +179,9 @@ export const MoreMenuSheet: React.FC<MoreMenuSheetProps> = ({
   const usagePercent = Math.min(creditStatus.usagePercent, 100);
   
   // Calculate messages remaining
-  const dailyLimit = TIER_LIMITS[tier]?.normal_chat || 25;
+  const dailyLimit = DAILY_CREDITS[tier] || 30;
   const messagesUsed = Math.round((usagePercent / 100) * dailyLimit);
-  const messagesRemaining = Math.max(0, dailyLimit - messagesUsed);
+  const messagesRemaining = creditStatus.dailyCreditsRemaining ?? Math.max(0, dailyLimit - messagesUsed);
   const isNearLimit = usagePercent >= 80;
   const isAtLimit = usagePercent >= 100;
 

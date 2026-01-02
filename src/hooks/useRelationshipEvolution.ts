@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 
 export type RelationshipPhase = 'introduction' | 'familiarity' | 'trusted' | 'companion';
-export type SubscriptionTier = 'core' | 'plus' | 'pro';
+export type SubscriptionTier = 'core' | 'basic' | 'plus' | 'pro';
 
 export interface UserEngagement {
   id: string;
