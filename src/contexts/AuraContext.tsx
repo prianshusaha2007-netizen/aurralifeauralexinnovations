@@ -119,7 +119,7 @@ const defaultUserProfile: UserProfile = {
   autoPlayVoice: false,
 };
 
-const AuraContext = createContext<AuraContextType | undefined>(undefined);
+export const AuraContext = createContext<AuraContextType | undefined>(undefined);
 
 export const AuraProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const { user } = useAuth();

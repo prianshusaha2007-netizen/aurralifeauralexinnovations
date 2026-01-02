@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Check, Heart, Sparkles, Star, Rocket, Crown, Loader2, RefreshCw, Users, Brain, Dumbbell, Palette } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useCredits } from '@/hooks/useCredits';
-import { useAura } from '@/contexts/AuraContext';
+import { AuraContext } from '@/contexts/AuraContext';
 import { useRelationshipEvolution, SubscriptionTier } from '@/hooks/useRelationshipEvolution';
 import { useRazorpay, PaymentMode } from '@/hooks/useRazorpay';
 import { useAuth } from '@/hooks/useAuth';
@@ -92,13 +92,16 @@ const TIER_CONFIG: Record<SubscriptionTier, {
 export const UpgradeSheet: React.FC<UpgradeSheetProps> = ({ open, onOpenChange }) => {
   const { upgradeToPremium } = useCredits();
   const { upgradeTier, recordUpgradePrompt, engagement } = useRelationshipEvolution();
-  const { userProfile } = useAura();
+  // Use optional context to avoid crash outside AuraProvider
+  const auraContext = useContext(AuraContext);
+  const userProfile = auraContext?.userProfile ?? { name: 'User', aiName: 'AURRA' };
   const { user } = useAuth();
   const { initiatePayment, initiateSubscription, isLoading: isPaymentLoading, isReady: isPaymentReady } = useRazorpay();
   const [selectedTier, setSelectedTier] = useState<SubscriptionTier>('plus');
   const [paymentMode, setPaymentMode] = useState<PaymentMode>('subscription');
 
-  const aiName = userProfile.aiName || 'AURRA';
+  const aiName = userProfile.aiName ?? 'AURRA';
+  const userName = userProfile.name ?? 'User';
   const currentTier = engagement?.subscriptionTier || 'core';
 
   const handleUpgrade = async (tier: SubscriptionTier) => {
@@ -108,12 +111,12 @@ export const UpgradeSheet: React.FC<UpgradeSheetProps> = ({ open, onOpenChange }
     
     if (paymentMode === 'subscription') {
       success = await initiateSubscription(tier as 'plus' | 'pro', user.id, {
-        name: userProfile.name,
+        name: userName,
         email: user.email,
       });
     } else {
       success = await initiatePayment(tier as 'plus' | 'pro', user.id, {
-        name: userProfile.name,
+        name: userName,
         email: user.email,
       });
     }
