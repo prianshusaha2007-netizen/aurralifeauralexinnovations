@@ -14,6 +14,7 @@ import { StreakCard } from '@/components/StreakCard';
 import { FriendInviteSystem } from '@/components/FriendInviteSystem';
 import { AchievementBadges } from '@/components/AchievementBadges';
 import { FriendCirclesLeaderboard } from '@/components/FriendCirclesLeaderboard';
+import { CommunityChallenges } from '@/components/CommunityChallenges';
 
 interface LeaderboardEntry {
   rank: number;
@@ -379,58 +380,7 @@ export const SocialLeaderboardScreen: React.FC = () => {
           </TabsContent>
 
           <TabsContent value="challenges" className="space-y-3">
-            {challenges.map((challenge) => (
-              <Card key={challenge.id} className="p-4">
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h3 className="font-semibold">{challenge.title}</h3>
-                      {challenge.joined && (
-                        <Badge variant="secondary" className="text-xs">Joined</Badge>
-                      )}
-                    </div>
-                    <p className="text-sm text-muted-foreground">{challenge.description}</p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-4 text-xs text-muted-foreground mb-3">
-                  <span className="flex items-center gap-1">
-                    <Users className="w-3 h-3" />
-                    {challenge.participants.toLocaleString()} joined
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <TrendingUp className="w-3 h-3" />
-                    {challenge.daysLeft} days left
-                  </span>
-                </div>
-
-                {challenge.joined ? (
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between text-sm">
-                      <span>Progress</span>
-                      <span className="font-medium">{challenge.progress}%</span>
-                    </div>
-                    <Progress value={challenge.progress} className="h-2" />
-                    <p className="text-xs text-muted-foreground">
-                      Reward: {challenge.reward}
-                    </p>
-                  </div>
-                ) : (
-                  <div className="flex items-center justify-between">
-                    <p className="text-xs text-muted-foreground">
-                      Reward: {challenge.reward}
-                    </p>
-                    <Button 
-                      size="sm" 
-                      onClick={() => joinChallenge(challenge.id)}
-                    >
-                      <Plus className="w-4 h-4 mr-1" />
-                      Join
-                    </Button>
-                  </div>
-                )}
-              </Card>
-            ))}
+            <CommunityChallenges />
 
             {/* Weekly Stats */}
             <Card className="p-4">
