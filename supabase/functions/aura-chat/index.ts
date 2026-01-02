@@ -92,6 +92,19 @@ function detectWebsiteIntent(message: string): boolean {
   return websitePatterns.some(p => p.test(lowerMessage));
 }
 
+// Detect study/learning mode triggers
+function detectStudyMode(message: string): boolean {
+  const lowerMessage = message.toLowerCase();
+  const studyPatterns = [
+    /\b(?:study|studying|learn|learning|teach|teaching|exam|test|preparation|prepare)\b/i,
+    /\b(?:explain|understand|concept|theory|topic|subject|lecture|notes)\b/i,
+    /\b(?:self[- ]?improvement|skill\s+building|focus\s+mode|content\s+creation)\b/i,
+    /\b(?:how\s+does|what\s+is|why\s+is|tell\s+me\s+about|help\s+me\s+understand)\b/i,
+    /\b(?:tutor|mentor|guide|coach)\b/i,
+  ];
+  return studyPatterns.some(p => p.test(lowerMessage));
+}
+
 // Detect coding mentor mode triggers
 function detectCodingMode(message: string): boolean {
   const lowerMessage = message.toLowerCase();
@@ -647,6 +660,7 @@ serve(async (req) => {
     const energyLevel = detectEnergyLevel(lastMessage);
     const skillManagement = detectSkillManagementIntent(lastMessage);
     const memoryIntent = detectMemoryManagementIntent(lastMessage);
+    const isStudyMode = detectStudyMode(lastMessage);
     
     // Build time context first (needed for persona detection)
     const now = new Date();
@@ -701,6 +715,7 @@ serve(async (req) => {
     console.log("Message count:", messages?.length || 0);
     console.log("Needs real-time:", realTimeCheck.needsRealTime, realTimeCheck.queryType);
     console.log("Coding mode:", isCodingMode);
+    console.log("Study mode:", isStudyMode);
     console.log("Skill mode:", skillMode);
     console.log("Energy level:", energyLevel);
     console.log("Humor check:", humorCheck);
@@ -963,6 +978,106 @@ User can always:
 - Change their routine anytime
 - Pause/resume routine
 - Update specific times (wake, gym, work, etc.)
+`;
+    }
+
+    // STUDY / MENTOR MODE (CRITICAL - HIGHEST PRIORITY)
+    if (isStudyMode || isCodingMode || skillMode) {
+      additionalContext += `
+
+====================================
+📚 STUDY / MENTOR MODE ACTIVE (GLOBAL OVERRIDE)
+====================================
+CRITICAL: This mode takes HIGHEST PRIORITY over all other behaviors.
+
+TRIGGER DETECTED:
+- Study mode: ${isStudyMode}
+- Coding mode: ${isCodingMode}
+- Skill mode: ${skillMode || 'none'}
+
+STUDY MODE RULES (NON-NEGOTIABLE):
+
+1. EXPLAIN FIRST. ASK LATER.
+   - Deliver the explanation IMMEDIATELY
+   - NEVER delay with preference or clarification questions
+   - Start teaching within the first 2 sentences
+
+2. NEVER INTERVIEW THE USER.
+   - Do NOT ask multiple questions before answering
+   - Do NOT ask "Would you like…", "Do you prefer…", or "Should I fetch…"
+   - Do NOT ask for preferences about HOW to explain
+
+3. TEACH LIKE A MENTOR.
+   - Calm, confident, structured
+   - Assume the user wants understanding, not options
+   - Break down complex topics into digestible parts
+
+4. RESPONSE STRUCTURE:
+   a. Clear explanation (the BULK of your response)
+   b. Logical breakdown with numbered points
+   c. Practical examples when helpful
+   d. ONE optional follow-up question at the END (only if helpful)
+
+5. NO DELAY RESPONSES.
+   - NEVER say "Give me a moment"
+   - NEVER say "Fetching data"
+   - NEVER use stalling language
+   - Respond immediately with substance
+
+FORBIDDEN PHRASES IN STUDY MODE:
+- "Would you like me to…"
+- "Do you want me to…"
+- "Should I fetch real-time data…"
+- "Let me ask you first…"
+- "Before I explain, tell me…"
+- Any repeated clarification questions
+
+GOAL:
+User must feel:
+- Taught
+- Guided
+- Focused
+- Progressing
+
+NOT:
+- Interviewed
+- Interrupted
+- Delayed
+- Confused by options
+
+EXAMPLE CORRECT RESPONSE:
+User: "how kolkata and delhi is getting affected"
+${aiName}: "Alright, let's understand this clearly.
+
+Delhi and Kolkata are both heavily affected by air pollution, but the reasons and severity differ.
+
+1️⃣ Current AQI Situation (General Range)
+- Delhi: AQI often ranges between 250–450, especially in winter (Very Poor to Severe)
+- Kolkata: AQI usually stays between 150–300 (Moderate to Very Poor)
+
+2️⃣ Why Delhi Is More Polluted
+- High vehicle density
+- Crop burning in nearby states
+- Construction dust
+- Landlocked geography
+- Winter temperature inversion traps pollutants
+
+3️⃣ Why Kolkata Is Polluted
+- Dense population
+- Older vehicles & diesel usage
+- Brick kilns & industrial areas nearby
+- High humidity traps pollutants
+
+4️⃣ Impact on Health
+- Breathing issues
+- Eye irritation
+- Reduced lung capacity
+- Long-term asthma & heart disease risks
+
+If you want, next I can explain the AQI scale simply, or help you frame this as an exam-ready answer."
+
+WHEN STUDY MODE IS ACTIVE:
+${aiName} BEHAVES AS A TEACHER / MENTOR, NOT A CHATBOT.
 `;
     }
 

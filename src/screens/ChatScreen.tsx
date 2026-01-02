@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Send, Sparkles, Menu, Volume2, Mic, Radio, Camera, ImagePlus, X, Loader2, Ghost, Timer, ChevronDown, GraduationCap, Gamepad2, Search, Pin, History, Crown, Settings2 } from 'lucide-react';
+import { Send, Sparkles, Menu, Volume2, Mic, Radio, Camera, ImagePlus, X, Loader2, Ghost, Timer, ChevronDown, GraduationCap, Gamepad2, Search, Pin, History, Crown, Settings2, Calendar } from 'lucide-react';
+import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { AuraAvatar } from '@/components/AuraAvatar';
 import { ChatBubble } from '@/components/ChatBubble';
@@ -707,7 +708,7 @@ ${data.improvements?.length > 0 ? `**Tips:** ${data.improvements.join(', ')}` : 
       {/* Fixed Header - Sticky on Scroll */}
       <div className="sticky top-0 z-50 bg-background/95 backdrop-blur-md border-b border-border/50">
         <div className="flex items-center justify-between px-3 py-2 pl-14">
-          {/* Center - Title with Avatar */}
+          {/* Center - Title with Avatar and Today's Date Badge */}
           <div className="flex items-center gap-2">
             <AuraAvatar 
               style={avatarStyle as any}
@@ -715,7 +716,13 @@ ${data.improvements?.length > 0 ? `**Tips:** ${data.improvements.join(', ')}` : 
               isThinking={isThinking || isVoiceFeedbackSpeaking} 
               isSpeaking={isVoiceFeedbackSpeaking}
             />
-            <span className="font-semibold text-sm">{aiName}</span>
+            <div className="flex flex-col">
+              <span className="font-semibold text-sm">{aiName}</span>
+              <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                <Calendar className="w-3 h-3" />
+                <span>Today's Chat • {format(new Date(), 'EEE, d MMM')}</span>
+              </div>
+            </div>
             {creditStatus.isPremium && (
               <Crown className="w-3 h-3 text-primary" />
             )}
