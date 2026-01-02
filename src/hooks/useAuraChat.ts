@@ -14,7 +14,9 @@ import { useMasterIntentEngine } from './useMasterIntentEngine';
 import { useChatActions } from './useChatActions';
 import { useRealtimeContext } from './useRealtimeContext';
 import { useUserJourney } from './useUserJourney';
+import { useAurraDailyPlan } from './useAurraDailyPlan';
 import { hasGreetedToday } from '@/utils/dailyGreeting';
+import { isRoutineEditRequest } from '@/utils/routineBehaviorRules';
 import { supabase } from '@/integrations/supabase/client';
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/aura-chat`;
@@ -175,6 +177,16 @@ export const useAuraChat = () => {
   const { classifyIntent, getResponseStrategy } = useMasterIntentEngine();
   const { handleChatAction, showUpgradeSheet, setShowUpgradeSheet, focusState } = useChatActions();
   const { context: realtimeContext, getContextForAI } = useRealtimeContext();
+  
+  // Daily plan tracking - "What's your plan for today?" logic
+  const {
+    shouldAskForPlan,
+    hasAskedToday: hasAskedForPlanToday,
+    currentPlan: todaysPlan,
+    saveDailyPlan,
+    isPlanResponse,
+    hasCompletedOnboarding: hasCompletedRoutineOnboarding,
+  } = useAurraDailyPlan();
   
   const messageCountRef = useRef(0);
 
@@ -419,6 +431,18 @@ export const useAuraChat = () => {
                 const msgDate = new Date(m.timestamp || Date.now()).toDateString();
                 return msgDate === new Date().toDateString() && m.sender === 'user';
               }).length,
+            },
+            // Daily plan context - "What's your plan for today?" system
+            dailyPlanContext: {
+              hasCompletedRoutineOnboarding,
+              shouldAskForPlan,
+              hasAskedForPlanToday,
+              currentPlan: todaysPlan ? {
+                plan: todaysPlan.plan,
+                intensity: todaysPlan.intensity,
+                keywords: todaysPlan.keywords,
+              } : null,
+              isRoutineEditRequest: isRoutineEditRequest(userMessage),
             },
             // Master Intent for "Chat is the OS"
             intent: {
