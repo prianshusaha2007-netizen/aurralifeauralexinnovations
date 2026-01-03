@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useAura } from '@/contexts/AuraContext';
 
 // Skill types available for self-improvement
 export type SkillType = 
@@ -61,7 +60,6 @@ const STORAGE_KEY = 'aurra-skills-progress';
 const SESSION_STORAGE_KEY = 'aurra-skill-sessions';
 
 export const useSkillsProgress = () => {
-  const { userProfile } = useAura();
   const [skills, setSkills] = useState<UserSkill[]>([]);
   const [currentSession, setCurrentSession] = useState<SkillSession | null>(null);
   const [hasCompletedDiscovery, setHasCompletedDiscovery] = useState(false);
