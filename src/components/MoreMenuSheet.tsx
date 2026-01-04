@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Plus,
@@ -33,6 +33,7 @@ import { motion } from 'framer-motion';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { useCredits, DAILY_CREDITS } from '@/hooks/useCredits';
+import { RhythmEditorSheet } from './RhythmEditorSheet';
 
 const TIER_LABELS: Record<string, string> = {
   core: 'Free',
@@ -94,11 +95,18 @@ const MENU_ITEMS = [
     color: 'from-blue-500 to-sky-500'
   },
   { 
-    id: 'daily-routine', 
+    id: 'weekly-rhythm', 
     icon: Calendar, 
+    label: 'My Weekly Rhythm', 
+    action: 'rhythm-editor',
+    color: 'from-violet-500 to-purple-500'
+  },
+  { 
+    id: 'daily-routine', 
+    icon: Target, 
     label: 'Daily Routine', 
     message: "Show today's routine",
-    color: 'from-violet-500 to-purple-500'
+    color: 'from-emerald-500 to-teal-500'
   },
   { 
     id: 'hydration-health', 
@@ -185,6 +193,8 @@ export const MoreMenuSheet: React.FC<MoreMenuSheetProps> = ({
   const isNearLimit = usagePercent >= 80;
   const isAtLimit = usagePercent >= 100;
 
+  const [showRhythmEditor, setShowRhythmEditor] = React.useState(false);
+
   const handleItemClick = (item: typeof MENU_ITEMS[0]) => {
     if (item.action === 'new-chat') {
       onNewChat();
@@ -196,6 +206,11 @@ export const MoreMenuSheet: React.FC<MoreMenuSheetProps> = ({
       navigate('/focus-history');
     } else if (item.action === 'friend-circles') {
       navigate('/social');
+    } else if (item.action === 'rhythm-editor') {
+      onOpenChange(false);
+      // Small delay to let the drawer close first
+      setTimeout(() => setShowRhythmEditor(true), 300);
+      return; // Don't close drawer here, we do it above
     } else if (item.message) {
       onSendMessage(item.message);
     }
@@ -209,6 +224,7 @@ export const MoreMenuSheet: React.FC<MoreMenuSheetProps> = ({
   };
 
   return (
+    <>
     <Drawer open={open} onOpenChange={onOpenChange}>
       <DrawerContent className="max-h-[85vh]">
         <DrawerHeader className="relative pb-2">
@@ -334,5 +350,13 @@ export const MoreMenuSheet: React.FC<MoreMenuSheetProps> = ({
         </ScrollArea>
       </DrawerContent>
     </Drawer>
+    
+    {/* Rhythm Editor Sheet */}
+    <RhythmEditorSheet
+      open={showRhythmEditor}
+      onOpenChange={setShowRhythmEditor}
+      onSendMessage={onSendMessage}
+    />
+  </>
   );
 };

@@ -1,14 +1,27 @@
 // AURRA Smart Routine System Prompt Rules
-// Paste these into your AI system prompt for routine-aware responses
+// These rules define how AURRA handles routines - supportive, not strict
 
 export const ROUTINE_SYSTEM_PROMPT = `
-## AURRA ROUTINE BEHAVIOR RULES
+## AURRA LIFE RHYTHM BEHAVIOR RULES
 
 **Core Philosophy:**
 - Routines are supportive, not strict
 - NEVER shame, insist, or guilt the user
 - Motivation > enforcement
 - Emotion > schedule
+- Life rhythm is asked ONCE during onboarding, never again
+
+**The ONE Onboarding Question (ALREADY ASKED):**
+"How is your life from Monday to Friday, and how are weekends different?"
+- This question was asked during onboarding
+- NEVER ask it again
+- User's rhythm is already stored and understood
+
+**Daily Interaction:**
+- Only ask "What's your plan for today?" once per day
+- After user responds, adapt silently
+- Suggest based on rhythm patterns, never command
+- Use presence, not interrogation
 
 **Before a routine block:**
 - Ask permission, don't command
@@ -25,6 +38,11 @@ export const ROUTINE_SYSTEM_PROMPT = `
 - Offer lighter options or rest
 - Example: "Want to keep it light today?"
 
+**Rhythm Changes:**
+- Only ask routine questions if user says "change my routine" / "edit my schedule"
+- For temporary changes: "Cool, adjusting just for today 👍"
+- For permanent changes: "Want this change only for today or going forward?"
+
 **Weekly summaries:**
 - Must be neutral and encouraging
 - No streak pressure
@@ -37,6 +55,7 @@ export const ROUTINE_SYSTEM_PROMPT = `
 - "No stress."
 - "Tomorrow doesn't need to be perfect."
 - "Even showing up once today counts."
+- "Cool, adjusting just for today 👍"
 
 **Phrases to NEVER use:**
 - "You missed your task"
@@ -44,13 +63,27 @@ export const ROUTINE_SYSTEM_PROMPT = `
 - "Your streak is broken"
 - "You should have..."
 - "Why didn't you..."
+- "What time do you wake up?" (already asked in onboarding)
+- "What are your hobbies?" (already asked in onboarding)
+- "Tell me about your routine" (already asked in onboarding)
 `;
 
 export const getRoutineContextForAI = (settings: {
   currentMood?: 'low' | 'normal' | 'high';
-  blocks: Array<{ name: string; timing: string; type: string }>;
-  wakeTime: string;
-  sleepTime: string;
+  weekdayPattern?: {
+    morning: string;
+    afternoon: string;
+    evening: string;
+    night: string;
+  };
+  weekendPattern?: {
+    pace: string;
+    flexibility: string;
+    social: string;
+  };
+  wakeTime?: string;
+  sleepTime?: string;
+  isWeekend?: boolean;
 }) => {
   const now = new Date();
   const currentHour = now.getHours();
@@ -61,19 +94,30 @@ export const getRoutineContextForAI = (settings: {
   else if (currentHour >= 17 && currentHour < 21) timeContext = 'evening';
   else timeContext = 'night';
 
-  const todayBlocks = settings.blocks.map(b => `${b.name} at ${b.timing}`).join(', ');
+  const isWeekend = settings.isWeekend ?? (now.getDay() === 0 || now.getDay() === 6);
+  
+  const currentPattern = isWeekend && settings.weekendPattern ? 
+    `Weekend - Pace: ${settings.weekendPattern.pace}, Flexibility: ${settings.weekendPattern.flexibility}` :
+    settings.weekdayPattern ? 
+    `${timeContext}: ${settings.weekdayPattern[timeContext as keyof typeof settings.weekdayPattern]}` :
+    'flexible';
 
   return `
 User context:
 - Current time of day: ${timeContext}
+- Day type: ${isWeekend ? 'Weekend' : 'Weekday'}
 - User's mood today: ${settings.currentMood || 'not checked'}
-- Wake time: ${settings.wakeTime}
-- Sleep time: ${settings.sleepTime}
-- Today's routine: ${todayBlocks || 'none set'}
+- Current rhythm: ${currentPattern}
+${settings.wakeTime ? `- Wake time: ${settings.wakeTime}` : ''}
+${settings.sleepTime ? `- Sleep time: ${settings.sleepTime}` : ''}
 
 Adjust your tone based on mood:
 - Low mood: Be extra gentle, suggest lighter activities
 - Normal: Supportive and steady
 - High energy: Match enthusiasm, encourage productivity
+
+Adjust based on day type:
+- Weekday: More structured support, respect busy patterns
+- Weekend: Lighter approach, more flexibility, respect recovery
 `;
 };
