@@ -25,7 +25,8 @@ import {
   Edit3,
   Crown,
   MessageCircle,
-  Cake
+  Cake,
+  RotateCcw
 } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { Input } from '@/components/ui/input';
@@ -197,6 +198,26 @@ export const SettingsScreen: React.FC = () => {
     toast({
       title: "Memories Cleared",
       description: "All saved memories have been deleted.",
+    });
+  };
+
+  const handleResetOnboarding = () => {
+    const keysToRemove = [
+      'aurra-life-rhythm',
+      'aurra-routine-onboarding-complete',
+      'aurra-onboarding-complete',
+      'aurra-smart-hydration',
+      'aurra-burnout-detection',
+      'aurra-focus-sessions',
+      'aurra-focus-ai-state',
+      'aurra-user-state-data',
+      'aurra-smart-routine-settings',
+      'aurra-routine-blocks',
+    ];
+    keysToRemove.forEach(key => localStorage.removeItem(key));
+    toast({
+      title: "Onboarding Reset",
+      description: "Refresh the page to start fresh.",
     });
   };
 
@@ -435,6 +456,13 @@ export const SettingsScreen: React.FC = () => {
           onClick: handleClearMemories,
           action: <ChevronRight className="w-5 h-5 text-destructive" />,
           destructive: true,
+        },
+        {
+          icon: RotateCcw,
+          label: 'Reset Onboarding',
+          description: 'Start fresh with routine setup',
+          onClick: handleResetOnboarding,
+          action: <ChevronRight className="w-5 h-5 text-muted-foreground" />,
         },
       ],
     },

@@ -53,11 +53,16 @@ serve(async (req) => {
 
     const now = new Date();
     const currentHour = now.getHours();
+    const isWeekend = now.getDay() === 0 || now.getDay() === 6;
     
-    // Only send reminders during waking hours (7 AM - 10 PM)
-    if (currentHour < 7 || currentHour >= 22) {
-      console.log('Outside waking hours, skipping reminders');
-      return new Response(JSON.stringify({ message: 'Outside waking hours' }), {
+    // Default waking hours (7 AM - 10 PM), but will be overridden per-user
+    const defaultWakeHour = 7;
+    const defaultSleepHour = 22;
+    
+    // Skip reminders during very early/late hours for everyone
+    if (currentHour < 5 || currentHour >= 23) {
+      console.log('Outside all active hours, skipping reminders');
+      return new Response(JSON.stringify({ message: 'Outside all active hours' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
@@ -84,15 +89,21 @@ serve(async (req) => {
           .eq('id', setting.user_id)
           .single();
 
-        // Parse wake/sleep times
-        const wakeHour = profile?.wake_time ? parseInt(profile.wake_time.split(':')[0]) : 7;
-        const sleepHour = profile?.sleep_time ? parseInt(profile.sleep_time.split(':')[0]) : 23;
+        // Parse wake/sleep times with defaults
+        const wakeHour = profile?.wake_time ? parseInt(profile.wake_time.split(':')[0]) : defaultWakeHour;
+        const sleepHour = profile?.sleep_time ? parseInt(profile.sleep_time.split(':')[0]) : defaultSleepHour;
 
-        // Skip if outside user's waking hours
-        if (currentHour < wakeHour || currentHour >= sleepHour) {
-          console.log(`Outside user ${setting.user_id} waking hours`);
+        // Weekend adjustment - be gentler, start later
+        const adjustedWakeHour = isWeekend ? Math.max(wakeHour, wakeHour + 1) : wakeHour;
+
+        // Skip if outside user's waking hours (with weekend adjustment)
+        if (currentHour < adjustedWakeHour || currentHour >= sleepHour) {
+          console.log(`Outside user ${setting.user_id} waking hours (weekend: ${isWeekend})`);
           continue;
         }
+
+        // If it's evening (after 7pm), use gentler messaging
+        const isEvening = currentHour >= 19;
 
         // Get today's hydration total
         const todayStart = new Date();
@@ -126,7 +137,14 @@ serve(async (req) => {
         const remaining = setting.daily_goal_ml - totalToday;
         const glasses = Math.ceil(remaining / 250);
 
-        const messages = [
+        // Different messages for evening (gentler) vs daytime (more energetic)
+        const eveningMessages = [
+          `💧 Gentle reminder to hydrate before bed.`,
+          `🌙 One more glass of water for the night?`,
+          `💦 Stay hydrated — ${glasses} glasses left.`,
+        ];
+
+        const dayMessages = [
           `💧 Time to hydrate! You're at ${progress}% - just ${glasses} more glasses to go!`,
           `🌊 Water break! ${remaining}ml left to reach your goal today.`,
           `💦 Hey${profile?.name ? ` ${profile.name}` : ''}! Don't forget to drink water. ${progress}% complete!`,
@@ -134,6 +152,7 @@ serve(async (req) => {
           `💧 Stay refreshed! ${remaining}ml until you hit your goal.`
         ];
 
+        const messages = isEvening ? eveningMessages : dayMessages;
         const message = messages[Math.floor(Math.random() * messages.length)];
 
         // Send push notification to all subscriptions
