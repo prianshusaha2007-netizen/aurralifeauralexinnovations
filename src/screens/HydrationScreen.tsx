@@ -8,7 +8,10 @@ import {
   Clock,
   Bell,
   Target,
-  Flame
+  Flame,
+  Moon,
+  Sun,
+  Zap
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -23,7 +26,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { format, startOfDay, isToday, subDays } from 'date-fns';
-
+import { useSmartHydration } from '@/hooks/useSmartHydration';
+import { motion, AnimatePresence } from 'framer-motion';
 interface HydrationLog {
   id: string;
   amount_ml: number;
@@ -48,6 +52,18 @@ export const HydrationScreen: React.FC = () => {
   });
   const [loading, setLoading] = useState(true);
   const [streak, setStreak] = useState(0);
+  
+  // Smart hydration hook - rhythm-aware
+  const { 
+    isActiveHours, 
+    getNudgeIntensity,
+    logHydration: smartLogHydration,
+    pauseNudges,
+    isEnabled: smartHydrationEnabled,
+    setIsEnabled: setSmartHydrationEnabled
+  } = useSmartHydration();
+  
+  const currentNudgeIntensity = getNudgeIntensity();
 
   useEffect(() => {
     if (user) {
@@ -148,13 +164,15 @@ export const HydrationScreen: React.FC = () => {
 
       if (error) throw error;
       
+      // Log with smart hydration for rhythm awareness
+      smartLogHydration(amount);
       fetchData();
       
       const newTotal = logs.reduce((sum, log) => sum + log.amount_ml, 0) + amount;
       if (newTotal >= settings.daily_goal_ml && newTotal - amount < settings.daily_goal_ml) {
         toast.success('🎉 You reached your hydration goal!');
       } else {
-        toast.success(`+${amount}ml added!`);
+        // No toast here as smartLogHydration already shows one
       }
     } catch (error) {
       console.error('Error adding water:', error);
@@ -238,6 +256,37 @@ export const HydrationScreen: React.FC = () => {
           </TabsList>
 
           <TabsContent value="track" className="space-y-4">
+            {/* Rhythm-aware status banner */}
+            <AnimatePresence>
+              {!isActiveHours() ? (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="flex items-center gap-3 p-3 rounded-xl bg-indigo-500/10 border border-indigo-500/20"
+                >
+                  <Moon className="w-5 h-5 text-indigo-400" />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-indigo-400">Rest Mode</p>
+                    <p className="text-xs text-muted-foreground">Hydration reminders paused for your rest time</p>
+                  </div>
+                </motion.div>
+              ) : currentNudgeIntensity === 'gentle' ? (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="flex items-center gap-3 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20"
+                >
+                  <Sun className="w-5 h-5 text-amber-400" />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-amber-400">Gentle Mode</p>
+                    <p className="text-xs text-muted-foreground">Softer reminders based on your rhythm</p>
+                  </div>
+                </motion.div>
+              ) : null}
+            </AnimatePresence>
+
             {/* Main Progress Card */}
             <Card className="border-cyan-500/20 bg-gradient-to-br from-cyan-500/10 to-blue-500/5">
               <CardContent className="p-6">
@@ -466,8 +515,54 @@ export const HydrationScreen: React.FC = () => {
                 </div>
 
                 <p className="text-xs text-muted-foreground">
-                  💡 AURA will remind you to drink water at your chosen interval during your waking hours.
+                  💡 AURRA adapts reminders to your rhythm — quieter at night and during focus time
                 </p>
+              </CardContent>
+            </Card>
+
+            {/* Smart Hydration Card */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Zap className="w-5 h-5 text-cyan-500" />
+                  Smart Reminders
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label htmlFor="smart-hydration">Rhythm-Aware Mode</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Adapt to your wake/sleep pattern
+                    </p>
+                  </div>
+                  <Switch
+                    id="smart-hydration"
+                    checked={smartHydrationEnabled}
+                    onCheckedChange={setSmartHydrationEnabled}
+                  />
+                </div>
+
+                <div className="p-3 rounded-lg bg-muted/50 space-y-2">
+                  <p className="text-xs font-medium">Current Status</p>
+                  <div className="flex items-center gap-2">
+                    {isActiveHours() ? (
+                      <>
+                        <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                        <span className="text-xs text-muted-foreground">
+                          Active hours — {currentNudgeIntensity} reminders
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <div className="w-2 h-2 rounded-full bg-indigo-400" />
+                        <span className="text-xs text-muted-foreground">
+                          Rest time — reminders paused
+                        </span>
+                      </>
+                    )}
+                  </div>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>

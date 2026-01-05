@@ -18,6 +18,8 @@ import { CreditLoadingSkeleton } from '@/components/CreditLoadingSkeleton';
 import { UpgradeSheet } from '@/components/UpgradeSheet';
 import { ChatSettingsSheet } from '@/components/ChatSettingsSheet';
 import { LiveVoiceInput } from '@/components/LiveVoiceInput';
+import { BurnoutSupportCard } from '@/components/BurnoutSupportCard';
+import { SmartFocusSuggestion } from '@/components/SmartFocusSuggestion';
 import { useAura, ChatMessage } from '@/contexts/AuraContext';
 import { useAuraChat } from '@/hooks/useAuraChat';
 import { useVoiceCommands } from '@/hooks/useVoiceCommands';
@@ -28,6 +30,8 @@ import { useWelcomeBack, updateLastActive } from '@/hooks/useWelcomeBack';
 import { usePersonaContext } from '@/contexts/PersonaContext';
 import { useCredits } from '@/hooks/useCredits';
 import { useVoicePlayback } from '@/hooks/useVoicePlayback';
+import { useBurnoutDetection } from '@/hooks/useBurnoutDetection';
+import { useFocusModeWithRhythm } from '@/hooks/useFocusModeWithRhythm';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -60,6 +64,21 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ onMenuClick, onVoiceMode
   const { shouldShowWelcomeBack, getWelcomeMessage } = useWelcomeBack();
   const { playText, stopPlayback, isPlaying } = useVoicePlayback();
   
+  // Burnout detection
+  const { 
+    burnoutState, 
+    shouldSuggestRest, 
+    acceptRestSuggestion, 
+    analyzeMessage 
+  } = useBurnoutDetection();
+  
+  // Focus mode with rhythm awareness
+  const { 
+    getFocusSuggestion, 
+    startRhythmAwareFocus,
+    isGoodTimeForFocus
+  } = useFocusModeWithRhythm();
+  
   const [inputValue, setInputValue] = useState('');
   const [showAutomation, setShowAutomation] = useState(false);
   const [selectedModel, setSelectedModel] = useState('gemini-flash');
@@ -82,6 +101,9 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ onMenuClick, onVoiceMode
   const [showUpgradeSheet, setShowUpgradeSheet] = useState(false);
   const [showChatSettings, setShowChatSettings] = useState(false);
   const [creditWarningShown, setCreditWarningShown] = useState(false);
+  const [showBurnoutCard, setShowBurnoutCard] = useState(false);
+  const [showFocusSuggestion, setShowFocusSuggestion] = useState(false);
+  const [focusSuggestionDismissed, setFocusSuggestionDismissed] = useState(false);
   const [messageReactions, setMessageReactions] = useState<Record<string, string[]>>(() => {
     try {
       const saved = localStorage.getItem('aura-message-reactions');
@@ -119,6 +141,33 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ onMenuClick, onVoiceMode
   const aiName = userProfile.aiName || 'AURRA';
   const vanishTimersRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
   const [showTestPanel, setShowTestPanel] = useState(false);
+  
+  // Get focus suggestion
+  const focusSuggestion = getFocusSuggestion();
+  
+  // Check if we should show burnout card
+  useEffect(() => {
+    if (shouldSuggestRest() && !showBurnoutCard) {
+      // Delay showing to not be intrusive
+      const timer = setTimeout(() => setShowBurnoutCard(true), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [shouldSuggestRest, showBurnoutCard]);
+  
+  // Check if we should show focus suggestion
+  useEffect(() => {
+    if (focusSuggestion && !focusSuggestionDismissed && chatMessages.length > 2) {
+      setShowFocusSuggestion(true);
+    }
+  }, [focusSuggestion, focusSuggestionDismissed, chatMessages.length]);
+  
+  // Analyze user messages for burnout patterns
+  useEffect(() => {
+    const lastMessage = chatMessages[chatMessages.length - 1];
+    if (lastMessage?.sender === 'user') {
+      analyzeMessage(lastMessage.content);
+    }
+  }, [chatMessages, analyzeMessage]);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -968,6 +1017,52 @@ ${data.improvements?.length > 0 ? `**Tips:** ${data.improvements.join(', ')}` : 
               searchHighlight={searchQuery}
             />
           ))}
+          
+          {/* Burnout Support Card */}
+          <AnimatePresence>
+            {showBurnoutCard && (
+              <BurnoutSupportCard
+                timeOfDay={
+                  new Date().getHours() < 12 ? 'morning' :
+                  new Date().getHours() < 17 ? 'afternoon' :
+                  new Date().getHours() < 21 ? 'evening' : 'night'
+                }
+                onChoice={(choice) => {
+                  acceptRestSuggestion();
+                  if (choice === 'light') {
+                    addChatMessage({ content: "Let's take it easy today.", sender: 'aura' });
+                  } else if (choice === 'reset') {
+                    addChatMessage({ content: "Let's do a quick 5-minute reset together.", sender: 'aura' });
+                  }
+                }}
+                onDismiss={() => setShowBurnoutCard(false)}
+              />
+            )}
+          </AnimatePresence>
+          
+          {/* Smart Focus Suggestion */}
+          <AnimatePresence>
+            {showFocusSuggestion && focusSuggestion && !showBurnoutCard && (
+              <SmartFocusSuggestion
+                type={focusSuggestion.type}
+                reason={focusSuggestion.reason}
+                duration={focusSuggestion.duration}
+                confidence={focusSuggestion.confidence}
+                onStart={() => {
+                  startRhythmAwareFocus(focusSuggestion.type, '', focusSuggestion.duration);
+                  setShowFocusSuggestion(false);
+                  addChatMessage({ 
+                    content: `Starting ${focusSuggestion.duration} minute ${focusSuggestion.type} session. I'm here to help you stay focused! 🎯`, 
+                    sender: 'aura' 
+                  });
+                }}
+                onDismiss={() => {
+                  setShowFocusSuggestion(false);
+                  setFocusSuggestionDismissed(true);
+                }}
+              />
+            )}
+          </AnimatePresence>
           
           {/* Typing Indicator */}
           {(isThinking || isGeneratingImage) && displayMessages[displayMessages.length - 1]?.sender === 'user' && (
