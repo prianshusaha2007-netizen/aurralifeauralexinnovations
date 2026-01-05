@@ -19,6 +19,7 @@ import { ArchivedChatScreen } from "./screens/ArchivedChatScreen";
 import { SkillsDashboardScreen } from "./screens/SkillsDashboardScreen";
 import SubscriptionScreen from "./screens/SubscriptionScreen";
 import { FocusHistoryScreen } from "./screens/FocusHistoryScreen";
+import { WellnessScreen } from "./screens/WellnessScreen";
 
 const queryClient = new QueryClient();
 
@@ -57,6 +58,7 @@ const App = () => (
               <Route path="/skills" element={<ProtectedRoute><SkillsDashboardScreen /></ProtectedRoute>} />
               <Route path="/subscription" element={<ProtectedRoute><SubscriptionScreen /></ProtectedRoute>} />
               <Route path="/focus-history" element={<ProtectedRoute><FocusHistoryScreen /></ProtectedRoute>} />
+              <Route path="/wellness" element={<ProtectedRoute><WellnessScreen /></ProtectedRoute>} />
               <Route path="/privacy" element={<PrivacyPolicy />} />
               <Route path="/terms" element={<TermsOfService />} />
               <Route path="*" element={<NotFound />} />

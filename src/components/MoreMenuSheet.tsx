@@ -17,7 +17,8 @@ import {
   X,
   ChevronRight,
   Timer,
-  Users
+  Users,
+  Heart
 } from 'lucide-react';
 import {
   Drawer,
@@ -107,6 +108,13 @@ const MENU_ITEMS = [
     label: 'Daily Routine', 
     message: "Show today's routine",
     color: 'from-emerald-500 to-teal-500'
+  },
+  { 
+    id: 'wellness', 
+    icon: Heart, 
+    label: 'Weekly Wellness', 
+    action: 'wellness',
+    color: 'from-rose-500 to-pink-500'
   },
   { 
     id: 'hydration-health', 
@@ -206,6 +214,8 @@ export const MoreMenuSheet: React.FC<MoreMenuSheetProps> = ({
       navigate('/focus-history');
     } else if (item.action === 'friend-circles') {
       navigate('/social');
+    } else if (item.action === 'wellness') {
+      navigate('/wellness');
     } else if (item.action === 'rhythm-editor') {
       onOpenChange(false);
       // Small delay to let the drawer close first

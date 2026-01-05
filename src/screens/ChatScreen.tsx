@@ -20,6 +20,7 @@ import { ChatSettingsSheet } from '@/components/ChatSettingsSheet';
 import { LiveVoiceInput } from '@/components/LiveVoiceInput';
 import { BurnoutSupportCard } from '@/components/BurnoutSupportCard';
 import { SmartFocusSuggestion } from '@/components/SmartFocusSuggestion';
+import { FocusTimerOverlay } from '@/components/FocusTimerOverlay';
 import { useAura, ChatMessage } from '@/contexts/AuraContext';
 import { useAuraChat } from '@/hooks/useAuraChat';
 import { useVoiceCommands } from '@/hooks/useVoiceCommands';
@@ -1321,6 +1322,9 @@ ${data.improvements?.length > 0 ? `**Tips:** ${data.improvements.join(', ')}` : 
           </div>
         </div>
       </div>
+      
+      {/* Focus Timer Overlay */}
+      <FocusTimerOverlay />
       
       <AutomationModal isOpen={showAutomation} onClose={() => setShowAutomation(false)} />
       
