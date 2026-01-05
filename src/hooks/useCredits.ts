@@ -17,11 +17,12 @@ export interface UserCredits {
 export type SubscriptionTier = 'core' | 'basic' | 'plus' | 'pro';
 
 // Daily credit limits per tier (internal tracking only - NEVER show numbers to users)
+// Aligned with payment architecture spec
 export const DAILY_CREDITS: Record<SubscriptionTier, number> = {
-  core: 30,    // Free tier
-  basic: 120,  // ₹99/month
-  plus: 300,   // ₹199/month
-  pro: 999,    // ₹299/month - "unlimited" with soft rate limiting
+  core: 20,       // Free tier
+  basic: 60,      // ₹99/month
+  plus: 150,      // ₹199/month
+  pro: 999999,    // ₹299/month - unlimited (internal only, never shown)
 };
 
 // Credit costs per action (internal)

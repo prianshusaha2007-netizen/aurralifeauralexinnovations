@@ -117,6 +117,9 @@ export const useRazorpay = () => {
           handler: async (response: RazorpayResponse) => {
             console.log('Payment successful:', response);
             
+            // Show "Activating..." - do NOT celebrate yet
+            toast.info('Activating your plan...', { duration: 3000 });
+            
             try {
               // Only send payment details and tier - server will get userId from auth token
               const { data: verifyData, error: verifyError } = await supabase.functions.invoke('verify-razorpay-payment', {
@@ -130,12 +133,14 @@ export const useRazorpay = () => {
 
               if (verifyError || !verifyData?.success) {
                 console.error('Verification error:', verifyError);
-                toast.error('Payment was received but verification failed. Your subscription will be activated shortly. If not, please contact support.');
+                // Payment received but verification failed - webhook will handle
+                toast.info('Payment received! Your subscription will be activated shortly.', { duration: 5000 });
                 resolve(false);
                 return;
               }
 
-              // Trigger confetti celebration
+              // Backend verification successful - now celebrate!
+              // The chat confirmation message is already inserted by the backend
               confetti({
                 particleCount: 100,
                 spread: 70,
@@ -161,11 +166,12 @@ export const useRazorpay = () => {
                 });
               }, 250);
 
-              toast.success('Payment successful! Your subscription is now active. 🎉');
+              // Simple success - backend already sent chat confirmation
+              toast.success('Welcome to the journey! 🎉');
               resolve(true);
             } catch (err) {
               console.error('Verification error:', err);
-              toast.error('Payment verification failed');
+              toast.info('Payment received! Check your chat for confirmation.');
               resolve(false);
             }
           },
@@ -245,6 +251,15 @@ export const useRazorpay = () => {
           handler: async (response: RazorpayResponse) => {
             console.log('Subscription payment successful:', response);
             
+            // Show "Activating..." - do NOT celebrate yet
+            // The webhook is the single source of truth for subscription activation
+            toast.info('Activating your subscription...', { duration: 3000 });
+            
+            // For subscriptions, the webhook (subscription.activated) is the source of truth
+            // The webhook will insert the chat confirmation message
+            // We wait briefly then celebrate (webhook should have processed by now)
+            await new Promise(r => setTimeout(r, 2000));
+            
             // Trigger confetti celebration
             confetti({
               particleCount: 100,
@@ -271,7 +286,8 @@ export const useRazorpay = () => {
               });
             }, 250);
 
-            toast.success('Subscription activated! Auto-renewal is enabled. 🎉');
+            // Simple success - backend webhook already sent chat confirmation
+            toast.success('Welcome to the journey! 🎉');
             resolve(true);
           },
           prefill: {

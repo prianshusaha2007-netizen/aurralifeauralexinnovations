@@ -270,12 +270,12 @@ async function handleSubscriptionActivated(supabase: any, subscriptionData: Reco
   }
 
   // Update user_credits with new tier limits
-  // Free: 30, Basic: 120, Plus: 300, Pro: 999 (unlimited)
+  // Aligned with payment architecture spec: Free=20, Basic=60, Plus=150, Pro=999999
   const creditLimits: Record<string, number> = {
-    core: 30,
-    basic: 120,
-    plus: 300,
-    pro: 999,
+    core: 20,
+    basic: 60,
+    plus: 150,
+    pro: 999999,
   };
   
   const { error: credError } = await supabase
@@ -283,7 +283,7 @@ async function handleSubscriptionActivated(supabase: any, subscriptionData: Reco
     .update({
       is_premium: true,
       premium_since: new Date().toISOString(),
-      daily_credits_limit: creditLimits[tier] || 300,
+      daily_credits_limit: creditLimits[tier] || 150,
       daily_credits_used: 0, // Reset on activation
       updated_at: new Date().toISOString(),
     })
@@ -291,6 +291,26 @@ async function handleSubscriptionActivated(supabase: any, subscriptionData: Reco
 
   if (credError) {
     logWebhookEvent('DB_ERROR', { requestId, handler: 'activated', table: 'user_credits', error: credError.message });
+  }
+
+  // Insert system chat message to confirm upgrade in chat
+  const tierNames: Record<string, string> = { basic: 'Basic', plus: 'Plus', pro: 'Pro' };
+  const tierName = tierNames[tier] || 'Plus';
+  const confirmationMessage = `You're on ${tierName} now ✨\nYou can think deeper, learn faster, and stay with me all day. Let's make the most of it!`;
+  
+  const { error: chatError } = await supabase
+    .from('chat_messages')
+    .insert({
+      user_id: userId,
+      sender: 'assistant',
+      content: confirmationMessage,
+      chat_date: new Date().toISOString().split('T')[0],
+    });
+
+  if (chatError) {
+    logWebhookEvent('DB_ERROR', { requestId, handler: 'activated', table: 'chat_messages', error: chatError.message });
+  } else {
+    logWebhookEvent('CHAT_CONFIRMATION_SENT', { requestId, userId, tier });
   }
 
   logWebhookEvent('HANDLER_SUCCESS', { requestId, handler: 'activated', userId, tier });
