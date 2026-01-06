@@ -16,13 +16,17 @@ import {
   Play,
   Pause,
   Settings,
-  ChevronRight
+  ChevronRight,
+  Award
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { useSkillsProgress, SkillType } from '@/hooks/useSkillsProgress';
+import { SkillMilestones, SkillProgressBadges } from '@/components/SkillMilestones';
+import { MentorshipProgressTracker } from '@/components/MentorshipProgressTracker';
+import { useMentorship } from '@/hooks/useMentorship';
 
 const SKILL_ICONS: Record<SkillType, React.ReactNode> = {
   gym: <Dumbbell className="h-5 w-5" />,
@@ -67,8 +71,10 @@ export function SkillsDashboardScreen() {
     currentSession,
     endSession 
   } = useSkillsProgress();
+  const { hasCompletedSetup: hasMentorship } = useMentorship();
   
   const [showAddSkill, setShowAddSkill] = useState(false);
+  const [selectedSkillForMilestones, setSelectedSkillForMilestones] = useState<SkillType | null>(null);
   const activeSkills = getActiveSkills();
 
   const handleAddSkill = (type: SkillType) => {
@@ -108,33 +114,40 @@ export function SkillsDashboardScreen() {
       </header>
 
       <div className="p-4 space-y-6 pb-24">
+        {/* Mentorship Progress Tracker */}
+        {hasMentorship && (
+          <MentorshipProgressTracker />
+        )}
+
         {/* Weekly Overview Card */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-        >
-          <Card className="bg-gradient-to-br from-primary/10 to-accent/10 border-primary/20">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <div className="p-2 rounded-full bg-primary/20">
-                    <TrendingUp className="h-4 w-4 text-primary" />
+        {!hasMentorship && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+          >
+            <Card className="bg-gradient-to-br from-primary/10 to-accent/10 border-primary/20">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <div className="p-2 rounded-full bg-primary/20">
+                      <TrendingUp className="h-4 w-4 text-primary" />
+                    </div>
+                    <span className="font-medium">This Week</span>
                   </div>
-                  <span className="font-medium">This Week</span>
+                  <Badge variant="secondary" className="bg-primary/20 text-primary">
+                    {activeSkills.reduce((acc, s) => acc + s.totalSessions, 0)} sessions
+                  </Badge>
                 </div>
-                <Badge variant="secondary" className="bg-primary/20 text-primary">
-                  {activeSkills.reduce((acc, s) => acc + s.totalSessions, 0)} sessions
-                </Badge>
-              </div>
-              <Progress value={weeklyProgress} className="h-2 mb-2" />
-              <p className="text-xs text-muted-foreground">
-                {weeklyProgress >= 70 ? "Great progress! Keep it up 🔥" : 
-                 weeklyProgress >= 40 ? "You're building momentum" : 
-                 "Small steps count — start today"}
-              </p>
-            </CardContent>
-          </Card>
-        </motion.div>
+                <Progress value={weeklyProgress} className="h-2 mb-2" />
+                <p className="text-xs text-muted-foreground">
+                  {weeklyProgress >= 70 ? "Great progress! Keep it up 🔥" : 
+                   weeklyProgress >= 40 ? "You're building momentum" : 
+                   "Small steps count — start today"}
+                </p>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
 
         {/* Active Skills */}
         <div>
@@ -181,6 +194,7 @@ export function SkillsDashboardScreen() {
                       onStart={() => handleStartSession(skill.type)}
                       onEnd={handleEndSession}
                       onRemove={() => removeSkill(skill.type)}
+                      onViewMilestones={() => setSelectedSkillForMilestones(skill.type)}
                     />
                   </motion.div>
                 ))}
@@ -271,6 +285,40 @@ export function SkillsDashboardScreen() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Milestones Modal */}
+      <AnimatePresence>
+        {selectedSkillForMilestones && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-black/50 flex items-end"
+            onClick={() => setSelectedSkillForMilestones(null)}
+          >
+            <motion.div
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              transition={{ type: 'spring', damping: 25 }}
+              className="w-full bg-background rounded-t-3xl p-4 pb-8 max-h-[70vh] overflow-y-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="w-12 h-1 bg-muted rounded-full mx-auto mb-4" />
+              <div className="flex items-center gap-2 mb-4">
+                <Award className="h-5 w-5 text-primary" />
+                <h2 className="text-lg font-semibold">Milestones & Achievements</h2>
+              </div>
+              
+              {activeSkills.find(s => s.type === selectedSkillForMilestones) && (
+                <SkillMilestones 
+                  skill={activeSkills.find(s => s.type === selectedSkillForMilestones)!}
+                />
+              )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -282,9 +330,10 @@ interface SkillCardProps {
   onStart: () => void;
   onEnd: () => void;
   onRemove: () => void;
+  onViewMilestones: () => void;
 }
 
-function SkillCard({ skill, isActive, onStart, onEnd, onRemove }: SkillCardProps) {
+function SkillCard({ skill, isActive, onStart, onEnd, onRemove, onViewMilestones }: SkillCardProps) {
   const [showOptions, setShowOptions] = useState(false);
 
   return (
@@ -322,6 +371,9 @@ function SkillCard({ skill, isActive, onStart, onEnd, onRemove }: SkillCardProps
                 <span className="capitalize">{skill.preferredTimeSlot}</span>
               </div>
             )}
+
+            {/* Progress Badges */}
+            <SkillProgressBadges skill={skill} className="mt-2" />
           </div>
 
           <div className="flex gap-1">
@@ -362,6 +414,15 @@ function SkillCard({ skill, isActive, onStart, onEnd, onRemove }: SkillCardProps
             animate={{ opacity: 1, height: 'auto' }}
             className="mt-3 pt-3 border-t border-border flex gap-2"
           >
+            <Button
+              size="sm"
+              variant="outline"
+              className="text-xs flex-1"
+              onClick={onViewMilestones}
+            >
+              <Award className="h-3 w-3 mr-1" />
+              Milestones
+            </Button>
             <Button
               size="sm"
               variant="outline"

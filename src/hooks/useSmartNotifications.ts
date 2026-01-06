@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
+import { useMentorship } from './useMentorship';
 
 export interface NotificationPreference {
   category: string;
@@ -14,7 +15,7 @@ export interface SmartNotification {
   id: string;
   title: string;
   body: string;
-  category: 'routine' | 'reminder' | 'hydration' | 'focus' | 'motivation';
+  category: 'routine' | 'reminder' | 'hydration' | 'focus' | 'motivation' | 'mentorship';
   priority: 'low' | 'medium' | 'high';
   scheduledFor: Date;
   sent: boolean;
@@ -39,9 +40,11 @@ const DEFAULT_PREFS: NotificationPreference[] = [
   { category: 'hydration', enabled: true, gentleMode: true, quietHoursStart: '22:00', quietHoursEnd: '08:00', maxPerHour: 2 },
   { category: 'focus', enabled: true, gentleMode: false, quietHoursStart: '00:00', quietHoursEnd: '06:00', maxPerHour: 2 },
   { category: 'motivation', enabled: true, gentleMode: true, quietHoursStart: '21:00', quietHoursEnd: '09:00', maxPerHour: 1 },
+  { category: 'mentorship', enabled: true, gentleMode: true, quietHoursStart: '22:00', quietHoursEnd: '08:00', maxPerHour: 1 },
 ];
 
 export const useSmartNotifications = () => {
+  const { isInQuietHours: isMentorshipQuietHours, profile: mentorshipProfile } = useMentorship();
   const [notifications, setNotifications] = useState<SmartNotification[]>([]);
   const [preferences, setPreferences] = useState<NotificationPreference[]>(DEFAULT_PREFS);
   const [behavior, setBehavior] = useState<UserBehavior>({
@@ -137,7 +140,21 @@ export const useSmartNotifications = () => {
     const pref = preferences.find(p => p.category === notification.category);
     
     if (!pref?.enabled) return false;
+    
+    // Check category-specific quiet hours
     if (isQuietHours(notification.category)) return false;
+
+    // IMPORTANT: Also check mentorship quiet hours for all notifications
+    // This respects the user's "do not disturb" preferences from mentorship setup
+    if (isMentorshipQuietHours()) {
+      // Only allow high priority notifications during mentorship quiet hours
+      if (notification.priority !== 'high') return false;
+    }
+
+    // If user set "only if user messages first", block non-essential notifications
+    if (mentorshipProfile.only_if_user_messages_first && notification.priority !== 'high') {
+      return false;
+    }
 
     // Check rate limiting
     const now = new Date();
@@ -157,7 +174,7 @@ export const useSmartNotifications = () => {
     }
 
     return true;
-  }, [preferences, notifications, behavior, isQuietHours]);
+  }, [preferences, notifications, behavior, isQuietHours, isMentorshipQuietHours, mentorshipProfile]);
 
   const scheduleNotification = useCallback((notification: Omit<SmartNotification, 'id' | 'sent' | 'dismissed'>) => {
     const newNotification: SmartNotification = {
@@ -299,5 +316,6 @@ export const useSmartNotifications = () => {
     updatePreference,
     getGentleReminder,
     isQuietHours,
+    isMentorshipQuietHours,
   };
 };
