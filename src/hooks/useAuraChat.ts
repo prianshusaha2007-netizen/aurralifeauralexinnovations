@@ -14,6 +14,7 @@ import { useMasterIntentEngine } from './useMasterIntentEngine';
 import { useChatActions } from './useChatActions';
 import { useRealtimeContext } from './useRealtimeContext';
 import { useUserJourney } from './useUserJourney';
+import { useMentorship } from './useMentorship';
 import { hasGreetedToday } from '@/utils/dailyGreeting';
 import { isRoutineEditRequest } from '@/utils/routineBehaviorRules';
 import { supabase } from '@/integrations/supabase/client';
@@ -300,6 +301,7 @@ export const useAuraChat = () => {
   const { classifyIntent, getResponseStrategy } = useMasterIntentEngine();
   const { handleChatAction, showUpgradeSheet, setShowUpgradeSheet, focusState } = useChatActions();
   const { context: realtimeContext, getContextForAI } = useRealtimeContext();
+  const { profile: mentorshipProfile, isInQuietHours, hasCompletedSetup: hasMentorshipSetup } = useMentorship();
   
   
   const messageCountRef = useRef(0);
@@ -608,6 +610,17 @@ export const useAuraChat = () => {
               remainingMinutes: Math.ceil(focusState.remainingTime / 60),
               sessionType: focusState.currentSession?.blockType || 'general',
             } : null,
+            // Mentorship context
+            mentorshipContext: hasMentorshipSetup ? {
+              roleTypes: mentorshipProfile.role_types,
+              mentorshipStyle: mentorshipProfile.mentorship_style,
+              subjects: mentorshipProfile.subjects,
+              practices: mentorshipProfile.practices,
+              level: mentorshipProfile.level,
+              injuriesNotes: mentorshipProfile.injuries_notes,
+              isInQuietHours: isInQuietHours(),
+              followUpEnabled: mentorshipProfile.follow_up_enabled,
+            } : null,
           },
         }),
       });
@@ -696,7 +709,7 @@ export const useAuraChat = () => {
     } finally {
       setIsThinking(false);
     }
-  }, [chatMessages, addChatMessage, updateChatMessage, userProfile, detectReminderIntent, addFromNaturalLanguage, generateReminderConfirmation, storyState, detectStoryIntent, startStory, endStory, getStorySystemPrompt, generateStoryStartMessage, getMemoryContext, checkSummarization, playText, realtimeContext]);
+  }, [chatMessages, addChatMessage, updateChatMessage, userProfile, detectReminderIntent, addFromNaturalLanguage, generateReminderConfirmation, storyState, detectStoryIntent, startStory, endStory, getStorySystemPrompt, generateStoryStartMessage, getMemoryContext, checkSummarization, playText, realtimeContext, mentorshipProfile, hasMentorshipSetup, isInQuietHours]);
 
   // Helper function for streaming story responses
   const streamStoryResponse = async (conversationHistory: Message[], preferredModel?: string) => {

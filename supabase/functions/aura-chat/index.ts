@@ -572,6 +572,17 @@ function validateInput(data: any): { valid: boolean; error?: string; sanitized?:
         remainingMinutes: typeof userProfile.focusContext.remainingMinutes === 'number' ? userProfile.focusContext.remainingMinutes : 0,
         sessionType: typeof userProfile.focusContext.sessionType === 'string' ? userProfile.focusContext.sessionType.slice(0, 20) : 'general',
       } : undefined,
+      // Mentorship context
+      mentorshipContext: userProfile.mentorshipContext && typeof userProfile.mentorshipContext === 'object' ? {
+        roleTypes: Array.isArray(userProfile.mentorshipContext.roleTypes) ? userProfile.mentorshipContext.roleTypes.slice(0, 5) : [],
+        mentorshipStyle: typeof userProfile.mentorshipContext.mentorshipStyle === 'string' ? userProfile.mentorshipContext.mentorshipStyle.slice(0, 20) : 'mentor',
+        subjects: Array.isArray(userProfile.mentorshipContext.subjects) ? userProfile.mentorshipContext.subjects.slice(0, 10) : [],
+        practices: Array.isArray(userProfile.mentorshipContext.practices) ? userProfile.mentorshipContext.practices.slice(0, 10) : [],
+        level: typeof userProfile.mentorshipContext.level === 'string' ? userProfile.mentorshipContext.level.slice(0, 20) : 'beginner',
+        injuriesNotes: typeof userProfile.mentorshipContext.injuriesNotes === 'string' ? userProfile.mentorshipContext.injuriesNotes.slice(0, 200) : undefined,
+        isInQuietHours: userProfile.mentorshipContext.isInQuietHours === true,
+        followUpEnabled: userProfile.mentorshipContext.followUpEnabled !== false,
+      } : undefined,
     };
   }
 
@@ -978,6 +989,66 @@ User can always:
 - Change their routine anytime
 - Pause/resume routine
 - Update specific times (wake, gym, work, etc.)
+`;
+    }
+
+    // MENTORSHIP SYSTEM CONTEXT
+    const mentorshipContext = userProfile?.mentorshipContext;
+    if (mentorshipContext && mentorshipContext.roleTypes && mentorshipContext.roleTypes.length > 0) {
+      const roleDescriptions: Record<string, string> = {
+        student: 'academic subjects and exam preparation',
+        parent: "their child's learning and routines",
+        trainer: 'fitness, yoga, or martial arts',
+        learner: 'skills like coding, design, or music',
+      };
+
+      const styleDescriptions: Record<string, string> = {
+        teacher: 'explains concepts directly and clearly',
+        mentor: 'guides and motivates with encouragement',
+        coach: 'keeps consistency with gentle accountability',
+        calm_companion: 'low pressure, just present and supportive',
+      };
+
+      const roles = mentorshipContext.roleTypes.map((r: string) => roleDescriptions[r] || r).join(', ');
+      const style = styleDescriptions[mentorshipContext.mentorshipStyle] || mentorshipContext.mentorshipStyle;
+
+      additionalContext += `
+
+====================================
+🧑‍🏫 MENTORSHIP MODE (ACTIVE)
+====================================
+USER WANTS HELP WITH: ${roles || 'general guidance'}
+MENTORSHIP STYLE: ${style}
+LEVEL: ${mentorshipContext.level || 'beginner'}
+${mentorshipContext.subjects && mentorshipContext.subjects.length > 0 ? `STUDY SUBJECTS: ${mentorshipContext.subjects.join(', ')}` : ''}
+${mentorshipContext.practices && mentorshipContext.practices.length > 0 ? `PRACTICES: ${mentorshipContext.practices.join(', ')}` : ''}
+${mentorshipContext.injuriesNotes ? `⚠️ INJURIES/NOTES: ${mentorshipContext.injuriesNotes}` : ''}
+
+MENTORSHIP BEHAVIOR RULES:
+1. ${aiName} is a personal mentor that STAYS with the user over time
+2. Teach and guide WITHOUT:
+   - Spamming messages
+   - Forcing routines
+   - Sounding robotic
+3. In TEACHER mode: Explain topics DIRECTLY (no question loops)
+   ❌ NOT: "What part do you want to focus on?"
+   ✅ INSTEAD: "Here's how this works — I'll keep it clear."
+4. In COACH mode: Safety-first, encouraging, no guilt language
+5. In MENTOR mode: Guide + motivate, acknowledge progress
+6. In CALM COMPANION mode: Be present, minimal advice, emotional safety
+
+FOLLOW-UP RULES:
+- Only send ONE gentle check-in per hour (max)
+- Examples: "Still studying, or should we pause?" / "How did that session feel?"
+- NEVER send repeated pings or pressure
+${mentorshipContext.isInQuietHours ? '⚠️ QUIET HOURS ACTIVE: Do NOT initiate unless user messages first' : ''}
+
+LIFE + MENTORSHIP CONNECTION:
+- Notice stress → slow pace
+- Notice consistency → encourage
+- Notice burnout → suggest rest
+- Notice improvement → reflect it back
+Example: "You've been more consistent this week. Even if it doesn't feel big, it is."
 `;
     }
 

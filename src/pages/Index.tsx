@@ -3,12 +3,14 @@ import { Navigate } from 'react-router-dom';
 import { AuraProvider, useAura } from '@/contexts/AuraContext';
 import { useAuth } from '@/hooks/useAuth';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useMentorship } from '@/hooks/useMentorship';
 import { AppSidebar, TabId } from '@/components/AppSidebar';
 import { ReminderPopup } from '@/components/ReminderPopup';
 import { FloatingFocusButton } from '@/components/FloatingFocusButton';
 import { CalmChatScreen } from '@/screens/CalmChatScreen';
 import { OnboardingScreen } from '@/screens/OnboardingScreen';
 import { PermissionsOnboardingScreen } from '@/screens/PermissionsOnboardingScreen';
+import { MentorshipOnboarding } from '@/components/MentorshipOnboarding';
 import { AuraOrb } from '@/components/AuraOrb';
 import { DailyMoodPopup } from '@/components/DailyMoodPopup';
 import { SplashScreen } from '@/components/SplashScreen';
@@ -23,8 +25,10 @@ import { useMorningBriefing } from '@/hooks/useMorningBriefing';
 const AppContent: React.FC = () => {
   const { userProfile, isLoading, clearChatHistory } = useAura();
   const { setUserSchedule } = useTheme();
+  const { hasCompletedSetup: hasMentorshipSetup, isLoading: mentorshipLoading } = useMentorship();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [voiceModeOpen, setVoiceModeOpen] = useState(false);
+  const [showMentorshipOnboarding, setShowMentorshipOnboarding] = useState(false);
   const [permissionsComplete, setPermissionsComplete] = useState(() => {
     return localStorage.getItem('aura-permissions-complete') === 'true';
   });
@@ -40,6 +44,15 @@ const AppContent: React.FC = () => {
       return () => clearTimeout(timer);
     }
   }, [showMorningMood]);
+  
+  // Check if mentorship onboarding should be shown
+  useEffect(() => {
+    if (!mentorshipLoading && !hasMentorshipSetup && userProfile.onboardingComplete && permissionsComplete) {
+      // Show mentorship onboarding after a delay
+      const timer = setTimeout(() => setShowMentorshipOnboarding(true), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [mentorshipLoading, hasMentorshipSetup, userProfile.onboardingComplete, permissionsComplete]);
   
   useMorningBriefing();
 
@@ -120,6 +133,13 @@ const AppContent: React.FC = () => {
         </div>
       )}
 
+      {/* Mentorship Onboarding */}
+      {showMentorshipOnboarding && (
+        <MentorshipOnboarding
+          onComplete={() => setShowMentorshipOnboarding(false)}
+          userName={userProfile.name}
+        />
+      )}
       <ContinuousVoiceMode
         isOpen={voiceModeOpen}
         onClose={() => setVoiceModeOpen(false)}

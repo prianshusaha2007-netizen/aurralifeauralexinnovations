@@ -18,7 +18,8 @@ import {
   ChevronRight,
   Timer,
   Users,
-  Heart
+  Heart,
+  GraduationCap
 } from 'lucide-react';
 import {
   Drawer,
@@ -115,6 +116,13 @@ const MENU_ITEMS = [
     label: 'Weekly Wellness', 
     action: 'wellness',
     color: 'from-rose-500 to-pink-500'
+  },
+  { 
+    id: 'mentorship', 
+    icon: GraduationCap, 
+    label: 'Mentorship Settings', 
+    action: 'mentorship',
+    color: 'from-amber-500 to-orange-500'
   },
   { 
     id: 'hydration-health', 
@@ -225,6 +233,8 @@ export const MoreMenuSheet: React.FC<MoreMenuSheetProps> = ({
       navigate('/social');
     } else if (item.action === 'wellness') {
       navigate('/wellness');
+    } else if (item.action === 'mentorship') {
+      navigate('/mentorship');
     } else if (item.action === 'rhythm-editor') {
       onOpenChange(false);
       // Small delay to let the drawer close first

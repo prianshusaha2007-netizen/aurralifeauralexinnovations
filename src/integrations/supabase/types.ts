@@ -605,6 +605,66 @@ export type Database = {
         }
         Relationships: []
       }
+      mentorship_profiles: {
+        Row: {
+          created_at: string
+          follow_up_enabled: boolean | null
+          id: string
+          injuries_notes: string | null
+          last_checkin_time: string | null
+          level: string | null
+          mentorship_style: string | null
+          only_if_user_messages_first: boolean | null
+          practices: string[] | null
+          quiet_during_work: boolean | null
+          quiet_hours_enabled: boolean | null
+          quiet_hours_end: string | null
+          quiet_hours_start: string | null
+          role_types: string[] | null
+          subjects: string[] | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          follow_up_enabled?: boolean | null
+          id?: string
+          injuries_notes?: string | null
+          last_checkin_time?: string | null
+          level?: string | null
+          mentorship_style?: string | null
+          only_if_user_messages_first?: boolean | null
+          practices?: string[] | null
+          quiet_during_work?: boolean | null
+          quiet_hours_enabled?: boolean | null
+          quiet_hours_end?: string | null
+          quiet_hours_start?: string | null
+          role_types?: string[] | null
+          subjects?: string[] | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          follow_up_enabled?: boolean | null
+          id?: string
+          injuries_notes?: string | null
+          last_checkin_time?: string | null
+          level?: string | null
+          mentorship_style?: string | null
+          only_if_user_messages_first?: boolean | null
+          practices?: string[] | null
+          quiet_during_work?: boolean | null
+          quiet_hours_enabled?: boolean | null
+          quiet_hours_end?: string | null
+          quiet_hours_start?: string | null
+          role_types?: string[] | null
+          subjects?: string[] | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       mood_checkins: {
         Row: {
           created_at: string
