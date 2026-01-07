@@ -1,28 +1,37 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Brain, Sparkles } from 'lucide-react';
+import { Brain, Sparkles, Zap } from 'lucide-react';
 import auraAvatar from '@/assets/aura-avatar.jpeg';
 
 interface ThinkingIndicatorProps {
   className?: string;
+  mode?: 'fast' | 'deep' | null;
 }
 
-const thinkingPhrases = [
-  'Thinking...',
+const fastPhrases = [
+  'Quick reply...',
+  'On it...',
   'Processing...',
-  'Understanding...',
+];
+
+const deepPhrases = [
+  'Deep thinking...',
+  'Analyzing...',
+  'Reasoning...',
   'Reflecting...',
 ];
 
-export const ThinkingIndicator: React.FC<ThinkingIndicatorProps> = ({ className }) => {
-  const [phraseIndex, setPhrasIndex] = React.useState(0);
+export const ThinkingIndicator: React.FC<ThinkingIndicatorProps> = ({ className, mode = 'fast' }) => {
+  const [phraseIndex, setPhraseIndex] = React.useState(0);
+  const isDeep = mode === 'deep';
+  const phrases = isDeep ? deepPhrases : fastPhrases;
 
   React.useEffect(() => {
     const interval = setInterval(() => {
-      setPhrasIndex((prev) => (prev + 1) % thinkingPhrases.length);
-    }, 2000);
+      setPhraseIndex((prev) => (prev + 1) % phrases.length);
+    }, isDeep ? 2500 : 1500);
     return () => clearInterval(interval);
-  }, []);
+  }, [phrases.length, isDeep]);
 
   return (
     <motion.div 
@@ -35,45 +44,64 @@ export const ThinkingIndicator: React.FC<ThinkingIndicatorProps> = ({ className 
       {/* Avatar with thinking glow */}
       <div className="relative">
         <motion.div
-          className="absolute inset-0 rounded-full bg-primary/20"
+          className={`absolute inset-0 rounded-full ${isDeep ? 'bg-violet-500/20' : 'bg-emerald-500/20'}`}
           animate={{ 
             scale: [1, 1.3, 1],
             opacity: [0.4, 0.1, 0.4],
           }}
           transition={{ 
-            duration: 2,
+            duration: isDeep ? 2.5 : 1.5,
             repeat: Infinity,
             ease: 'easeInOut',
           }}
         />
-        <div className="w-9 h-9 rounded-full overflow-hidden ring-2 ring-primary/20 relative z-10">
+        <div className={`w-9 h-9 rounded-full overflow-hidden ring-2 ${isDeep ? 'ring-violet-500/30' : 'ring-emerald-500/30'} relative z-10`}>
           <img src={auraAvatar} alt="AURRA" className="w-full h-full object-cover" />
         </div>
       </div>
 
       {/* Thinking bubble */}
       <motion.div 
-        className="bg-card/90 backdrop-blur-md border border-border/40 px-4 py-3 rounded-2xl rounded-bl-sm shadow-lg shadow-primary/5"
+        className="bg-card/90 backdrop-blur-md border border-border/40 px-4 py-3 rounded-2xl rounded-bl-sm shadow-lg"
         animate={{ 
-          boxShadow: [
-            '0 4px 6px -1px hsl(var(--primary) / 0.05)',
-            '0 4px 12px -1px hsl(var(--primary) / 0.1)',
-            '0 4px 6px -1px hsl(var(--primary) / 0.05)',
-          ]
+          boxShadow: isDeep 
+            ? [
+                '0 4px 6px -1px hsl(262 80% 50% / 0.05)',
+                '0 4px 12px -1px hsl(262 80% 50% / 0.15)',
+                '0 4px 6px -1px hsl(262 80% 50% / 0.05)',
+              ]
+            : [
+                '0 4px 6px -1px hsl(160 80% 40% / 0.05)',
+                '0 4px 12px -1px hsl(160 80% 40% / 0.1)',
+                '0 4px 6px -1px hsl(160 80% 40% / 0.05)',
+              ]
         }}
-        transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+        transition={{ duration: isDeep ? 2.5 : 1.5, repeat: Infinity, ease: 'easeInOut' }}
       >
         <div className="flex items-center gap-2.5">
-          {/* Animated brain icon */}
-          <motion.div
-            animate={{ 
-              rotate: [0, 5, -5, 0],
-              scale: [1, 1.05, 1],
-            }}
-            transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
-          >
-            <Brain className="w-4 h-4 text-primary/70" />
-          </motion.div>
+          {/* Mode indicator badge */}
+          <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
+            isDeep 
+              ? 'bg-violet-500/10 text-violet-600 dark:text-violet-400' 
+              : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+          }`}>
+            {isDeep ? (
+              <motion.div
+                animate={{ rotate: [0, 10, -10, 0] }}
+                transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+              >
+                <Brain className="w-3 h-3" />
+              </motion.div>
+            ) : (
+              <motion.div
+                animate={{ scale: [1, 1.2, 1] }}
+                transition={{ duration: 0.6, repeat: Infinity }}
+              >
+                <Zap className="w-3 h-3" />
+              </motion.div>
+            )}
+            <span>{isDeep ? 'Deep' : 'Quick'}</span>
+          </div>
 
           {/* Thinking text */}
           <motion.span 
@@ -83,7 +111,7 @@ export const ThinkingIndicator: React.FC<ThinkingIndicatorProps> = ({ className 
             exit={{ opacity: 0, y: -5 }}
             className="text-sm text-muted-foreground font-medium"
           >
-            {thinkingPhrases[phraseIndex]}
+            {phrases[phraseIndex]}
           </motion.span>
 
           {/* Animated dots */}
@@ -91,13 +119,13 @@ export const ThinkingIndicator: React.FC<ThinkingIndicatorProps> = ({ className 
             {[0, 1, 2].map((i) => (
               <motion.span
                 key={i}
-                className="w-1.5 h-1.5 rounded-full bg-primary/50"
+                className={`w-1.5 h-1.5 rounded-full ${isDeep ? 'bg-violet-500/50' : 'bg-emerald-500/50'}`}
                 animate={{ 
                   scale: [1, 1.4, 1],
                   opacity: [0.4, 1, 0.4],
                 }}
                 transition={{ 
-                  duration: 0.8,
+                  duration: isDeep ? 1 : 0.6,
                   repeat: Infinity,
                   delay: i * 0.15,
                   ease: 'easeInOut',
@@ -106,17 +134,19 @@ export const ThinkingIndicator: React.FC<ThinkingIndicatorProps> = ({ className 
             ))}
           </div>
 
-          {/* Sparkle decoration */}
-          <motion.div
-            animate={{ 
-              rotate: [0, 180, 360],
-              opacity: [0.3, 0.7, 0.3],
-            }}
-            transition={{ duration: 3, repeat: Infinity, ease: 'linear' }}
-            className="ml-1"
-          >
-            <Sparkles className="w-3 h-3 text-primary/40" />
-          </motion.div>
+          {/* Sparkle decoration (only for deep mode) */}
+          {isDeep && (
+            <motion.div
+              animate={{ 
+                rotate: [0, 180, 360],
+                opacity: [0.3, 0.7, 0.3],
+              }}
+              transition={{ duration: 3, repeat: Infinity, ease: 'linear' }}
+              className="ml-1"
+            >
+              <Sparkles className="w-3 h-3 text-violet-500/40" />
+            </motion.div>
+          )}
         </div>
       </motion.div>
     </motion.div>

@@ -245,6 +245,7 @@ function findRelevantBlock(blocks: SmartRoutineBlock[], currentHour: number): {
 export const useAuraChat = () => {
   const { chatMessages, addChatMessage, updateChatMessage, userProfile } = useAura();
   const [isThinking, setIsThinking] = useState(false);
+  const [currentResponseMode, setCurrentResponseMode] = useState<'fast' | 'deep' | null>(null);
   const { detectReminderIntent, generateReminderConfirmation } = useReminderIntentDetection();
   const { addFromNaturalLanguage } = useReminders();
   const { 
@@ -430,6 +431,10 @@ export const useAuraChat = () => {
 
     // Regular chat flow (or story continuation)
     addChatMessage({ content: userMessage, sender: 'user' });
+    
+    // Determine response path early and set it for UI indicator
+    const responsePath = getResponsePath(userMessage);
+    setCurrentResponseMode(responsePath);
     setIsThinking(true);
     
     // If in story mode, add story context
@@ -450,8 +455,7 @@ export const useAuraChat = () => {
       });
     }
 
-    // Determine response path (fast vs deep)
-    const responsePath = getResponsePath(userMessage);
+    // Response path already determined above
     
     // For fast path, limit context to last 6 messages
     // For deep path, use last 20 messages
@@ -814,12 +818,14 @@ export const useAuraChat = () => {
       });
     } finally {
       setIsThinking(false);
+      setCurrentResponseMode(null);
     }
   };
 
   return { 
     sendMessage, 
-    isThinking, 
+    isThinking,
+    currentResponseMode,
     storyState, 
     endStory, 
     shouldAskMood, 

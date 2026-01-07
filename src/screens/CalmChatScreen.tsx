@@ -109,7 +109,7 @@ const detectDocIntent = (message: string): boolean => {
 export const CalmChatScreen: React.FC<CalmChatScreenProps> = ({ onMenuClick, onNewChat }) => {
   const navigate = useNavigate();
   const { chatMessages, addChatMessage, userProfile } = useAura();
-  const { sendMessage, isThinking, showUpgradeSheet: chatUpgradeSheet, setShowUpgradeSheet: setChatUpgradeSheet, focusState } = useAuraChat();
+  const { sendMessage, isThinking, currentResponseMode, showUpgradeSheet: chatUpgradeSheet, setShowUpgradeSheet: setChatUpgradeSheet, focusState } = useAuraChat();
   const { speak, isSpeaking } = useVoiceFeedback();
   const { placeholder } = useRotatingPlaceholder(6000);
   const { briefing, isLoading: isBriefingLoading, fetchBriefing } = useMorningBriefing();
@@ -991,9 +991,9 @@ export const CalmChatScreen: React.FC<CalmChatScreenProps> = ({ onMenuClick, onN
             )}
           </AnimatePresence>
 
-          {/* Typing Indicator - WhatsApp style */}
+          {/* Typing Indicator - WhatsApp style with mode indicator */}
           {(isThinking || isGenerating || isCreatingDoc) && chatMessages[chatMessages.length - 1]?.sender === 'user' && (
-            <TypingIndicator />
+            <TypingIndicator mode={currentResponseMode} />
           )}
           
           <div ref={messagesEndRef} />

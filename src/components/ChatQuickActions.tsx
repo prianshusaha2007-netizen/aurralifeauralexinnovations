@@ -1,5 +1,5 @@
 import React from 'react';
-import { Rocket, Brain, PenLine, FileText, Laugh, Wand2, Dumbbell, Target } from 'lucide-react';
+import { Rocket, Brain, PenLine, FileText, Laugh, Wand2, Dumbbell, Target, CalendarClock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
@@ -11,6 +11,13 @@ interface ChatQuickActionsProps {
 }
 
 const QUICK_ACTIONS = [
+  { 
+    id: 'yesterday', 
+    label: 'What happened yesterday?', 
+    icon: CalendarClock, 
+    message: "What happened yesterday? Give me a quick recap of what we talked about.",
+    gradient: 'from-amber-500 to-yellow-500'
+  },
   { 
     id: 'boost-day', 
     label: 'Boost my day', 
