@@ -16,6 +16,9 @@ import { useRealtimeContext } from './useRealtimeContext';
 import { useUserJourney } from './useUserJourney';
 import { useMentorship } from './useMentorship';
 import { useOptimizedMemory } from './useOptimizedMemory';
+import { useEmotionalDetection } from './useEmotionalDetection';
+import { useSilentPersonaSwitching } from './useSilentPersonaSwitching';
+import { useRecoveryMode } from './useRecoveryMode';
 import { hasGreetedToday } from '@/utils/dailyGreeting';
 import { isRoutineEditRequest } from '@/utils/routineBehaviorRules';
 import { supabase } from '@/integrations/supabase/client';
@@ -305,6 +308,30 @@ export const useAuraChat = () => {
   const { context: realtimeContext, getContextForAI } = useRealtimeContext();
   const { profile: mentorshipProfile, isInQuietHours, hasCompletedSetup: hasMentorshipSetup } = useMentorship();
   
+  // Emotional detection for real-time tone adaptation
+  const { 
+    detectEmotion, 
+    emotionalTrend, 
+    currentEnergy, 
+    getEmotionalContextForAI,
+    needsSupport,
+  } = useEmotionalDetection();
+  
+  // Silent persona switching based on context
+  const { 
+    processMessage: processPersonaMessage, 
+    getPersonaContextForAI,
+  } = useSilentPersonaSwitching();
+  
+  // Recovery mode - gentle mode after stress signals
+  const {
+    isActive: recoveryModeActive,
+    level: recoveryLevel,
+    processMessage: processRecoveryMessage,
+    getRecoveryContextForAI,
+    getActivationMessage,
+  } = useRecoveryMode();
+  
   // Optimized memory system for faster responses
   const { 
     memoryContext: optimizedMemory, 
@@ -485,10 +512,18 @@ export const useAuraChat = () => {
     const intent = classifyIntent(userMessage);
     const responseStrategy = getResponseStrategy(intent);
     
+    // Emotional detection and recovery mode processing
+    const emotionResult = detectEmotion(userMessage);
+    const personaResult = processPersonaMessage(userMessage);
+    const recoveryResult = processRecoveryMessage(userMessage);
+    
     // Track emotional interactions
     if (intent.shouldPrioritizeEmotion) {
       recordInteraction('emotional');
     }
+    
+    // If recovery mode just activated, we'll add an activation message after AI response
+    const shouldShowRecoveryMessage = recoveryResult.shouldActivateRecovery;
 
     let assistantContent = '';
     let messageId: string | null = null;
@@ -632,6 +667,27 @@ export const useAuraChat = () => {
               injuriesNotes: mentorshipProfile.injuries_notes,
               isInQuietHours: isInQuietHours(),
               followUpEnabled: mentorshipProfile.follow_up_enabled,
+            } : null,
+            // Emotional Detection Context - real-time tone adaptation
+            emotionalContext: {
+              currentState: emotionResult.state,
+              emotionalTrend: emotionalTrend,
+              energyLevel: currentEnergy,
+              confidence: emotionResult.confidence,
+              toneAdaptation: emotionResult.toneAdaptation,
+              responseStyle: emotionResult.suggestedResponseStyle,
+              needsExtraSupport: needsSupport,
+            },
+            // Silent Persona Context - context-aware persona
+            personaContext: {
+              activePersona: personaResult.persona,
+              behavior: personaResult.behavior,
+            },
+            // Recovery Mode Context - stress-triggered gentle mode
+            recoveryContext: recoveryModeActive ? {
+              isActive: true,
+              level: recoveryLevel,
+              adaptations: getRecoveryContextForAI(),
             } : null,
           },
         }),
@@ -837,5 +893,10 @@ export const useAuraChat = () => {
     showUpgradeSheet,
     setShowUpgradeSheet,
     focusState,
+    // Emotional & Recovery state
+    emotionalTrend,
+    currentEnergy,
+    recoveryModeActive,
+    recoveryLevel,
   };
 };

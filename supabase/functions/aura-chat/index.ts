@@ -584,6 +584,33 @@ function validateInput(data: any): { valid: boolean; error?: string; sanitized?:
         isInQuietHours: userProfile.mentorshipContext.isInQuietHours === true,
         followUpEnabled: userProfile.mentorshipContext.followUpEnabled !== false,
       } : undefined,
+      // Emotional Detection context
+      emotionalContext: userProfile.emotionalContext && typeof userProfile.emotionalContext === 'object' ? {
+        currentState: typeof userProfile.emotionalContext.currentState === 'string' ? userProfile.emotionalContext.currentState.slice(0, 20) : 'neutral',
+        emotionalTrend: typeof userProfile.emotionalContext.emotionalTrend === 'string' ? userProfile.emotionalContext.emotionalTrend.slice(0, 20) : 'neutral',
+        energyLevel: typeof userProfile.emotionalContext.energyLevel === 'string' ? userProfile.emotionalContext.energyLevel.slice(0, 20) : 'medium',
+        confidence: typeof userProfile.emotionalContext.confidence === 'number' ? userProfile.emotionalContext.confidence : 0.5,
+        toneAdaptation: typeof userProfile.emotionalContext.toneAdaptation === 'string' ? userProfile.emotionalContext.toneAdaptation.slice(0, 20) : 'warm',
+        responseStyle: typeof userProfile.emotionalContext.responseStyle === 'string' ? userProfile.emotionalContext.responseStyle.slice(0, 100) : '',
+        needsExtraSupport: userProfile.emotionalContext.needsExtraSupport === true,
+      } : undefined,
+      // Silent Persona context
+      personaContext: userProfile.personaContext && typeof userProfile.personaContext === 'object' ? {
+        activePersona: typeof userProfile.personaContext.activePersona === 'string' ? userProfile.personaContext.activePersona.slice(0, 30) : 'companion',
+        behavior: userProfile.personaContext.behavior && typeof userProfile.personaContext.behavior === 'object' ? {
+          responseLength: typeof userProfile.personaContext.behavior.responseLength === 'string' ? userProfile.personaContext.behavior.responseLength : 'medium',
+          tone: typeof userProfile.personaContext.behavior.tone === 'string' ? userProfile.personaContext.behavior.tone.slice(0, 50) : 'warm',
+          energy: typeof userProfile.personaContext.behavior.energy === 'string' ? userProfile.personaContext.behavior.energy : 'medium',
+          suggestions: userProfile.personaContext.behavior.suggestions === true,
+          questionStyle: typeof userProfile.personaContext.behavior.questionStyle === 'string' ? userProfile.personaContext.behavior.questionStyle : 'gentle',
+        } : undefined,
+      } : undefined,
+      // Recovery Mode context
+      recoveryContext: userProfile.recoveryContext && typeof userProfile.recoveryContext === 'object' ? {
+        isActive: userProfile.recoveryContext.isActive === true,
+        level: typeof userProfile.recoveryContext.level === 'string' ? userProfile.recoveryContext.level.slice(0, 20) : 'none',
+        adaptations: typeof userProfile.recoveryContext.adaptations === 'string' ? userProfile.recoveryContext.adaptations.slice(0, 1000) : '',
+      } : undefined,
     };
   }
 
@@ -1609,6 +1636,140 @@ Show reminders: ${adaptations?.showReminders ? 'Yes' : 'NO'}
 Suggestions today: ${adaptations?.suggestionsPerDay || 0}
 Tone intensity: ${adaptations?.toneIntensity?.toUpperCase() || 'BALANCED'}
 
+`;
+    }
+
+    // EMOTIONAL DETECTION CONTEXT - real-time tone adaptation
+    const emotionalContext = userProfile?.emotionalContext;
+    if (emotionalContext && emotionalContext.currentState !== 'neutral') {
+      additionalContext += `
+
+====================================
+💭 EMOTIONAL DETECTION (ACTIVE)
+====================================
+
+DETECTED STATE: ${(emotionalContext.currentState || 'neutral').toUpperCase()}
+EMOTIONAL TREND: ${emotionalContext.emotionalTrend || 'neutral'}
+ENERGY LEVEL: ${emotionalContext.energyLevel || 'medium'}
+CONFIDENCE: ${Math.round((emotionalContext.confidence || 0.5) * 100)}%
+TONE ADAPTATION: ${emotionalContext.toneAdaptation || 'warm'}
+${emotionalContext.needsExtraSupport ? '⚠️ USER NEEDS EXTRA SUPPORT (3+ stress signals detected)' : ''}
+
+RESPONSE STYLE GUIDE:
+${emotionalContext.responseStyle || 'Standard warm interaction.'}
+
+EMOTIONAL TONE RULES (DO NOT ANNOUNCE):
+${emotionalContext.currentState === 'stressed' ? `🔴 STRESSED
+- Keep responses brief and calming
+- Offer to break things down
+- Don't add pressure or urgency
+- "One thing at a time" approach` : ''}
+${emotionalContext.currentState === 'tired' ? `🟠 TIRED
+- Keep responses brief
+- Suggest rest as a valid option
+- Don't push productivity
+- Acknowledge their state indirectly` : ''}
+${emotionalContext.currentState === 'anxious' ? `🟡 ANXIOUS
+- Reassuring tone
+- Help ground the user with simple steps
+- Calm, steady responses
+- "It's okay. Let's take this slow."` : ''}
+${emotionalContext.currentState === 'frustrated' ? `🔵 FRUSTRATED
+- Acknowledge the frustration
+- Be solution-focused but patient
+- Don't be overly cheerful
+- Help troubleshoot calmly` : ''}
+${emotionalContext.currentState === 'low' ? `🟣 LOW/SAD
+- Warm and understanding
+- No forced positivity
+- Simply be present
+- Gentle acknowledgment` : ''}
+${emotionalContext.currentState === 'happy' ? `🟢 HAPPY
+- Match the positive energy
+- Be encouraging
+- Conversational and light` : ''}
+
+CRITICAL: Never say "I notice you seem stressed/tired/etc."
+Just naturally adapt your tone.
+`;
+    }
+
+    // SILENT PERSONA CONTEXT - context-aware persona switching
+    const personaContext = userProfile?.personaContext;
+    if (personaContext) {
+      const behavior = personaContext.behavior;
+      additionalContext += `
+
+====================================
+🎭 SILENT PERSONA (${(personaContext.activePersona || 'companion').toUpperCase()})
+====================================
+
+CURRENT PERSONA: ${personaContext.activePersona || 'companion'}
+
+BEHAVIOR SETTINGS:
+- Response length: ${behavior?.responseLength || 'medium'}
+- Tone: ${behavior?.tone || 'warm and conversational'}
+- Energy level: ${behavior?.energy || 'medium'}
+- Include suggestions: ${behavior?.suggestions ? 'yes, when relevant' : 'no, just respond'}
+- Question style: ${behavior?.questionStyle === 'none' ? 'avoid questions' : behavior?.questionStyle === 'gentle' ? 'gentle, optional questions' : 'thoughtful follow-up questions'}
+
+PERSONA DESCRIPTIONS:
+${personaContext.activePersona === 'companion' ? '🤝 COMPANION: Warm, supportive friend. Focus on listening and being present.' : ''}
+${personaContext.activePersona === 'mentor' ? '🎓 MENTOR: Patient teacher. Explain clearly, break down concepts, encourage learning.' : ''}
+${personaContext.activePersona === 'coach' ? '🏃 COACH: Action-focused. Be direct, suggest next steps, build momentum.' : ''}
+${personaContext.activePersona === 'thinker' ? '💭 THINKER: Thinking partner. Help analyze, explore options, ask good questions.' : ''}
+${personaContext.activePersona === 'creative' ? '🎨 CREATIVE: Creative collaborator. Be playful, suggest ideas, encourage imagination.' : ''}
+${personaContext.activePersona === 'night_companion' ? '🌙 NIGHT COMPANION: Calm night presence. Speak softly, keep responses brief, prioritize rest.' : ''}
+
+CRITICAL: Never announce persona or mode changes. Just embody the persona naturally.
+`;
+    }
+
+    // RECOVERY MODE CONTEXT - gentle mode after stress signals
+    const recoveryContext = userProfile?.recoveryContext;
+    if (recoveryContext?.isActive) {
+      additionalContext += `
+
+====================================
+🌿 RECOVERY MODE ACTIVE (${(recoveryContext.level || 'light').toUpperCase()})
+====================================
+
+⚠️ USER HAS SHOWN 3+ STRESS SIGNALS RECENTLY
+
+${recoveryContext.adaptations || ''}
+
+RECOVERY LEVEL BEHAVIOR:
+${recoveryContext.level === 'light' ? `🟢 LIGHT RECOVERY
+- User seems a bit stressed
+- Be gentler, keep responses short
+- Reduce productivity suggestions` : ''}
+${recoveryContext.level === 'active' ? `🟡 ACTIVE RECOVERY
+- User is clearly stressed
+- Reduce productivity talk
+- Focus on presence
+- "I'm here. No rush."` : ''}
+${recoveryContext.level === 'deep' ? `🔴 DEEP RECOVERY
+- User is overwhelmed
+- Minimal suggestions
+- Maximum calm
+- Rest-first approach
+- "It's okay to take a break."` : ''}
+
+MANDATORY RECOVERY RULES:
+1. Reduce or eliminate productivity suggestions
+2. Don't mention tasks, routines, or "what's next"
+3. Shorter, calmer responses
+4. Acknowledge feelings without fixing
+5. Offer rest as a valid option
+6. No pressure, no guilt
+
+DO NOT:
+- Ask about tasks or productivity
+- Suggest "getting back on track"
+- Mention streaks or consistency
+- Push any goals
+
+TONE: Warm, gentle, present. No forced positivity.
 `;
     }
 
