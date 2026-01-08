@@ -42,6 +42,7 @@ import { useSmartRoutine } from '@/hooks/useSmartRoutine';
 import { useUserStateDetection } from '@/hooks/useUserStateDetection';
 import { useUserJourney } from '@/hooks/useUserJourney';
 import { useFocusModeIntegration, FocusModeUIElements, FocusModeHeaderBanner } from '@/components/FocusModeIntegration';
+import { useRecoveryMode } from '@/hooks/useRecoveryMode';
 import { FirstTimePreferences } from '@/components/FirstTimePreferences';
 import { NightWindDownFlow } from '@/components/NightWindDownFlow';
 import { RoutineOnboardingChat } from '@/components/RoutineOnboardingChat';
@@ -192,6 +193,9 @@ export const CalmChatScreen: React.FC<CalmChatScreenProps> = ({ onMenuClick, onN
   
   // AI-integrated Focus Mode
   const focusModeAI = useFocusModeIntegration();
+  
+  // Recovery mode detection
+  const recoveryMode = useRecoveryMode();
   
   const [inputValue, setInputValue] = useState('');
   const [memoryPrompt, setMemoryPrompt] = useState<{ content: string; show: boolean }>({ content: '', show: false });
@@ -560,6 +564,20 @@ export const CalmChatScreen: React.FC<CalmChatScreenProps> = ({ onMenuClick, onN
             <div className="flex flex-col">
               <div className="flex items-center gap-2">
                 <h1 className="font-semibold text-foreground">AURRA</h1>
+                {/* Recovery Mode Indicator */}
+                <AnimatePresence>
+                  {recoveryMode.isActive && (
+                    <motion.span
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.8 }}
+                      className="text-sm"
+                      title="Recovery mode active - taking it easy"
+                    >
+                      🌿
+                    </motion.span>
+                  )}
+                </AnimatePresence>
                 <StatusIndicator status={auraStatus} />
               </div>
               {/* Live Clock with City & Weather */}
