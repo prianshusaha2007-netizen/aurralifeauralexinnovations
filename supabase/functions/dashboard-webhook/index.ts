@@ -15,11 +15,21 @@ serve(async (req) => {
   const startTime = Date.now();
   
   try {
-    // Verify webhook secret for security
+    // Verify webhook secret for security - FAIL CLOSED approach
     const webhookSecret = req.headers.get('x-webhook-secret');
     const expectedSecret = Deno.env.get('WEBHOOK_SECRET');
     
-    if (expectedSecret && webhookSecret !== expectedSecret) {
+    // SECURITY: Reject if secret not configured (fail closed)
+    if (!expectedSecret) {
+      console.error('[Dashboard Webhook] WEBHOOK_SECRET not configured - rejecting request');
+      return new Response(
+        JSON.stringify({ error: 'Service misconfigured' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    // SECURITY: Reject if secret doesn't match
+    if (webhookSecret !== expectedSecret) {
       console.log('[Dashboard Webhook] Unauthorized access attempt');
       return new Response(
         JSON.stringify({ error: 'Unauthorized' }),
