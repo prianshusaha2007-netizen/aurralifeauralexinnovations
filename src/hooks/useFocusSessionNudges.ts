@@ -1,5 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { FocusType } from './useFocusModeAI';
+
+// Re-define type locally to avoid circular dependency
+export type FocusTypeNudge = 'study' | 'coding' | 'work' | 'creative' | 'quiet' | 'gym';
 
 export interface FocusNudge {
   message: string;
@@ -8,7 +10,7 @@ export interface FocusNudge {
 }
 
 // Mode-specific contextual templates following AURRA philosophy
-const MODE_TEMPLATES: Record<FocusType, {
+const MODE_TEMPLATES: Record<FocusTypeNudge, {
   framing: string[];
   nudges: string[];
   breakSuggestions: string[];
@@ -124,7 +126,7 @@ const MODE_TEMPLATES: Record<FocusType, {
 };
 
 export const useFocusSessionNudges = (
-  focusType: FocusType | null,
+  focusType: FocusTypeNudge | null,
   isActive: boolean,
   remainingTime: number
 ) => {
@@ -184,7 +186,7 @@ export const useFocusSessionNudges = (
   useEffect(() => {
     if (isActive && focusType) {
       sessionStartRef.current = new Date();
-      setFramingMessage(generateFramingMessage());
+      setFramingMessage(generateFramingMessage() || '');
       setNudgeHistory([]);
       setCurrentNudge(null);
       

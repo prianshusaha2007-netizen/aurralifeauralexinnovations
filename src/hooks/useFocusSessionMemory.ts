@@ -1,19 +1,22 @@
 import { useState, useCallback, useEffect } from 'react';
-import { FocusType, GymSubType, GymBodyArea } from './useFocusModeAI';
 import { useAuth } from './useAuth';
-import { supabase } from '@/integrations/supabase/client';
+
+// Re-define types locally to avoid circular dependency
+export type FocusTypeLocal = 'study' | 'coding' | 'work' | 'creative' | 'quiet' | 'gym';
+export type GymSubTypeLocal = 'strength' | 'cardio' | 'light';
+export type GymBodyAreaLocal = 'upper' | 'lower' | 'full';
 
 export interface FocusSessionRecord {
   id: string;
-  mode: FocusType;
+  mode: FocusTypeLocal;
   duration: number; // in minutes
   emotion: 'calm' | 'stressed' | 'motivated' | 'tired' | 'accomplished' | 'neutral';
   reflection?: string;
   completed: 'yes' | 'almost' | 'not_today';
   timestamp: string;
   goal?: string;
-  gymSubType?: GymSubType;
-  gymBodyArea?: GymBodyArea;
+  gymSubType?: GymSubTypeLocal;
+  gymBodyArea?: GymBodyAreaLocal;
   struggledCount: number;
   consistencyScore?: number; // Inferred from patterns
 }
@@ -48,7 +51,7 @@ export const useFocusSessionMemory = () => {
   const [energyPatterns, setEnergyPatterns] = useState<{
     peakHours: number[];
     avgFocusDuration: number;
-    preferredModes: FocusType[];
+    preferredModes: FocusTypeLocal[];
     fatigueThreshold: number; // Minutes before fatigue typically sets in
   }>({
     peakHours: [9, 10, 14, 15], // Default morning/afternoon peaks
@@ -91,24 +94,26 @@ export const useFocusSessionMemory = () => {
   // Save sessions
   useEffect(() => {
     if (sessions.length > 0) {
-      localStorage.setItem(FOCUS_MEMORY_KEY, JSON.stringify(sessions.slice(-100))); // Keep last 100
+      localStorage.setItem(FOCUS_MEMORY_KEY, JSON.stringify(sessions.slice(-100)));
     }
+    return undefined;
   }, [sessions]);
 
   // Save summaries
   useEffect(() => {
     if (dailySummaries.length > 0) {
-      localStorage.setItem(DAILY_SUMMARY_KEY, JSON.stringify(dailySummaries.slice(-30))); // Keep 30 days
+      localStorage.setItem(DAILY_SUMMARY_KEY, JSON.stringify(dailySummaries.slice(-30)));
     }
+    return undefined;
   }, [dailySummaries]);
 
   // Save patterns
   useEffect(() => {
     localStorage.setItem(ENERGY_PATTERNS_KEY, JSON.stringify(energyPatterns));
+    return undefined;
   }, [energyPatterns]);
-
   // Calculate consistency score based on recent patterns
-  const calculateConsistencyScore = useCallback((mode: FocusType): number => {
+  const calculateConsistencyScore = useCallback((mode: FocusTypeLocal): number => {
     const recentSessions = sessions.filter(s => {
       const sessionDate = new Date(s.timestamp);
       const weekAgo = new Date();
@@ -169,7 +174,7 @@ export const useFocusSessionMemory = () => {
       const sortedModes = Object.entries(modeCounts)
         .sort((a, b) => b[1] - a[1])
         .slice(0, 3)
-        .map(([mode]) => mode as FocusType);
+        .map(([mode]) => mode as FocusTypeLocal);
       
       // Update fatigue threshold (when struggles start)
       const struggledSessions = sessions.filter(s => s.struggledCount > 0);
@@ -296,7 +301,7 @@ export const useFocusSessionMemory = () => {
   }, [dailySummaries, energyPatterns]);
 
   // Get focus history for a specific mode
-  const getModeHistory = useCallback((mode: FocusType, days: number = 7): FocusSessionRecord[] => {
+  const getModeHistory = useCallback((mode: FocusTypeLocal, days: number = 7): FocusSessionRecord[] => {
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - days);
     

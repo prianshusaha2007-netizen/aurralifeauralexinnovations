@@ -1,8 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { useFocusMode, FocusSession } from './useFocusMode';
 import { useFocusSessions } from './useFocusSessions';
-import { useFocusSessionNudges } from './useFocusSessionNudges';
-import { useFocusSessionMemory } from './useFocusSessionMemory';
+
 export type FocusType = 'study' | 'coding' | 'work' | 'creative' | 'quiet' | 'gym';
 
 export type GymSubType = 'strength' | 'cardio' | 'light';
@@ -47,8 +46,6 @@ const RECOVERY_STORAGE_KEY = 'aurra-recovery-state';
 export const useFocusModeAI = () => {
   const focusMode = useFocusMode();
   const { saveFocusSession } = useFocusSessions();
-  const sessionMemory = useFocusSessionMemory();
-  const nudges = useFocusSessionNudges(null, focusMode.isActive, focusMode.remainingTime);
   
   const [focusType, setFocusType] = useState<FocusType | null>(null);
   const [goal, setGoal] = useState<FocusGoal | null>(null);
