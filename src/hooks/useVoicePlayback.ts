@@ -43,8 +43,9 @@ export const useVoicePlayback = () => {
         return;
       }
 
+      // Use text-to-voice function which falls back to OpenAI TTS
       const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/elevenlabs-tts`,
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/text-to-voice`,
         {
           method: 'POST',
           headers: {
@@ -53,7 +54,7 @@ export const useVoicePlayback = () => {
           },
           body: JSON.stringify({ 
             text: truncatedText, 
-            voiceId 
+            voice: 'alloy' // OpenAI TTS voice
           }),
         }
       );
