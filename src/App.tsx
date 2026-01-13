@@ -13,6 +13,7 @@ import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsOfService from "./pages/TermsOfService";
+import Install from "./pages/Install";
 import { ImageGalleryScreen } from "./screens/ImageGalleryScreen";
 import { ChatHistoryScreen } from "./screens/ChatHistoryScreen";
 import { ArchivedChatScreen } from "./screens/ArchivedChatScreen";
@@ -66,6 +67,7 @@ const App = () => (
               <Route path="/referrals" element={<ProtectedRoute><ReferralsScreen /></ProtectedRoute>} />
               <Route path="/privacy" element={<PrivacyPolicy />} />
               <Route path="/terms" element={<TermsOfService />} />
+              <Route path="/install" element={<Install />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
