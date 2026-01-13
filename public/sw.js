@@ -1,28 +1,76 @@
-// AURA Service Worker for Push Notifications
+// AURA Service Worker for Push Notifications & PWA Caching
 
-const CACHE_NAME = 'aura-v1';
+const CACHE_NAME = 'aura-pwa-v2';
+const STATIC_ASSETS = [
+  '/',
+  '/pwa-192x192.png',
+  '/pwa-512x512.png',
+  '/favicon.ico',
+];
 
-// Install event
+// Install event - cache static assets
 self.addEventListener('install', (event) => {
-  console.log('Service Worker installing.');
+  console.log('[SW] Installing service worker...');
+  event.waitUntil(
+    caches.open(CACHE_NAME).then((cache) => {
+      console.log('[SW] Caching static assets');
+      return cache.addAll(STATIC_ASSETS);
+    })
+  );
   self.skipWaiting();
 });
 
-// Activate event
+// Activate event - clean old caches
 self.addEventListener('activate', (event) => {
-  console.log('Service Worker activated.');
-  event.waitUntil(self.clients.claim());
+  console.log('[SW] Activating service worker...');
+  event.waitUntil(
+    caches.keys().then((cacheNames) => {
+      return Promise.all(
+        cacheNames
+          .filter((name) => name !== CACHE_NAME)
+          .map((name) => caches.delete(name))
+      );
+    }).then(() => self.clients.claim())
+  );
+});
+
+// Fetch event - serve from cache, fallback to network
+self.addEventListener('fetch', (event) => {
+  // Skip non-GET requests and chrome-extension requests
+  if (event.request.method !== 'GET' || event.request.url.startsWith('chrome-extension')) {
+    return;
+  }
+
+  event.respondWith(
+    caches.match(event.request).then((cachedResponse) => {
+      if (cachedResponse) {
+        return cachedResponse;
+      }
+      return fetch(event.request).then((response) => {
+        // Don't cache non-successful responses or API calls
+        if (!response || response.status !== 200 || response.type !== 'basic') {
+          return response;
+        }
+        // Clone and cache the response
+        const responseToCache = response.clone();
+        caches.open(CACHE_NAME).then((cache) => {
+          cache.put(event.request, responseToCache);
+        });
+        return response;
+      });
+    })
+  );
 });
 
 // Push notification received
 self.addEventListener('push', (event) => {
-  console.log('Push notification received:', event);
+  console.log('[SW] Push notification received:', event);
 
   let data = {
     title: 'AURA',
     body: 'You have a new notification',
-    icon: '/favicon.ico',
-    badge: '/favicon.ico',
+    icon: '/pwa-192x192.png',
+    badge: '/pwa-192x192.png',
     tag: 'aura-notification',
   };
 
@@ -37,17 +85,19 @@ self.addEventListener('push', (event) => {
 
   const options = {
     body: data.body,
-    icon: data.icon,
-    badge: data.badge,
-    tag: data.tag,
+    icon: data.icon || '/pwa-192x192.png',
+    badge: data.badge || '/pwa-192x192.png',
+    tag: data.tag || `aura-${Date.now()}`,
     vibrate: [100, 50, 100],
+    requireInteraction: true,
     data: {
       dateOfArrival: Date.now(),
-      url: self.location.origin,
+      url: data.url || self.location.origin,
+      ...data.data,
     },
     actions: [
       { action: 'open', title: 'Open AURA' },
-      { action: 'close', title: 'Dismiss' },
+      { action: 'dismiss', title: 'Dismiss' },
     ],
   };
 
