@@ -19,6 +19,7 @@ import { ContinuousVoiceMode } from '@/components/ContinuousVoiceMode';
 import { PermissionsOnboardingModal } from '@/components/PermissionsOnboardingModal';
 import { MorningGreeting } from '@/components/MorningGreeting';
 import { MorningMoodCheck, useShouldShowMoodCheck } from '@/components/MorningMoodCheck';
+import { PWAInstallBanner } from '@/components/PWAInstallBanner';
 import { useReminders } from '@/hooks/useReminders';
 import { useMorningBriefing } from '@/hooks/useMorningBriefing';
 
@@ -119,6 +120,7 @@ const AppContent: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
+      <PWAInstallBanner />
       <MorningGreeting />
       <DailyMoodPopup userName={userProfile.name} />
       <PermissionsOnboardingModal />

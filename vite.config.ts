@@ -15,16 +15,19 @@ export default defineConfig(({ mode }) => ({
     mode === "development" && componentTagger(),
     VitePWA({
       registerType: "autoUpdate",
-      includeAssets: ["favicon.jpeg", "robots.txt"],
+      includeAssets: ["favicon.jpeg", "robots.txt", "pwa-192x192.png", "pwa-512x512.png"],
       manifest: {
-        name: "Auralex - Human-Centric AI",
-        short_name: "Auralex",
-        description: "Your personal AI companion that talks naturally and helps manage your life",
+        name: "AURRA - Life OS",
+        short_name: "AURRA",
+        description: "Your ambient AI companion that listens, understands, remembers, guides, and grows with you. Not a chatbot. A Life OS.",
         theme_color: "#0d9488",
         background_color: "#0a0a0a",
         display: "standalone",
         orientation: "portrait",
         start_url: "/",
+        scope: "/",
+        id: "/",
+        categories: ["productivity", "lifestyle", "health"],
         icons: [
           {
             src: "/pwa-192x192.png",
@@ -43,9 +46,40 @@ export default defineConfig(({ mode }) => ({
             purpose: "maskable",
           },
         ],
+        shortcuts: [
+          {
+            name: "Chat with AURRA",
+            short_name: "Chat",
+            description: "Start a conversation",
+            url: "/",
+            icons: [{ src: "/pwa-192x192.png", sizes: "192x192" }],
+          },
+          {
+            name: "Daily Plan",
+            short_name: "Plan",
+            description: "View today's plan",
+            url: "/daily-plan",
+            icons: [{ src: "/pwa-192x192.png", sizes: "192x192" }],
+          },
+          {
+            name: "Timeline",
+            short_name: "Timeline",
+            description: "View your life timeline",
+            url: "/timeline",
+            icons: [{ src: "/pwa-192x192.png", sizes: "192x192" }],
+          },
+          {
+            name: "Mood Check-in",
+            short_name: "Mood",
+            description: "Log how you're feeling",
+            url: "/mood",
+            icons: [{ src: "/pwa-192x192.png", sizes: "192x192" }],
+          },
+        ],
       },
       workbox: {
-        globPatterns: ["**/*.{js,css,html,ico,png,svg,jpeg,jpg}"],
+        globPatterns: ["**/*.{js,css,html,ico,png,svg,jpeg,jpg,woff,woff2}"],
+        navigateFallback: "/index.html",
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/.*\.supabase\.co\/.*/i,
@@ -53,6 +87,14 @@ export default defineConfig(({ mode }) => ({
             options: {
               cacheName: "supabase-cache",
               expiration: { maxEntries: 50, maxAgeSeconds: 86400 },
+            },
+          },
+          {
+            urlPattern: /^https:\/\/fonts\.(googleapis|gstatic)\.com\/.*/i,
+            handler: "CacheFirst",
+            options: {
+              cacheName: "google-fonts-cache",
+              expiration: { maxEntries: 10, maxAgeSeconds: 31536000 },
             },
           },
         ],
