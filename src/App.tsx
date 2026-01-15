@@ -26,6 +26,7 @@ import { MentorshipSettingsScreen } from "./screens/MentorshipSettingsScreen";
 import { ReferralsScreen } from "./screens/ReferralsScreen";
 import TimelineScreen from "./screens/TimelineScreen";
 import AutonomySettingsScreen from "./screens/AutonomySettingsScreen";
+import AlarmsScreen from "./screens/AlarmsScreen";
 const queryClient = new QueryClient();
 
 // Wrapper for routes that need AuraProvider
@@ -69,6 +70,7 @@ const App = () => (
               <Route path="/referrals" element={<ProtectedRoute><ReferralsScreen /></ProtectedRoute>} />
               <Route path="/timeline" element={<ProtectedRoute><TimelineScreen /></ProtectedRoute>} />
               <Route path="/autonomy" element={<ProtectedRoute><AutonomySettingsScreen /></ProtectedRoute>} />
+              <Route path="/alarms" element={<ProtectedRoute><AlarmsScreen /></ProtectedRoute>} />
               <Route path="/privacy" element={<PrivacyPolicy />} />
               <Route path="/terms" element={<TermsOfService />} />
               <Route path="/install" element={<Install />} />

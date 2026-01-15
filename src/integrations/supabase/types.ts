@@ -44,6 +44,128 @@ export type Database = {
         }
         Relationships: []
       }
+      alarm_executions: {
+        Row: {
+          actions_performed: Json | null
+          alarm_id: string | null
+          context_snapshot: Json | null
+          created_at: string
+          duration_ms: number | null
+          error_message: string | null
+          executed_at: string
+          execution_mode: Database["public"]["Enums"]["execution_mode"]
+          id: string
+          result: Json | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          actions_performed?: Json | null
+          alarm_id?: string | null
+          context_snapshot?: Json | null
+          created_at?: string
+          duration_ms?: number | null
+          error_message?: string | null
+          executed_at?: string
+          execution_mode: Database["public"]["Enums"]["execution_mode"]
+          id?: string
+          result?: Json | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          actions_performed?: Json | null
+          alarm_id?: string | null
+          context_snapshot?: Json | null
+          created_at?: string
+          duration_ms?: number | null
+          error_message?: string | null
+          executed_at?: string
+          execution_mode?: Database["public"]["Enums"]["execution_mode"]
+          id?: string
+          result?: Json | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "alarm_executions_alarm_id_fkey"
+            columns: ["alarm_id"]
+            isOneToOne: false
+            referencedRelation: "alarms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      alarms: {
+        Row: {
+          actions: Json | null
+          alarm_type: Database["public"]["Enums"]["alarm_type"]
+          autonomy_level: string | null
+          category: Database["public"]["Enums"]["task_category"] | null
+          conditions: Json | null
+          created_at: string
+          description: string | null
+          execution_mode: Database["public"]["Enums"]["execution_mode"] | null
+          id: string
+          is_active: boolean | null
+          last_triggered_at: string | null
+          metadata: Json | null
+          next_trigger_at: string | null
+          priority: number | null
+          repeat_pattern: string | null
+          scheduled_at: string
+          title: string
+          updated_at: string
+          urgency: number | null
+          user_id: string
+        }
+        Insert: {
+          actions?: Json | null
+          alarm_type?: Database["public"]["Enums"]["alarm_type"]
+          autonomy_level?: string | null
+          category?: Database["public"]["Enums"]["task_category"] | null
+          conditions?: Json | null
+          created_at?: string
+          description?: string | null
+          execution_mode?: Database["public"]["Enums"]["execution_mode"] | null
+          id?: string
+          is_active?: boolean | null
+          last_triggered_at?: string | null
+          metadata?: Json | null
+          next_trigger_at?: string | null
+          priority?: number | null
+          repeat_pattern?: string | null
+          scheduled_at: string
+          title: string
+          updated_at?: string
+          urgency?: number | null
+          user_id: string
+        }
+        Update: {
+          actions?: Json | null
+          alarm_type?: Database["public"]["Enums"]["alarm_type"]
+          autonomy_level?: string | null
+          category?: Database["public"]["Enums"]["task_category"] | null
+          conditions?: Json | null
+          created_at?: string
+          description?: string | null
+          execution_mode?: Database["public"]["Enums"]["execution_mode"] | null
+          id?: string
+          is_active?: boolean | null
+          last_triggered_at?: string | null
+          metadata?: Json | null
+          next_trigger_at?: string | null
+          priority?: number | null
+          repeat_pattern?: string | null
+          scheduled_at?: string
+          title?: string
+          updated_at?: string
+          urgency?: number | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       analyzed_images: {
         Row: {
           analysis_data: Json | null
@@ -76,6 +198,65 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      batch_tasks: {
+        Row: {
+          alarm_id: string | null
+          completed_at: string | null
+          created_at: string
+          id: string
+          message_template: string | null
+          platform: string | null
+          progress: Json | null
+          recipients: Json
+          scheduled_at: string | null
+          status: string | null
+          task_type: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          alarm_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          message_template?: string | null
+          platform?: string | null
+          progress?: Json | null
+          recipients?: Json
+          scheduled_at?: string | null
+          status?: string | null
+          task_type: string
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          alarm_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          message_template?: string | null
+          platform?: string | null
+          progress?: Json | null
+          recipients?: Json
+          scheduled_at?: string | null
+          status?: string | null
+          task_type?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "batch_tasks_alarm_id_fkey"
+            columns: ["alarm_id"]
+            isOneToOne: false
+            referencedRelation: "alarms"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       challenge_participants: {
         Row: {
@@ -371,6 +552,60 @@ export type Database = {
           gym_sub_type?: string | null
           id?: string
           struggled_count?: number | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      follow_ups: {
+        Row: {
+          contact_identifier: string | null
+          contact_name: string
+          context: string | null
+          created_at: string
+          follow_up_count: number | null
+          id: string
+          last_contact_at: string | null
+          metadata: Json | null
+          next_follow_up_at: string | null
+          notes: string | null
+          platform: string
+          response_received: boolean | null
+          status: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          contact_identifier?: string | null
+          contact_name: string
+          context?: string | null
+          created_at?: string
+          follow_up_count?: number | null
+          id?: string
+          last_contact_at?: string | null
+          metadata?: Json | null
+          next_follow_up_at?: string | null
+          notes?: string | null
+          platform: string
+          response_received?: boolean | null
+          status?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          contact_identifier?: string | null
+          contact_name?: string
+          context?: string | null
+          created_at?: string
+          follow_up_count?: number | null
+          id?: string
+          last_contact_at?: string | null
+          metadata?: Json | null
+          next_follow_up_at?: string | null
+          notes?: string | null
+          platform?: string
+          response_received?: boolean | null
+          status?: string | null
+          updated_at?: string
           user_id?: string
         }
         Relationships: []
@@ -1060,6 +1295,69 @@ export type Database = {
           },
         ]
       }
+      user_context_state: {
+        Row: {
+          active_focus_session: boolean | null
+          burnout_score: number | null
+          context_metadata: Json | null
+          current_energy: string | null
+          current_location: string | null
+          current_mood: string | null
+          id: string
+          is_exercising: boolean | null
+          is_studying: boolean | null
+          is_working: boolean | null
+          last_sleep_at: string | null
+          last_wake_at: string | null
+          motivation_level: number | null
+          quiet_hours_active: boolean | null
+          sleep_quality: string | null
+          stress_level: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          active_focus_session?: boolean | null
+          burnout_score?: number | null
+          context_metadata?: Json | null
+          current_energy?: string | null
+          current_location?: string | null
+          current_mood?: string | null
+          id?: string
+          is_exercising?: boolean | null
+          is_studying?: boolean | null
+          is_working?: boolean | null
+          last_sleep_at?: string | null
+          last_wake_at?: string | null
+          motivation_level?: number | null
+          quiet_hours_active?: boolean | null
+          sleep_quality?: string | null
+          stress_level?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          active_focus_session?: boolean | null
+          burnout_score?: number | null
+          context_metadata?: Json | null
+          current_energy?: string | null
+          current_location?: string | null
+          current_mood?: string | null
+          id?: string
+          is_exercising?: boolean | null
+          is_studying?: boolean | null
+          is_working?: boolean | null
+          last_sleep_at?: string | null
+          last_wake_at?: string | null
+          motivation_level?: number | null
+          quiet_hours_active?: boolean | null
+          sleep_quality?: string | null
+          stress_level?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_credits: {
         Row: {
           created_at: string
@@ -1261,7 +1559,30 @@ export type Database = {
       generate_referral_code: { Args: never; Returns: string }
     }
     Enums: {
-      [_ in never]: never
+      alarm_type:
+        | "time_based"
+        | "purpose"
+        | "batch_task"
+        | "follow_up"
+        | "calendar_autopilot"
+        | "reminder_chain"
+      execution_mode:
+        | "ring_ask_execute"
+        | "ring_execute"
+        | "silent_execute"
+        | "silent_execute_report"
+        | "suppress"
+        | "delay"
+      task_category:
+        | "fitness"
+        | "study"
+        | "finance"
+        | "social"
+        | "reflection"
+        | "routine"
+        | "networking"
+        | "outreach"
+        | "wellness"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1388,6 +1709,34 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      alarm_type: [
+        "time_based",
+        "purpose",
+        "batch_task",
+        "follow_up",
+        "calendar_autopilot",
+        "reminder_chain",
+      ],
+      execution_mode: [
+        "ring_ask_execute",
+        "ring_execute",
+        "silent_execute",
+        "silent_execute_report",
+        "suppress",
+        "delay",
+      ],
+      task_category: [
+        "fitness",
+        "study",
+        "finance",
+        "social",
+        "reflection",
+        "routine",
+        "networking",
+        "outreach",
+        "wellness",
+      ],
+    },
   },
 } as const
