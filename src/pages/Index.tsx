@@ -20,19 +20,32 @@ import { PermissionsOnboardingModal } from '@/components/PermissionsOnboardingMo
 import { MorningGreeting } from '@/components/MorningGreeting';
 import { MorningMoodCheck, useShouldShowMoodCheck } from '@/components/MorningMoodCheck';
 import { PWAInstallBanner } from '@/components/PWAInstallBanner';
+import AlarmTriggerModal from '@/components/AlarmTriggerModal';
 import { useReminders } from '@/hooks/useReminders';
 import { useMorningBriefing } from '@/hooks/useMorningBriefing';
+import { useAlarmSystem, Alarm, ExecutionMode } from '@/hooks/useAlarmSystem';
 
 const AppContent: React.FC = () => {
   const { userProfile, isLoading, clearChatHistory } = useAura();
   const { setUserSchedule } = useTheme();
   const { hasCompletedSetup: hasMentorshipSetup, isLoading: mentorshipLoading } = useMentorship();
+  const { 
+    pendingAlarms, 
+    executeAlarm, 
+    updateAlarm, 
+    determineAdaptiveMode 
+  } = useAlarmSystem();
+  
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [voiceModeOpen, setVoiceModeOpen] = useState(false);
   const [showMentorshipOnboarding, setShowMentorshipOnboarding] = useState(false);
   const [permissionsComplete, setPermissionsComplete] = useState(() => {
     return localStorage.getItem('aura-permissions-complete') === 'true';
   });
+  
+  // Alarm trigger modal state
+  const [activeAlarm, setActiveAlarm] = useState<Alarm | null>(null);
+  const [alarmModalOpen, setAlarmModalOpen] = useState(false);
   
   const { reminders, activeReminder, snoozeReminder, completeReminder, dismissActiveReminder } = useReminders();
   const { shouldShow: showMorningMood, dismiss: dismissMorningMood } = useShouldShowMoodCheck();
@@ -55,6 +68,15 @@ const AppContent: React.FC = () => {
     }
   }, [mentorshipLoading, hasMentorshipSetup, userProfile.onboardingComplete, permissionsComplete]);
   
+  // Watch for pending alarms and trigger modal
+  useEffect(() => {
+    if (pendingAlarms.length > 0 && !alarmModalOpen) {
+      const nextAlarm = pendingAlarms[0];
+      setActiveAlarm(nextAlarm);
+      setAlarmModalOpen(true);
+    }
+  }, [pendingAlarms, alarmModalOpen]);
+  
   useMorningBriefing();
 
   // Sync user schedule to theme context for auto dark/light mode
@@ -70,6 +92,33 @@ const AppContent: React.FC = () => {
   const handlePermissionsComplete = () => {
     localStorage.setItem('aura-permissions-complete', 'true');
     setPermissionsComplete(true);
+  };
+
+  // Alarm trigger modal handlers
+  const handleAlarmApprove = async () => {
+    if (activeAlarm) {
+      await executeAlarm(activeAlarm, true);
+      setAlarmModalOpen(false);
+      setActiveAlarm(null);
+    }
+  };
+
+  const handleAlarmSnooze = async (minutes: number) => {
+    if (activeAlarm) {
+      const newScheduledAt = new Date(Date.now() + minutes * 60 * 1000).toISOString();
+      await updateAlarm(activeAlarm.id, { scheduled_at: newScheduledAt });
+      setAlarmModalOpen(false);
+      setActiveAlarm(null);
+    }
+  };
+
+  const handleAlarmSkip = async () => {
+    if (activeAlarm) {
+      // Deactivate the alarm for today
+      await updateAlarm(activeAlarm.id, { is_active: false });
+      setAlarmModalOpen(false);
+      setActiveAlarm(null);
+    }
   };
 
   if (isLoading) {
@@ -153,6 +202,16 @@ const AppContent: React.FC = () => {
         onSnooze={(mins) => activeReminder && snoozeReminder(activeReminder.id, mins)}
         onComplete={() => activeReminder && completeReminder(activeReminder.id)}
         onDismiss={dismissActiveReminder}
+      />
+
+      {/* Alarm Trigger Modal */}
+      <AlarmTriggerModal
+        alarm={alarmModalOpen ? activeAlarm : null}
+        onApprove={handleAlarmApprove}
+        onSnooze={handleAlarmSnooze}
+        onSkip={handleAlarmSkip}
+        onClose={() => setAlarmModalOpen(false)}
+        adaptiveMode={activeAlarm ? determineAdaptiveMode(activeAlarm) : 'ring_ask_execute'}
       />
 
       <AppSidebar 
