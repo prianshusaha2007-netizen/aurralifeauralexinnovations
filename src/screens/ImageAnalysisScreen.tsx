@@ -78,15 +78,20 @@ export const ImageAnalysisScreen: React.FC = () => {
 
       if (uploadError) throw uploadError;
 
-      const { data: { publicUrl } } = supabase.storage
+      // Use signed URL for private bucket (1 year expiry for saved images)
+      const { data: signedUrlData, error: signedUrlError } = await supabase.storage
         .from('analyzed-images')
-        .getPublicUrl(fileName);
+        .createSignedUrl(fileName, 31536000); // 1 year in seconds
+
+      if (signedUrlError) throw signedUrlError;
+
+      const imageUrl = signedUrlData.signedUrl;
 
       // Save to database - cast to any to bypass type checking for new table
       const insertData = {
         user_id: user.id,
-        original_image_url: selectedImage || publicUrl,
-        transformed_image_url: transformedImage ? publicUrl : null,
+        original_image_url: selectedImage || imageUrl,
+        transformed_image_url: transformedImage ? imageUrl : null,
         analysis_data: analysisResult as any,
         annotations: analysisResult?.improvements || [],
         transformation_type: activeTransform,
