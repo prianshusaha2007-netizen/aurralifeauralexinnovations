@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, type FC, type ReactNode } from 'react';
 
 type ThemeMode = 'light' | 'dark' | 'auto';
 type ActiveTheme = 'light' | 'dark';
@@ -61,7 +61,7 @@ const getAutoTheme = (schedule?: UserSchedule): ActiveTheme => {
   return 'dark';
 };
 
-export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const ThemeProvider: FC<{ children: ReactNode }> = ({ children }) => {
   const [mode, setModeState] = useState<ThemeMode>(() => {
     const saved = localStorage.getItem('aura-theme-mode');
     return (saved as ThemeMode) || 'auto';
