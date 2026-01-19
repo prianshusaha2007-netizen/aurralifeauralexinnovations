@@ -199,24 +199,49 @@ export class AgentOrchestrator {
     
     const actionMap: Record<string, AgentResponse['actions']> = {
       planner: [
-        { label: 'Create Plan', action: 'create_plan' },
+        { label: 'Create Goal', action: 'create_plan', data: { title: 'New Goal' } },
         { label: 'View Goals', action: 'view_goals' },
       ],
+      scheduler: [
+        { label: 'Add Task', action: 'add_focus_block', data: { title: 'Scheduled Task', duration: 30 } },
+      ],
+      routine: [
+        { label: 'Add Habit', action: 'create_habit', data: { name: 'New Habit' } },
+        { label: 'Log Mood', action: 'log_mood', data: { mood: 'neutral', energy: 'medium', stress: 'low' } },
+      ],
+      task: [
+        { label: 'Add Focus Block', action: 'add_focus_block', data: { title: 'Focus Time', duration: 25 } },
+      ],
       study: [
-        { label: 'Start Session', action: 'start_session' },
-        { label: 'Review Cards', action: 'review_flashcards' },
+        { label: 'Start 25min', action: 'start_session', data: { type: 'study', duration: 25 } },
+        { label: 'Start 50min', action: 'start_session', data: { type: 'study', duration: 50 } },
       ],
       fitness: [
-        { label: 'Log Workout', action: 'log_workout' },
+        { label: 'Log 30min', action: 'log_workout', data: { type: 'general', duration: 30 } },
+        { label: 'Log 60min', action: 'log_workout', data: { type: 'general', duration: 60 } },
         { label: 'View Progress', action: 'view_fitness' },
       ],
       finance: [
-        { label: 'Log Expense', action: 'log_expense' },
+        { label: 'Log ₹100', action: 'log_expense', data: { amount: 100, category: 'other' } },
+        { label: 'Log ₹500', action: 'log_expense', data: { amount: 500, category: 'other' } },
         { label: 'View Budget', action: 'view_budget' },
       ],
       social: [
         { label: 'Draft Message', action: 'draft_message' },
-        { label: 'Schedule Follow-up', action: 'schedule_followup' },
+        { label: 'Schedule Follow-up', action: 'schedule_followup', data: { contactName: 'Contact', platform: 'email' } },
+      ],
+      memory: [
+        { label: 'Save Memory', action: 'save_memory', data: { content: 'Important note', category: 'general' } },
+      ],
+      mood: [
+        { label: 'Log High', action: 'log_mood', data: { mood: 'high', energy: 'high', stress: 'low' } },
+        { label: 'Log Low', action: 'log_mood', data: { mood: 'low', energy: 'low', stress: 'high' } },
+      ],
+      energy: [
+        { label: 'Log Water', action: 'log_water', data: { amount: 250 } },
+      ],
+      recovery: [
+        { label: 'Log Rest', action: 'log_mood', data: { mood: 'neutral', energy: 'low', stress: 'low', notes: 'Taking a break' } },
       ],
     };
     

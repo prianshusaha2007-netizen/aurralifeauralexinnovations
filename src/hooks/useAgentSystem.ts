@@ -4,10 +4,9 @@ import { useState, useCallback, useEffect, useMemo } from 'react';
 import { orchestrator } from '@/agents/AgentOrchestrator';
 import { AGENT_REGISTRY, getAgentById } from '@/agents/registry';
 import { AgentContext, AgentResponse, AutonomyMode, AgentDomain } from '@/agents/types';
-import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
+import { useAgentActions } from './useAgentActions';
 import { toast } from 'sonner';
-
 interface AgentMessage {
   id: string;
   type: 'user' | 'agent';
@@ -73,11 +72,11 @@ Respond as AURRA with the activated agent personalities. Keep responses conversa
 
 export const useAgentSystem = (): UseAgentSystemReturn => {
   const { user } = useAuth();
+  const agentActions = useAgentActions();
   const [messages, setMessages] = useState<AgentMessage[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [currentMode, setCurrentMode] = useState<AutonomyMode>('adaptive');
   const [context, setContext] = useState<AgentContext>(orchestrator.getState().context);
-
   // Update orchestrator when mode changes
   useEffect(() => {
     orchestrator.setGlobalMode(currentMode);
@@ -266,28 +265,114 @@ export const useAgentSystem = (): UseAgentSystemReturn => {
     setIsProcessing(true);
     
     try {
-      // Route to appropriate handler
-      const actionHandlers: Record<string, () => Promise<string>> = {
-        create_plan: async () => 'Plan created! I\'ve broken down your goal into steps.',
-        start_session: async () => 'Focus session started. I\'ll track your progress.',
-        log_workout: async () => 'Workout logged! Great job staying active.',
-        log_expense: async () => 'Expense logged. I\'m tracking your spending.',
-        draft_message: async () => 'Message draft ready. Would you like to review it?',
-        view_goals: async () => 'Loading your goals...',
-        review_flashcards: async () => 'Starting flashcard review...',
-        view_fitness: async () => 'Loading fitness progress...',
-        view_budget: async () => 'Loading budget overview...',
-        schedule_followup: async () => 'Follow-up scheduled.',
+      // Route to appropriate handler with real database operations
+      const actionHandlers: Record<string, () => Promise<{ success: boolean; message: string }>> = {
+        // Planning actions
+        create_plan: async () => {
+          const title = data?.title || 'New Goal';
+          return agentActions.createGoal({ 
+            title, 
+            description: data?.description,
+            category: data?.category,
+            targetDate: data?.targetDate 
+          });
+        },
+        view_goals: async () => agentActions.getGoals(),
+        
+        // Study actions
+        start_session: async () => {
+          const type = data?.type || 'study';
+          const duration = data?.duration || 25;
+          return agentActions.startFocusSession(type, duration);
+        },
+        review_flashcards: async () => agentActions.startFocusSession('flashcards', 15),
+        
+        // Fitness actions
+        log_workout: async () => {
+          return agentActions.logWorkout({
+            type: data?.type || 'general',
+            duration: data?.duration || 30,
+            bodyArea: data?.bodyArea,
+            goal: data?.goal,
+          });
+        },
+        view_fitness: async () => agentActions.getFitnessProgress(),
+        
+        // Finance actions
+        log_expense: async () => {
+          return agentActions.logExpense({
+            amount: data?.amount || 100,
+            category: data?.category || 'other',
+            description: data?.description,
+          });
+        },
+        view_budget: async () => agentActions.getBudgetOverview(),
+        
+        // Social actions
+        draft_message: async () => ({ 
+          success: true, 
+          message: '📝 Message draft ready. What would you like to say?' 
+        }),
+        schedule_followup: async () => {
+          return agentActions.scheduleFollowUp({
+            contactName: data?.contactName || 'Contact',
+            platform: data?.platform || 'email',
+            context: data?.context,
+            nextFollowUpAt: data?.nextFollowUpAt,
+          });
+        },
+        
+        // Routine actions
+        add_focus_block: async () => {
+          return agentActions.addFocusBlock(
+            data?.title || 'Focus Time',
+            data?.duration || 30,
+            data?.priority || 1
+          );
+        },
+        
+        // Habit actions
+        create_habit: async () => {
+          return agentActions.createHabit({
+            name: data?.name || 'New Habit',
+            icon: data?.icon,
+          });
+        },
+        
+        // Mood actions
+        log_mood: async () => {
+          return agentActions.logMood({
+            mood: data?.mood || 'neutral',
+            energy: data?.energy || 'medium',
+            stress: data?.stress || 'low',
+            notes: data?.notes,
+          });
+        },
+        
+        // Memory actions
+        save_memory: async () => {
+          return agentActions.saveMemory(
+            data?.content || 'User shared something important',
+            data?.category || 'general'
+          );
+        },
+        
+        // Hydration actions
+        log_water: async () => {
+          return agentActions.logWater(data?.amount || 250);
+        },
       };
       
       const handler = actionHandlers[action];
-      const result = handler ? await handler() : `Action "${action}" executed.`;
+      const result = handler 
+        ? await handler() 
+        : { success: true, message: `Action "${action}" executed.` };
       
       // Add result message
       setMessages(prev => [...prev, {
         id: `action-${Date.now()}`,
         type: 'agent',
-        content: result,
+        content: result.message,
         agentId: 'execution',
         agentName: 'Execution Agent',
         domain: 'routine',
@@ -295,10 +380,19 @@ export const useAgentSystem = (): UseAgentSystemReturn => {
       }]);
     } catch (error) {
       console.error('Action execution error:', error);
+      setMessages(prev => [...prev, {
+        id: `error-${Date.now()}`,
+        type: 'agent',
+        content: 'Failed to execute action. Please try again.',
+        agentId: 'system',
+        agentName: 'System',
+        domain: 'routine',
+        timestamp: new Date(),
+      }]);
     } finally {
       setIsProcessing(false);
     }
-  }, []);
+  }, [agentActions]);
 
   // Update context
   const updateContext = useCallback((updates: Partial<AgentContext>) => {

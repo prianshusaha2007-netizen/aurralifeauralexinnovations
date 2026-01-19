@@ -2,7 +2,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Send, Bot, User, Sparkles, Settings2, 
-  ChevronDown, Loader2, Mic, Image as ImageIcon
+  ChevronDown, Loader2, Mic, Image as ImageIcon,
+  Wallet, Dumbbell, Target, BookOpen, Droplets
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -177,13 +178,55 @@ const AgentChatInterface: React.FC<AgentChatInterfaceProps> = ({
                 Tell me about your goals, tasks, or anything you need help with. 
                 My specialized agents will work together to assist you.
               </p>
+              
+              {/* Quick Action Buttons */}
+              <div className="grid grid-cols-2 gap-2 mt-6 max-w-sm mx-auto">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="justify-start gap-2 h-auto py-2"
+                  onClick={() => handleQuickAction('log_expense', { amount: 100, category: 'food', description: 'Quick expense' })}
+                >
+                  <Wallet className="w-4 h-4 text-green-500" />
+                  <span className="text-xs">Log ₹100 expense</span>
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="justify-start gap-2 h-auto py-2"
+                  onClick={() => handleQuickAction('log_workout', { type: 'general', duration: 30 })}
+                >
+                  <Dumbbell className="w-4 h-4 text-orange-500" />
+                  <span className="text-xs">Log 30min workout</span>
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="justify-start gap-2 h-auto py-2"
+                  onClick={() => handleQuickAction('start_session', { type: 'study', duration: 25 })}
+                >
+                  <BookOpen className="w-4 h-4 text-blue-500" />
+                  <span className="text-xs">Start 25min study</span>
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="justify-start gap-2 h-auto py-2"
+                  onClick={() => handleQuickAction('log_water', { amount: 250 })}
+                >
+                  <Droplets className="w-4 h-4 text-cyan-500" />
+                  <span className="text-xs">Log 250ml water</span>
+                </Button>
+              </div>
+              
+              {/* Chat Suggestions */}
               <div className="flex flex-wrap justify-center gap-2 mt-4">
-                {['Plan my day', 'Start studying', 'Log expense', 'Track workout'].map((suggestion) => (
+                {['Create a goal', 'View my budget', 'Track my fitness', 'Plan my week'].map((suggestion) => (
                   <Button
                     key={suggestion}
-                    variant="outline"
+                    variant="ghost"
                     size="sm"
-                    className="text-xs"
+                    className="text-xs text-muted-foreground"
                     onClick={() => sendMessage(suggestion)}
                   >
                     {suggestion}
