@@ -1287,8 +1287,6 @@ export const CalmChatScreen: React.FC<CalmChatScreenProps> = ({ onMenuClick, onN
           </motion.div>
         )}
       </AnimatePresence>
-        </>
-      )}
 
       {/* Upgrade Sheet - triggered by chat or button */}
       <UpgradeSheet
@@ -1315,6 +1313,8 @@ export const CalmChatScreen: React.FC<CalmChatScreenProps> = ({ onMenuClick, onN
           isFirstTimeUser,
         }}
       />
+        </>
+      )}
     </div>
   );
 };
