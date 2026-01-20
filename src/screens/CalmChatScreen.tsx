@@ -57,10 +57,9 @@ import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { motion, AnimatePresence } from 'framer-motion';
 import { DailyPlanIndicator, DailyPlanBadge, DailyPlanAdaptCard } from '@/components/DailyPlanIndicator';
-import AgentChatInterface from '@/components/AgentChatInterface';
+// AgentChatInterface temporarily removed to fix React instance issue
+// import AgentChatInterface from '@/components/AgentChatInterface';
 import auraAvatar from '@/assets/aura-avatar.jpeg';
-
-type ChatMode = 'regular' | 'agent';
 
 interface CalmChatScreenProps {
   onMenuClick?: () => void;
@@ -219,7 +218,8 @@ export const CalmChatScreen: React.FC<CalmChatScreenProps> = ({ onMenuClick, onN
   const [longPressVoiceActive, setLongPressVoiceActive] = useState(false);
   const [activeSettingsCard, setActiveSettingsCard] = useState<SettingsCardType>(null);
   const [isListening, setIsListening] = useState(false);
-  const [chatMode, setChatMode] = useState<ChatMode>('regular');
+  // Agent mode temporarily disabled
+  // const [chatMode, setChatMode] = useState<ChatMode>('regular');
   
   // Check if coding block is active
   const isCodingBlockActive = activeBlock?.block.type === 'coding';
@@ -641,25 +641,7 @@ export const CalmChatScreen: React.FC<CalmChatScreenProps> = ({ onMenuClick, onN
               />
             )}
             
-            {/* Chat Mode Toggle */}
-            <Button
-              variant="ghost"
-              size="icon"
-              className={cn(
-                "rounded-full h-10 w-10 transition-colors",
-                chatMode === 'agent' 
-                  ? "text-primary bg-primary/10" 
-                  : "text-muted-foreground hover:text-primary hover:bg-primary/10"
-              )}
-              onClick={() => setChatMode(prev => prev === 'regular' ? 'agent' : 'regular')}
-              title={chatMode === 'regular' ? 'Switch to Agent Mode' : 'Switch to Regular Chat'}
-            >
-              {chatMode === 'regular' ? (
-                <Bot className="w-5 h-5" />
-              ) : (
-                <MessageCircle className="w-5 h-5" />
-              )}
-            </Button>
+            {/* Chat Mode Toggle - Temporarily disabled */}
             
             {/* Voice Mode Button */}
             <Button
@@ -687,19 +669,12 @@ export const CalmChatScreen: React.FC<CalmChatScreenProps> = ({ onMenuClick, onN
       {/* Spacer for fixed header */}
       <div style={{ height: HEADER_HEIGHT }} className="flex-shrink-0" />
 
-      {/* Chat Mode Content */}
-      {chatMode === 'agent' ? (
-        /* Agent Mode - Full Agent Chat Interface */
-        <div className="flex-1 overflow-hidden">
-          <AgentChatInterface embedded onClose={() => setChatMode('regular')} />
-        </div>
-      ) : (
-        /* Regular Mode - Original Chat UI */
-        <>
-          {/* AI-Integrated Focus Mode Banner - shows when in focus mode */}
-          <AnimatePresence>
-            {focusModeAI.isActive && focusModeAI.focusType && (
-              <FocusModeHeaderBanner focusMode={focusModeAI} />
+      {/* Regular Chat Mode */}
+      <>
+        {/* AI-Integrated Focus Mode Banner - shows when in focus mode */}
+        <AnimatePresence>
+          {focusModeAI.isActive && focusModeAI.focusType && (
+            <FocusModeHeaderBanner focusMode={focusModeAI} />
             )}
           </AnimatePresence>
 
@@ -1314,7 +1289,6 @@ export const CalmChatScreen: React.FC<CalmChatScreenProps> = ({ onMenuClick, onN
         }}
       />
         </>
-      )}
     </div>
   );
 };
