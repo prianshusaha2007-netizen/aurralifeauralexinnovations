@@ -4,13 +4,8 @@ import path from "path";
 import { componentTagger } from "lovable-tagger";
 import { VitePWA } from "vite-plugin-pwa";
 
-// Force fresh cache with timestamp
-const CACHE_BUST = Date.now().toString(36);
-
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
-  // Use unique cache directory to force fresh dependency optimization
-  cacheDir: `node_modules/.vite-${CACHE_BUST}`,
   server: {
     host: "::",
     port: 8080,
@@ -131,9 +126,12 @@ export default defineConfig(({ mode }) => ({
       "react-dom", 
       "react-dom/client",
       "react/jsx-runtime",
-      "@tanstack/react-query"
+      "react/jsx-dev-runtime",
+      "@tanstack/react-query",
+      "framer-motion"
     ],
     force: true,
+    needsInterop: [],
   },
   build: {
     commonjsOptions: {
