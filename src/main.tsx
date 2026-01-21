@@ -1,12 +1,13 @@
-import React from "react";
+// CRITICAL: Import React first before any other modules
+import * as React from "react";
+import * as ReactDOM from "react-dom";
 import { createRoot } from "react-dom/client";
 
-// Debug: Log React version to verify single instance
-console.log('[AURRA] React version:', React.version);
-console.log('[AURRA] React instance check:', { 
-  hasUseState: typeof React.useState === 'function',
-  hasUseEffect: typeof React.useEffect === 'function'
-});
+// Ensure React is available globally to prevent multiple instance issues
+if (typeof window !== 'undefined') {
+  (window as any).React = React;
+  (window as any).ReactDOM = ReactDOM;
+}
 
 import App from "./App.tsx";
 import "./index.css";
