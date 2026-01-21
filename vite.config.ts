@@ -4,8 +4,13 @@ import path from "path";
 import { componentTagger } from "lovable-tagger";
 import { VitePWA } from "vite-plugin-pwa";
 
+// Force fresh cache with timestamp
+const CACHE_BUST = Date.now().toString(36);
+
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
+  // Use unique cache directory to force fresh dependency optimization
+  cacheDir: `node_modules/.vite-${CACHE_BUST}`,
   server: {
     host: "::",
     port: 8080,
@@ -104,21 +109,31 @@ export default defineConfig(({ mode }) => ({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
+      // Force all React imports to use the same instance
       "react": path.resolve(__dirname, "node_modules/react"),
       "react-dom": path.resolve(__dirname, "node_modules/react-dom"),
       "react-dom/client": path.resolve(__dirname, "node_modules/react-dom/client"),
       "react/jsx-runtime": path.resolve(__dirname, "node_modules/react/jsx-runtime"),
       "react/jsx-dev-runtime": path.resolve(__dirname, "node_modules/react/jsx-dev-runtime"),
     },
-    dedupe: ["react", "react-dom", "react/jsx-runtime", "react/jsx-dev-runtime", "@tanstack/react-query", "framer-motion"],
+    dedupe: [
+      "react", 
+      "react-dom", 
+      "react/jsx-runtime", 
+      "react/jsx-dev-runtime",
+      "@tanstack/react-query", 
+      "framer-motion"
+    ],
   },
   optimizeDeps: {
-    include: ["react", "react-dom", "react-dom/client", "@tanstack/react-query"],
-    exclude: [],
+    include: [
+      "react", 
+      "react-dom", 
+      "react-dom/client",
+      "react/jsx-runtime",
+      "@tanstack/react-query"
+    ],
     force: true,
-    esbuildOptions: {
-      resolveExtensions: ['.mjs', '.js', '.ts', '.jsx', '.tsx', '.json'],
-    },
   },
   build: {
     commonjsOptions: {
