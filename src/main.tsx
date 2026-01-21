@@ -1,5 +1,13 @@
 import React from "react";
-import ReactDOM from "react-dom/client";
+import { createRoot } from "react-dom/client";
+
+// Debug: Log React version to verify single instance
+console.log('[AURRA] React version:', React.version);
+console.log('[AURRA] React instance check:', { 
+  hasUseState: typeof React.useState === 'function',
+  hasUseEffect: typeof React.useEffect === 'function'
+});
+
 import App from "./App.tsx";
 import "./index.css";
 
@@ -8,7 +16,8 @@ if (!container) {
   throw new Error("Root element not found");
 }
 
-ReactDOM.createRoot(container).render(
+const root = createRoot(container);
+root.render(
   <React.StrictMode>
     <App />
   </React.StrictMode>
