@@ -4,7 +4,7 @@ import { AuraProvider, useAura } from '@/contexts/AuraContext';
 import { useAuth } from '@/hooks/useAuth';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useMentorship } from '@/hooks/useMentorship';
-import { AppSidebar, TabId } from '@/components/AppSidebar';
+import { LifeOSSidebar, LifeOSLayer } from '@/components/LifeOSSidebar';
 import { ReminderPopup } from '@/components/ReminderPopup';
 import { FloatingFocusButton } from '@/components/FloatingFocusButton';
 import { CalmChatScreen } from '@/screens/CalmChatScreen';
@@ -32,6 +32,7 @@ const AppContent: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [voiceModeOpen, setVoiceModeOpen] = useState(false);
   const [showMentorshipOnboarding, setShowMentorshipOnboarding] = useState(false);
+  const [activeLayer, setActiveLayer] = useState<LifeOSLayer>('chat');
   const [permissionsComplete, setPermissionsComplete] = useState(() => {
     return localStorage.getItem('aura-permissions-complete') === 'true';
   });
@@ -102,9 +103,10 @@ const AppContent: React.FC = () => {
   };
 
   // Chat is the cockpit - only render chat screen
-  // All other "screens" are accessed via sidebar or triggered via chat
-  const handleSidebarTabChange = (tab: TabId) => {
-    // For settings screens, we'll need to handle them
+  // Chat is the cockpit - only render chat screen
+  // All other "layers" are accessed via sidebar or triggered via chat
+  const handleLayerChange = (layer: LifeOSLayer) => {
+    setActiveLayer(layer);
     // For now, just close sidebar - features should be accessed via chat
     setSidebarOpen(false);
   };
@@ -160,11 +162,11 @@ const AppContent: React.FC = () => {
       {/* Alarm System Integration */}
       <AlarmSystemIntegration />
 
-      <AppSidebar 
+      <LifeOSSidebar 
         isOpen={sidebarOpen} 
         onClose={() => setSidebarOpen(false)}
-        activeTab="chat"
-        onTabChange={handleSidebarTabChange}
+        activeLayer={activeLayer}
+        onLayerChange={handleLayerChange}
         onNewChat={handleNewChat}
       />
 
