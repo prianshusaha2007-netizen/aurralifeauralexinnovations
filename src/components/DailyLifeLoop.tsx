@@ -225,48 +225,22 @@ export const DailyLifeLoop: React.FC<DailyLifeLoopProps> = ({
   );
 };
 
-// Hook to check if daily flow should be shown
-export const useDailyLifeLoop = () => {
-  const [shouldShow, setShouldShow] = useState(false);
-  
-  useEffect(() => {
-    // Check on mount and every minute
-    const check = () => {
-      const flow = getActiveFlow();
-      setShouldShow(flow !== 'none');
-    };
-    
-    check();
-    const interval = setInterval(check, 60000);
-    return () => clearInterval(interval);
-  }, []);
-  
-  const dismiss = useCallback(() => {
-    setShouldShow(false);
-  }, []);
-  
-  return { shouldShow, dismiss };
-};
-
-// Debug/test functions
-export const triggerDailyFlow = (flowType: 'briefing' | 'reflection' | 'winddown') => {
-  const today = new Date().toISOString().split('T')[0];
-  // Remove today's marker to allow showing again
-  localStorage.removeItem(`aurra-flow-${flowType}-date`);
-  console.log(`[DailyLifeLoop] Triggered ${flowType} flow - refresh to see`);
-  return `Flow ${flowType} triggered. Refresh to see.`;
-};
-
-export const resetDailyFlows = () => {
-  localStorage.removeItem('aurra-flow-briefing-date');
-  localStorage.removeItem('aurra-flow-reflection-date');
-  localStorage.removeItem('aurra-flow-winddown-date');
-  console.log('[DailyLifeLoop] All flows reset');
-  return 'All daily flows reset. Refresh to see.';
-};
-
-// Expose to window for testing
+// Debug/test functions - only attach on client
 if (typeof window !== 'undefined') {
+  const triggerDailyFlow = (flowType: 'briefing' | 'reflection' | 'winddown') => {
+    localStorage.removeItem(`aurra-flow-${flowType}-date`);
+    console.log(`[DailyLifeLoop] Triggered ${flowType} flow - refresh to see`);
+    return `Flow ${flowType} triggered. Refresh to see.`;
+  };
+
+  const resetDailyFlows = () => {
+    localStorage.removeItem('aurra-flow-briefing-date');
+    localStorage.removeItem('aurra-flow-reflection-date');
+    localStorage.removeItem('aurra-flow-winddown-date');
+    console.log('[DailyLifeLoop] All flows reset');
+    return 'All daily flows reset. Refresh to see.';
+  };
+
   (window as any).triggerDailyFlow = triggerDailyFlow;
   (window as any).resetDailyFlows = resetDailyFlows;
 }
