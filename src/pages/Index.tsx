@@ -24,7 +24,6 @@ import AlarmSystemIntegration from '@/components/AlarmSystemIntegration';
 import { TodayView } from '@/components/TodayView';
 import { useReminders } from '@/hooks/useReminders';
 import { useMorningBriefing } from '@/hooks/useMorningBriefing';
-import { useNightCompression } from '@/hooks/useNightCompression';
 
 const AppContent: React.FC = () => {
   const { userProfile, isLoading, clearChatHistory } = useAura();
@@ -62,9 +61,6 @@ const AppContent: React.FC = () => {
   }, [mentorshipLoading, hasMentorshipSetup, userProfile.onboardingComplete, permissionsComplete]);
   
   useMorningBriefing();
-  
-  // Night compression - runs silently in background during night hours
-  useNightCompression();
 
   useEffect(() => {
     if (userProfile.wakeTime && userProfile.sleepTime) {
