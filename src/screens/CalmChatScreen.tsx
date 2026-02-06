@@ -53,7 +53,7 @@ import { FounderModeCard } from '@/components/FounderModeCard';
 import { CompactJourneyBadge } from '@/components/JourneyStatusBadge';
 import { MorningBriefingCard } from '@/components/MorningBriefingCard';
 import { DailyFlowDebugPanel } from '@/components/DailyFlowDebugPanel';
-import { DailyLifeLoop, useDailyLifeLoop } from '@/components/DailyLifeLoop';
+import { DailyLifeLoop } from '@/components/DailyLifeLoop';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -202,8 +202,36 @@ export const CalmChatScreen: React.FC<CalmChatScreenProps> = ({ onMenuClick, onN
   // Recovery mode detection
   const recoveryMode = useRecoveryMode();
   
-  // Daily life loop (morning/evening/night flows)
-  const { shouldShow: showDailyLoop, dismiss: dismissDailyLoop } = useDailyLifeLoop();
+  // Daily life loop state - managed locally to avoid hook import issues
+  const [showDailyLoop, setShowDailyLoop] = useState(false);
+  const dismissDailyLoop = useCallback(() => setShowDailyLoop(false), []);
+  
+  // Check for daily flow on mount
+  useEffect(() => {
+    const getDayPhase = () => {
+      const hour = new Date().getHours();
+      if (hour >= 5 && hour < 11) return 'morning';
+      if (hour >= 11 && hour < 17) return 'day';
+      if (hour >= 17 && hour < 21) return 'evening';
+      return 'night';
+    };
+    
+    const getActiveFlow = () => {
+      const phase = getDayPhase();
+      const today = new Date().toISOString().split('T')[0];
+      const lastBriefing = localStorage.getItem('aurra-flow-briefing-date');
+      const lastReflection = localStorage.getItem('aurra-flow-reflection-date');
+      const lastWinddown = localStorage.getItem('aurra-flow-winddown-date');
+      
+      if (phase === 'morning' && lastBriefing !== today) return 'briefing';
+      if (phase === 'evening' && lastReflection !== today) return 'reflection';
+      if (phase === 'night' && lastWinddown !== today) return 'winddown';
+      return 'none';
+    };
+    
+    const flow = getActiveFlow();
+    setShowDailyLoop(flow !== 'none');
+  }, []);
 
   const [inputValue, setInputValue] = useState('');
   const [memoryPrompt, setMemoryPrompt] = useState<{ content: string; show: boolean }>({ content: '', show: false });
