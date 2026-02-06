@@ -105,16 +105,17 @@ export default defineConfig(({ mode }) => ({
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },
-    dedupe: ["react", "react-dom"],
+    dedupe: ["react", "react-dom", "react-router-dom"],
   },
   optimizeDeps: {
-    include: ["react", "react-dom", "react/jsx-runtime", "react/jsx-dev-runtime", "@tanstack/react-query"],
+    include: ["react", "react-dom", "react/jsx-runtime", "react/jsx-dev-runtime", "@tanstack/react-query", "react-router-dom"],
+    force: true,
     esbuildOptions: {
       define: {
         global: 'globalThis',
       },
     },
   },
-  // Force new cache directory to avoid stale bundles
-  cacheDir: "node_modules/.vite_fresh",
+  // Force cache rebuild
+  cacheDir: "node_modules/.vite_cache_v2",
 }));
