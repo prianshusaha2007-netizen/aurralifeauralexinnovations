@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Navigate } from 'react-router-dom';
 import { AuraProvider, useAura } from '@/contexts/AuraContext';
 import { useAuth } from '@/hooks/useAuth';
@@ -21,6 +21,7 @@ import { MorningGreeting } from '@/components/MorningGreeting';
 import { MorningMoodCheck, useShouldShowMoodCheck } from '@/components/MorningMoodCheck';
 import { PWAInstallBanner } from '@/components/PWAInstallBanner';
 import AlarmSystemIntegration from '@/components/AlarmSystemIntegration';
+import { TodayView } from '@/components/TodayView';
 import { useReminders } from '@/hooks/useReminders';
 import { useMorningBriefing } from '@/hooks/useMorningBriefing';
 
@@ -33,6 +34,7 @@ const AppContent: React.FC = () => {
   const [voiceModeOpen, setVoiceModeOpen] = useState(false);
   const [showMentorshipOnboarding, setShowMentorshipOnboarding] = useState(false);
   const [activeLayer, setActiveLayer] = useState<LifeOSLayer>('chat');
+  const [pendingAurraMessage, setPendingAurraMessage] = useState<string | null>(null);
   const [permissionsComplete, setPermissionsComplete] = useState(() => {
     return localStorage.getItem('aura-permissions-complete') === 'true';
   });
@@ -102,7 +104,12 @@ const AppContent: React.FC = () => {
     clearChatHistory();
   };
 
-  // Chat is the cockpit - only render chat screen
+  // Handle asking AURRA from other views (like TodayView)
+  const handleAskAurra = (message: string) => {
+    setPendingAurraMessage(message);
+    setActiveLayer('chat');
+  };
+
   // Chat is the cockpit - only render chat screen
   // All other "layers" are accessed via sidebar or triggered via chat
   const handleLayerChange = (layer: LifeOSLayer) => {
@@ -173,14 +180,26 @@ const AppContent: React.FC = () => {
       {/* Floating Focus Button - appears during active routine blocks */}
       <FloatingFocusButton />
 
-      {/* Chat is the only screen - the cockpit */}
+      {/* Main content area */}
       <main className="flex-1 overflow-hidden">
-        <PageTransition pageKey="chat">
-          <CalmChatScreen 
-            onMenuClick={() => setSidebarOpen(true)} 
-            onNewChat={handleNewChat}
-          />
-        </PageTransition>
+        {activeLayer === 'today' ? (
+          <PageTransition pageKey="today">
+            <div className="h-full overflow-auto bg-background">
+              <div className="max-w-lg mx-auto py-4">
+                <TodayView onAskAurra={handleAskAurra} />
+              </div>
+            </div>
+          </PageTransition>
+        ) : (
+          <PageTransition pageKey="chat">
+            <CalmChatScreen 
+              onMenuClick={() => setSidebarOpen(true)} 
+              onNewChat={handleNewChat}
+              pendingMessage={pendingAurraMessage}
+              onPendingMessageHandled={() => setPendingAurraMessage(null)}
+            />
+          </PageTransition>
+        )}
       </main>
     </div>
   );

@@ -64,6 +64,8 @@ import auraAvatar from '@/assets/aura-avatar.jpeg';
 interface CalmChatScreenProps {
   onMenuClick?: () => void;
   onNewChat?: () => void;
+  pendingMessage?: string | null;
+  onPendingMessageHandled?: () => void;
 }
 
 // Detect memory-worthy content
@@ -109,7 +111,7 @@ const detectDocIntent = (message: string): boolean => {
   return patterns.some(p => p.test(message));
 };
 
-export const CalmChatScreen: React.FC<CalmChatScreenProps> = ({ onMenuClick, onNewChat }) => {
+export const CalmChatScreen: React.FC<CalmChatScreenProps> = ({ onMenuClick, onNewChat, pendingMessage, onPendingMessageHandled }) => {
   const navigate = useNavigate();
   const { chatMessages, addChatMessage, userProfile } = useAura();
   const { sendMessage, isThinking, currentResponseMode, showUpgradeSheet: chatUpgradeSheet, setShowUpgradeSheet: setChatUpgradeSheet, focusState } = useAuraChat();
@@ -244,8 +246,21 @@ export const CalmChatScreen: React.FC<CalmChatScreenProps> = ({ onMenuClick, onN
   const hasShownTooltipRef = useRef(localStorage.getItem('aura-voice-tooltip-shown') === 'true');
   const weatherSuggestionShownRef = useRef(false);
 
+  // Handle pending messages from other views (like TodayView)
+  useEffect(() => {
+    if (pendingMessage && onPendingMessageHandled) {
+      // Small delay to ensure chat is ready
+      const timer = setTimeout(() => {
+        setInputValue(pendingMessage);
+        onPendingMessageHandled();
+        // Focus input
+        inputRef.current?.focus();
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [pendingMessage, onPendingMessageHandled]);
 
-  // Fetch morning briefing when hook triggers it
+
   useEffect(() => {
     const fetchMorningBriefingData = async () => {
       if (!showMorningBriefing) return;
