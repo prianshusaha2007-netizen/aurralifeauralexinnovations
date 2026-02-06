@@ -225,22 +225,18 @@ export const DailyLifeLoop: React.FC<DailyLifeLoopProps> = ({
   );
 };
 
-// Debug/test functions - only attach on client
-if (typeof window !== 'undefined') {
-  const triggerDailyFlow = (flowType: 'briefing' | 'reflection' | 'winddown') => {
-    localStorage.removeItem(`aurra-flow-${flowType}-date`);
-    console.log(`[DailyLifeLoop] Triggered ${flowType} flow - refresh to see`);
-    return `Flow ${flowType} triggered. Refresh to see.`;
-  };
+// Debug/test functions - exported for manual use in console
+// To trigger: import { triggerDailyFlow } from '@/components/DailyLifeLoop'
+export const triggerDailyFlow = (flowType: 'briefing' | 'reflection' | 'winddown') => {
+  localStorage.removeItem(`aurra-flow-${flowType}-date`);
+  console.log(`[DailyLifeLoop] Triggered ${flowType} flow - refresh to see`);
+  return `Flow ${flowType} triggered. Refresh to see.`;
+};
 
-  const resetDailyFlows = () => {
-    localStorage.removeItem('aurra-flow-briefing-date');
-    localStorage.removeItem('aurra-flow-reflection-date');
-    localStorage.removeItem('aurra-flow-winddown-date');
-    console.log('[DailyLifeLoop] All flows reset');
-    return 'All daily flows reset. Refresh to see.';
-  };
-
-  (window as any).triggerDailyFlow = triggerDailyFlow;
-  (window as any).resetDailyFlows = resetDailyFlows;
-}
+export const resetDailyFlows = () => {
+  localStorage.removeItem('aurra-flow-briefing-date');
+  localStorage.removeItem('aurra-flow-reflection-date');
+  localStorage.removeItem('aurra-flow-winddown-date');
+  console.log('[DailyLifeLoop] All flows reset');
+  return 'All daily flows reset. Refresh to see.';
+};
