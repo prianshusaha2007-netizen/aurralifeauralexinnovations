@@ -53,6 +53,8 @@ import { FounderModeCard } from '@/components/FounderModeCard';
 import { CompactJourneyBadge } from '@/components/JourneyStatusBadge';
 import { MorningBriefingCard } from '@/components/MorningBriefingCard';
 import { DailyFlowDebugPanel } from '@/components/DailyFlowDebugPanel';
+import { DailyLifeLoop, useDailyLifeLoop } from '@/components/DailyLifeLoop';
+import { useNightCompression } from '@/hooks/useNightCompression';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -201,6 +203,11 @@ export const CalmChatScreen: React.FC<CalmChatScreenProps> = ({ onMenuClick, onN
   // Recovery mode detection
   const recoveryMode = useRecoveryMode();
   
+  // Daily life loop (morning/evening/night flows)
+  const { shouldShow: showDailyLoop, dismiss: dismissDailyLoop } = useDailyLifeLoop();
+  
+  // Night compression (runs silently in background)
+  const { getYesterdaySummary } = useNightCompression();
   const [inputValue, setInputValue] = useState('');
   const [memoryPrompt, setMemoryPrompt] = useState<{ content: string; show: boolean }>({ content: '', show: false });
   const [showMediaSheet, setShowMediaSheet] = useState(false);
@@ -713,7 +720,19 @@ export const CalmChatScreen: React.FC<CalmChatScreenProps> = ({ onMenuClick, onN
         )}
       </AnimatePresence>
 
-      {/* Skill Session Timer - shows during active sessions */}
+      {/* Daily Life Loop - time-aware ambient flows */}
+      <AnimatePresence>
+        {showDailyLoop && !showMorningBriefing && !isFirstTimeUser && (
+          <div className="px-4 py-2">
+            <DailyLifeLoop
+              userName={userProfile.name}
+              onAskAurra={handleSend}
+              onDismiss={dismissDailyLoop}
+            />
+          </div>
+        )}
+      </AnimatePresence>
+
       <AnimatePresence>
         {currentSession && (
           <SkillSessionTimer compact={chatMessages.length > 1} />
