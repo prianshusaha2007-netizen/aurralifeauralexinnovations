@@ -125,10 +125,54 @@ serve(async (req) => {
       }
     );
 
+    // If ElevenLabs fails (401, 403, etc.), fall back to OpenAI TTS
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('ElevenLabs API error:', response.status, errorText);
-      throw new Error(`ElevenLabs API error: ${response.status}`);
+      console.error('ElevenLabs API error:', response.status, errorText, '- falling back to OpenAI TTS');
+      
+      const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
+      if (!openaiApiKey) {
+        return new Response(
+          JSON.stringify({ error: 'TTS services unavailable', requiresSetup: true }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      const openaiResponse = await fetch('https://api.openai.com/v1/audio/speech', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${openaiApiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'tts-1',
+          input: text,
+          voice: 'nova',
+          response_format: 'mp3',
+        }),
+      });
+
+      if (!openaiResponse.ok) {
+        return new Response(
+          JSON.stringify({ error: 'All TTS services failed' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      const openaiBuffer = await openaiResponse.arrayBuffer();
+      const openaiUint8 = new Uint8Array(openaiBuffer);
+      let openaiB = '';
+      const cs = 8192;
+      for (let i = 0; i < openaiUint8.length; i += cs) {
+        const chunk = openaiUint8.slice(i, i + cs);
+        openaiB += String.fromCharCode.apply(null, Array.from(chunk));
+      }
+      const openaiBase64 = btoa(openaiB);
+
+      return new Response(
+        JSON.stringify({ audioContent: openaiBase64 }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     const audioBuffer = await response.arrayBuffer();
