@@ -58,6 +58,7 @@ import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { motion, AnimatePresence } from 'framer-motion';
 import { DailyPlanIndicator, DailyPlanBadge, DailyPlanAdaptCard } from '@/components/DailyPlanIndicator';
+import { NotificationCenter } from '@/components/NotificationCenter';
 // AgentChatInterface temporarily removed to fix React instance issue
 // import AgentChatInterface from '@/components/AgentChatInterface';
 import auraAvatar from '@/assets/aura-avatar.jpeg';
@@ -653,6 +654,9 @@ export const CalmChatScreen: React.FC<CalmChatScreenProps> = ({ onMenuClick, onN
           
           {/* Right: Actions - minimal, calm */}
           <div className="flex items-center gap-1">
+            
+            {/* Notification Center Bell */}
+            <NotificationCenter />
             
             {/* Routine Visual Button - shows when visual exists but is hidden */}
             {routineVisual && !showVisual && (
