@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Send, Plus, Loader2, Download, RefreshCw, Headphones, ChevronDown, MoreVertical, Mic, CreditCard, Bot, MessageCircle } from 'lucide-react';
+import { Send, Plus, Loader2, Download, RefreshCw, Headphones, ChevronDown, MoreVertical, Mic, CreditCard, Bot, MessageCircle, Image } from 'lucide-react';
 import { useChatGestures } from '@/hooks/useChatGestures';
 import { Button } from '@/components/ui/button';
 import { SplitChatBubble } from '@/components/SplitChatBubble';
@@ -57,6 +57,7 @@ import { DailyLifeLoop } from '@/components/DailyLifeLoop';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { motion, AnimatePresence } from 'framer-motion';
+import { DeepFocusOverlay } from '@/components/DeepFocusOverlay';
 import { DailyPlanIndicator, DailyPlanBadge, DailyPlanAdaptCard } from '@/components/DailyPlanIndicator';
 import { NotificationCenter } from '@/components/NotificationCenter';
 // AgentChatInterface temporarily removed to fix React instance issue
@@ -120,7 +121,7 @@ export const CalmChatScreen: React.FC<CalmChatScreenProps> = ({ onMenuClick, onN
   const { speak, isSpeaking } = useVoiceFeedback();
   const { placeholder } = useRotatingPlaceholder(6000);
   const { briefing, isLoading: isBriefingLoading, fetchBriefing } = useMorningBriefing();
-  const { analyzeFile, generateImage, createDocument, downloadDocument, downloadImage, isUploading, isGenerating, isCreatingDoc } = useMediaActions();
+  const { analyzeFile, generateImage, createDocument, downloadDocument, downloadImage, analyzeImageInline, isUploading, isGenerating, isCreatingDoc, isAnalyzingImage } = useMediaActions();
   const { showReflectionPrompt, lastWeekStats, saveReflection, dismissReflection } = useWeeklyReflection();
   const { activeBlock, blocks } = useRoutineBlocks();
   const { hasActiveSkills, getActiveSkills, currentSession } = useSkillsProgress();
@@ -253,7 +254,8 @@ export const CalmChatScreen: React.FC<CalmChatScreenProps> = ({ onMenuClick, onN
   const [longPressVoiceActive, setLongPressVoiceActive] = useState(false);
   const [activeSettingsCard, setActiveSettingsCard] = useState<SettingsCardType>(null);
   const [isListening, setIsListening] = useState(false);
-  // Agent mode temporarily disabled
+  const [deepFocusPaused, setDeepFocusPaused] = useState(false);
+  const chatImageInputRef = useRef<HTMLInputElement>(null);
   // const [chatMode, setChatMode] = useState<ChatMode>('regular');
   
   // Check if coding block is active
@@ -574,6 +576,36 @@ export const CalmChatScreen: React.FC<CalmChatScreenProps> = ({ onMenuClick, onN
         sender: 'aura' 
       });
     }
+  };
+
+  // Handle inline image upload for chat analysis
+  const handleChatImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !file.type.startsWith('image/')) return;
+    e.target.value = '';
+
+    const reader = new FileReader();
+    reader.onload = async (ev) => {
+      const base64 = ev.target?.result as string;
+      
+      // Show image as user message
+      addChatMessage({ content: `📷 [Image shared]`, sender: 'user' });
+      addChatMessage({ content: "Let me look at this...", sender: 'aura' });
+      
+      const analysis = await analyzeImageInline(base64);
+      if (analysis) {
+        addChatMessage({ content: analysis, sender: 'aura' });
+      } else {
+        addChatMessage({ content: "I had trouble seeing that clearly. Want to try again?", sender: 'aura' });
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // Handle image analysis during deep focus
+  const handleFocusImageAnalysis = async (base64: string): Promise<string> => {
+    const result = await analyzeImageInline(base64);
+    return result || "I had trouble analyzing that. Want to try again?";
   };
 
   const handleVoiceTranscript = async (transcript: string) => {
@@ -1092,6 +1124,15 @@ export const CalmChatScreen: React.FC<CalmChatScreenProps> = ({ onMenuClick, onN
         )}
       </AnimatePresence>
 
+      {/* Hidden image input for chat */}
+      <input
+        ref={chatImageInputRef}
+        type="file"
+        accept="image/*"
+        onChange={handleChatImageUpload}
+        className="hidden"
+      />
+
       {/* Fixed Input Area - Calm, minimal design */}
       <div 
         className="fixed bottom-0 left-0 right-0 z-40 px-4 py-4 bg-background/95 backdrop-blur-sm" 
@@ -1107,6 +1148,17 @@ export const CalmChatScreen: React.FC<CalmChatScreenProps> = ({ onMenuClick, onN
               onClick={() => setShowMediaSheet(true)}
             >
               <Plus className="w-5 h-5" />
+            </Button>
+
+            {/* Image upload button */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-11 w-11 rounded-full shrink-0 text-muted-foreground hover:text-foreground"
+              onClick={() => chatImageInputRef.current?.click()}
+              disabled={isAnalyzingImage}
+            >
+              <Image className="w-5 h-5" />
             </Button>
 
             {/* Input Container - simple, breathing */}
@@ -1291,6 +1343,26 @@ export const CalmChatScreen: React.FC<CalmChatScreenProps> = ({ onMenuClick, onN
           }}
         />
       )}
+
+      {/* Deep Focus Overlay - fullscreen immersive focus mode */}
+      <AnimatePresence>
+        {focusModeAI.isActive && focusModeAI.focusType && (
+          <DeepFocusOverlay
+            isActive={focusModeAI.isActive}
+            focusType={focusModeAI.focusType}
+            goal={focusModeAI.goal?.description || 'Focus session'}
+            remainingTime={focusModeAI.remainingTime}
+            formatTime={focusModeAI.formatTime}
+            duration={focusModeAI.currentSession?.duration || 25}
+            onEnd={() => focusModeAI.endFocusSession(true)}
+            onPause={() => { focusModeAI.pauseSession(); setDeepFocusPaused(true); }}
+            onResume={() => { focusModeAI.resumeSession(); setDeepFocusPaused(false); }}
+            isPaused={deepFocusPaused}
+            onSendMessage={handleSend}
+            onImageAnalysis={handleFocusImageAnalysis}
+          />
+        )}
+      </AnimatePresence>
         </>
     </div>
   );

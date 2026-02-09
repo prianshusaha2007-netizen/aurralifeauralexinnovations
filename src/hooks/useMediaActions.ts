@@ -178,14 +178,57 @@ export const useMediaActions = () => {
     }
   }, []);
 
+  // Analyze image inline (conversational style for chat)
+  const [isAnalyzingImage, setIsAnalyzingImage] = useState(false);
+  
+  const analyzeImageInline = useCallback(async (base64Image: string): Promise<string | null> => {
+    setIsAnalyzingImage(true);
+    
+    try {
+      const { data, error } = await supabase.functions.invoke('analyze-image-general', {
+        body: { image: base64Image }
+      });
+      
+      if (error) throw error;
+      
+      // Build a conversational response from the structured data
+      let response = data.summary || 'I can see the image.';
+      
+      // Add text detection info conversationally
+      if (data.text_detected?.length > 0) {
+        const textSnippet = data.text_detected.slice(0, 3).join(', ');
+        response += `\n\nI can see some text: "${textSnippet}"`;
+        if (data.text_detected.length > 3) {
+          response += ` and more.`;
+        }
+        response += `\nWant me to help you understand or summarize it?`;
+      }
+      
+      // Add object context
+      if (data.objects?.length > 0 && !data.text_detected?.length) {
+        const topObjects = data.objects.slice(0, 3).map((o: any) => o.name).join(', ');
+        response += `\n\nI notice: ${topObjects}.`;
+      }
+      
+      return response;
+    } catch (err) {
+      console.error('Image analysis error:', err);
+      return null;
+    } finally {
+      setIsAnalyzingImage(false);
+    }
+  }, []);
+
   return {
     analyzeFile,
     generateImage,
     createDocument,
     downloadDocument,
     downloadImage,
+    analyzeImageInline,
     isUploading,
     isGenerating,
     isCreatingDoc,
+    isAnalyzingImage,
   };
 };
