@@ -651,34 +651,8 @@ export const CalmChatScreen: React.FC<CalmChatScreenProps> = ({ onMenuClick, onN
             </div>
           </div>
           
-          {/* Right: Badges + Actions */}
+          {/* Right: Actions - minimal, calm */}
           <div className="flex items-center gap-1">
-            {/* Compact badges row */}
-            <div className="hidden sm:flex items-center gap-1 mr-1">
-              <CompactJourneyBadge 
-                daysSinceFirstUse={daysSinceFirstUse}
-                stressState={stressState}
-              />
-              <DailyPlanBadge />
-            </div>
-            
-            {/* Subscription Quick Access - shows plan badge for free users */}
-            {!creditStatus.isPremium && !creditStatus.isLoading && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className={cn(
-                  "rounded-full h-8 px-2.5 text-xs text-muted-foreground hover:text-primary hover:bg-primary/10 gap-1",
-                  creditStatus.usagePercent >= 80 && "animate-pulse text-amber-500 hover:text-amber-600"
-                )}
-                onClick={() => navigate('/subscription')}
-              >
-                <CreditCard className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">
-                  {creditStatus.usagePercent >= 100 ? 'Upgrade' : 'Free'}
-                </span>
-              </Button>
-            )}
             
             {/* Routine Visual Button - shows when visual exists but is hidden */}
             {routineVisual && !showVisual && (
@@ -764,25 +738,7 @@ export const CalmChatScreen: React.FC<CalmChatScreenProps> = ({ onMenuClick, onN
         )}
       </AnimatePresence>
 
-      {/* Routine Widget - shows when not in morning flow and has blocks */}
-      {!showMorningBriefing && chatMessages.length <= 1 && !currentSession && (
-        <div className="px-4 pb-2 space-y-2">
-          <RoutineWidget 
-            onViewVisual={openVisual}
-            onViewRoutine={() => {
-              // Send message to show routine in chat
-              handleSend("Show me my routine for today");
-            }}
-          />
-          {/* Skills Widget - compact view */}
-          {hasActiveSkills() && (
-            <SkillsWidget onNavigate={() => {
-              // Send message to show skills in chat
-              handleSend("Show my skills and progress");
-            }} />
-          )}
-        </div>
-      )}
+      {/* Routine/Skills widgets removed — routines are learned conversationally */}
 
       {/* Chat Messages - with gesture support */}
       <div 
@@ -1313,22 +1269,24 @@ export const CalmChatScreen: React.FC<CalmChatScreenProps> = ({ onMenuClick, onN
         }}
       />
 
-      {/* Daily Flow Debug Panel - dev only */}
-      <DailyFlowDebugPanel
-        onTriggerMorning={() => {
-          triggerMorningFlow();
-          fetchBriefing();
-        }}
-        onTriggerNight={triggerNightFlow}
-        onTriggerFirstTime={triggerFirstTimeFlow}
-        onResetFlow={resetAllFlowState}
-        flowState={{
-          showPreferences,
-          showMorningBriefing,
-          showWindDown,
-          isFirstTimeUser,
-        }}
-      />
+      {/* Debug Panel - only in development */}
+      {import.meta.env.DEV && (
+        <DailyFlowDebugPanel
+          onTriggerMorning={() => {
+            triggerMorningFlow();
+            fetchBriefing();
+          }}
+          onTriggerNight={triggerNightFlow}
+          onTriggerFirstTime={triggerFirstTimeFlow}
+          onResetFlow={resetAllFlowState}
+          flowState={{
+            showPreferences,
+            showMorningBriefing,
+            showWindDown,
+            isFirstTimeUser,
+          }}
+        />
+      )}
         </>
     </div>
   );
