@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Brain, X, Check } from 'lucide-react';
+import { Check, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAura } from '@/contexts/AuraContext';
 import { toast } from 'sonner';
@@ -23,10 +23,10 @@ export const MemorySavePrompt: React.FC<MemorySavePromptProps> = ({
     setSaving(true);
     try {
       await addMemory({ category, content });
-      toast.success("I'll remember this 💫", { duration: 2000 });
+      toast("I'll keep this in mind", { duration: 2000 });
       onClose();
     } catch {
-      toast.error('Could not save memory');
+      toast.error('Could not save');
     } finally {
       setSaving(false);
     }
@@ -38,58 +38,59 @@ export const MemorySavePrompt: React.FC<MemorySavePromptProps> = ({
 
   const handleNeverAsk = () => {
     localStorage.setItem('aura-no-memory-prompts', 'true');
-    toast.info("Got it, I won't ask about saving things", { duration: 2000 });
+    toast("I won't ask again", { duration: 2000 });
     onClose();
   };
+
+  // Truncate content for display
+  const displayContent = content.length > 80 
+    ? content.slice(0, 80) + '...' 
+    : content;
 
   return (
     <AnimatePresence>
       <motion.div
-        initial={{ opacity: 0, y: 10, scale: 0.95 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        exit={{ opacity: 0, y: -10, scale: 0.95 }}
-        className="flex items-start gap-3 p-3 bg-primary/5 border border-primary/20 rounded-2xl max-w-md"
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -8 }}
+        className="flex flex-col gap-3 p-4 bg-muted/30 rounded-2xl max-w-sm"
       >
-        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-          <Brain className="w-4 h-4 text-primary" />
-        </div>
+        {/* Gentle question */}
+        <p className="text-sm text-foreground">
+          Should I remember this?
+        </p>
         
-        <div className="flex-1 min-w-0">
-          <p className="text-sm text-foreground mb-2">
-            Should I remember this for you? 💭
-          </p>
-          <p className="text-xs text-muted-foreground mb-3 line-clamp-2">
-            "{content}"
-          </p>
-          
-          <div className="flex flex-wrap gap-2">
-            <Button
-              size="sm"
-              className="h-7 rounded-full text-xs"
-              onClick={handleSave}
-              disabled={saving}
-            >
-              <Check className="w-3 h-3 mr-1" />
-              Yes, remember
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-7 rounded-full text-xs"
-              onClick={handleDismiss}
-            >
-              Not now
-            </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              className="h-7 rounded-full text-xs text-muted-foreground"
-              onClick={handleNeverAsk}
-            >
-              <X className="w-3 h-3 mr-1" />
-              Don't ask
-            </Button>
-          </div>
+        {/* Content preview - subtle */}
+        <p className="text-xs text-muted-foreground line-clamp-2">
+          {displayContent}
+        </p>
+        
+        {/* Actions - simple, clear */}
+        <div className="flex items-center gap-2 pt-1">
+          <Button
+            size="sm"
+            variant="default"
+            className="h-8 rounded-full text-xs px-4"
+            onClick={handleSave}
+            disabled={saving}
+          >
+            <Check className="w-3 h-3 mr-1.5" />
+            Yes
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-8 rounded-full text-xs px-3 text-muted-foreground"
+            onClick={handleDismiss}
+          >
+            No
+          </Button>
+          <button
+            onClick={handleNeverAsk}
+            className="ml-auto text-xs text-muted-foreground/60 hover:text-muted-foreground transition-colors"
+          >
+            Don't ask
+          </button>
         </div>
       </motion.div>
     </AnimatePresence>

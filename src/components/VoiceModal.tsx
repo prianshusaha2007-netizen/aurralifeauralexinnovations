@@ -1,9 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { X, Mic, MicOff, Phone, Volume2 } from 'lucide-react';
+import { X, Mic } from 'lucide-react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { AuraOrb } from './AuraOrb';
-import { AudioWaveform } from './AudioWaveform';
 import { RealtimeChat } from '@/utils/RealtimeAudio';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -14,13 +12,15 @@ interface VoiceModalProps {
   userName?: string;
 }
 
-export const VoiceModal: React.FC<VoiceModalProps> = ({ isOpen, onClose, userName = 'there' }) => {
+export const VoiceModal: React.FC<VoiceModalProps> = ({ 
+  isOpen, 
+  onClose, 
+  userName = 'there' 
+}) => {
   const [isConnected, setIsConnected] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
-  const [isMuted, setIsMuted] = useState(false);
   const [transcript, setTranscript] = useState('');
-  const [analyser, setAnalyser] = useState<AnalyserNode | null>(null);
   const chatRef = useRef<RealtimeChat | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
 
@@ -30,16 +30,12 @@ export const VoiceModal: React.FC<VoiceModalProps> = ({ isOpen, onClose, userNam
 
   const handleSpeakingChange = useCallback((speaking: boolean) => {
     setIsSpeaking(speaking);
-    if (chatRef.current) {
-      setAnalyser(speaking ? chatRef.current.getOutputAnalyser() : chatRef.current.getInputAnalyser());
-    }
   }, []);
 
   const handleTranscript = useCallback((text: string, isFinal: boolean) => {
     if (isFinal) {
       setTranscript(text);
-      // Clear transcript after a delay
-      setTimeout(() => setTranscript(''), 5000);
+      setTimeout(() => setTranscript(''), 4000);
     }
   }, []);
 
@@ -54,17 +50,10 @@ export const VoiceModal: React.FC<VoiceModalProps> = ({ isOpen, onClose, userNam
       await chatRef.current.init(undefined, userName);
       setIsConnected(true);
       setTranscript('');
-      
-      setTimeout(() => {
-        if (chatRef.current) {
-          setAnalyser(chatRef.current.getInputAnalyser());
-        }
-      }, 500);
-      
-      toast.success('Connected — speak naturally');
+      toast.success('Ready', { duration: 1500 });
     } catch (error) {
       console.error('Error starting voice:', error);
-      toast.error('Could not start voice mode');
+      toast.error('Could not connect');
     } finally {
       setIsConnecting(false);
     }
@@ -78,24 +67,10 @@ export const VoiceModal: React.FC<VoiceModalProps> = ({ isOpen, onClose, userNam
     setIsConnected(false);
     setIsSpeaking(false);
     setTranscript('');
-    setAnalyser(null);
   }, []);
 
-  const toggleMute = useCallback(() => {
-    setIsMuted(prev => !prev);
-    // Toggle the audio track
-    if (streamRef.current) {
-      streamRef.current.getAudioTracks().forEach(track => {
-        track.enabled = isMuted;
-      });
-    }
-  }, [isMuted]);
-
-  // Cleanup on unmount or close
   useEffect(() => {
-    return () => {
-      endConversation();
-    };
+    return () => endConversation();
   }, [endConversation]);
 
   useEffect(() => {
@@ -109,112 +84,89 @@ export const VoiceModal: React.FC<VoiceModalProps> = ({ isOpen, onClose, userNam
     onClose();
   }, [endConversation, onClose]);
 
+  // Status message - warm and human
+  const getStatusMessage = () => {
+    if (isConnecting) return 'One moment...';
+    if (isSpeaking) return 'Speaking...';
+    if (isConnected) return 'Listening';
+    return 'Tap to speak';
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-md md:max-w-lg bg-background border-border p-0 overflow-hidden [&>button]:hidden">
-        <div className="relative min-h-[500px] flex flex-col">
-          {/* Background gradient */}
-          <div className="absolute inset-0 bg-gradient-to-b from-primary/5 via-background to-accent/5" />
-          
-          {/* Animated background orbs */}
-          <AnimatePresence>
-            {isConnected && (
-              <>
-                <motion.div
-                  className="absolute top-1/4 left-1/4 w-48 h-48 rounded-full bg-primary/10 blur-3xl"
-                  initial={{ scale: 0, opacity: 0 }}
-                  animate={{
-                    scale: [1, 1.2, 1],
-                    opacity: [0.3, 0.5, 0.3],
-                  }}
-                  exit={{ scale: 0, opacity: 0 }}
-                  transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-                />
-                <motion.div
-                  className="absolute bottom-1/4 right-1/4 w-48 h-48 rounded-full bg-accent/10 blur-3xl"
-                  initial={{ scale: 0, opacity: 0 }}
-                  animate={{
-                    scale: [1.2, 1, 1.2],
-                    opacity: [0.3, 0.5, 0.3],
-                  }}
-                  exit={{ scale: 0, opacity: 0 }}
-                  transition={{ duration: 4, repeat: Infinity, ease: "easeInOut", delay: 2 }}
-                />
-              </>
-            )}
-          </AnimatePresence>
+      <DialogContent className="max-w-sm bg-background/95 backdrop-blur-xl border-0 shadow-2xl p-0 overflow-hidden [&>button]:hidden rounded-3xl">
+        <div className="relative min-h-[380px] flex flex-col items-center justify-center px-8 py-10">
+          {/* Subtle close */}
+          <button
+            onClick={handleClose}
+            className="absolute top-4 right-4 p-2 text-muted-foreground/50 hover:text-muted-foreground transition-colors"
+          >
+            <X className="w-4 h-4" />
+          </button>
 
-          {/* Content */}
-          <div className="relative flex-1 flex flex-col items-center justify-center px-6 py-8">
-            {/* Close button */}
-            <Button
-              variant="ghost"
-              size="icon"
-              className="absolute top-2 right-2 text-muted-foreground"
-              onClick={handleClose}
-            >
-              <X className="w-5 h-5" />
-            </Button>
-
-            {/* Status text */}
+          {/* Central breathing orb */}
+          <motion.div
+            className="relative mb-8"
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ type: "spring", stiffness: 150, damping: 20 }}
+          >
+            {/* Outer glow ring - breathing animation */}
             <motion.div
-              className="text-center mb-6"
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-            >
-              <h2 className="text-lg font-medium text-foreground mb-1">
-                {isConnecting ? 'Connecting...' : 
-                 isConnected ? (isSpeaking ? 'AURRA is speaking' : 'Listening...') : 
-                 'Voice Mode'}
-              </h2>
-              <p className="text-sm text-muted-foreground">
-                {isConnected 
-                  ? (isSpeaking ? 'Wait for AURRA to finish' : 'Speak naturally')
-                  : 'Have a natural conversation with AURRA'}
-              </p>
-            </motion.div>
-
+              className={`absolute inset-0 rounded-full ${
+                isSpeaking 
+                  ? 'bg-primary/20' 
+                  : isConnected 
+                    ? 'bg-primary/10' 
+                    : 'bg-muted/30'
+              }`}
+              animate={{
+                scale: isConnected ? [1, 1.15, 1] : 1,
+                opacity: isConnected ? [0.4, 0.6, 0.4] : 0.3,
+              }}
+              transition={{
+                duration: isSpeaking ? 1.5 : 3,
+                repeat: Infinity,
+                ease: "easeInOut",
+              }}
+              style={{ width: 140, height: 140, marginLeft: -10, marginTop: -10 }}
+            />
+            
             {/* Main orb */}
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ type: "spring", stiffness: 200, damping: 20 }}
+            <motion.button
+              onClick={!isConnected ? startConversation : undefined}
+              disabled={isConnecting}
+              className={`relative w-[120px] h-[120px] rounded-full flex items-center justify-center transition-all ${
+                isConnected 
+                  ? 'bg-gradient-to-br from-primary/80 to-primary cursor-default' 
+                  : 'bg-gradient-to-br from-primary/60 to-primary hover:from-primary/70 hover:to-primary cursor-pointer'
+              }`}
+              whileTap={!isConnected ? { scale: 0.95 } : undefined}
             >
-              <AuraOrb 
-                size="xl" 
-                isThinking={isConnecting} 
-                className={isSpeaking ? 'animate-pulse' : ''}
-              />
-            </motion.div>
+              <Mic className={`w-8 h-8 text-primary-foreground ${isConnecting ? 'animate-pulse' : ''}`} />
+            </motion.button>
+          </motion.div>
 
-            {/* Audio Waveform */}
-            <AnimatePresence>
-              {isConnected && (
-                <motion.div
-                  className="mt-6 w-full max-w-xs"
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.9 }}
-                  transition={{ delay: 0.2 }}
-                >
-                  <AudioWaveform 
-                    analyser={analyser} 
-                    isActive={isConnected} 
-                    mode={isSpeaking ? 'speaking' : 'listening'}
-                    className="mx-auto"
-                  />
-                </motion.div>
-              )}
-            </AnimatePresence>
+          {/* Status - minimal, warm */}
+          <motion.p
+            className="text-lg font-light text-foreground/80 mb-2"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.2 }}
+          >
+            {getStatusMessage()}
+          </motion.p>
 
-            {/* Transcript display */}
-            <AnimatePresence>
+          {/* Transcript - gentle appearance */}
+          <div className="h-12 flex items-center justify-center">
+            <AnimatePresence mode="wait">
               {transcript && (
                 <motion.p
-                  className="mt-4 text-sm text-muted-foreground text-center max-w-xs"
-                  initial={{ opacity: 0, y: 10 }}
+                  key={transcript}
+                  className="text-sm text-muted-foreground text-center max-w-[280px]"
+                  initial={{ opacity: 0, y: 5 }}
                   animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
+                  exit={{ opacity: 0, y: -5 }}
                 >
                   "{transcript}"
                 </motion.p>
@@ -222,58 +174,26 @@ export const VoiceModal: React.FC<VoiceModalProps> = ({ isOpen, onClose, userNam
             </AnimatePresence>
           </div>
 
-          {/* Controls */}
-          <div className="relative px-6 pb-8">
-            <motion.div
-              className="flex items-center justify-center gap-4"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 }}
-            >
-              {!isConnected ? (
+          {/* End button - only when connected */}
+          <AnimatePresence>
+            {isConnected && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 10 }}
+                transition={{ delay: 0.3 }}
+                className="mt-6"
+              >
                 <Button
-                  size="lg"
-                  className="rounded-full h-14 px-8 aura-gradient text-primary-foreground gap-2"
-                  onClick={startConversation}
-                  disabled={isConnecting}
+                  variant="ghost"
+                  onClick={handleClose}
+                  className="text-muted-foreground hover:text-foreground rounded-full px-6"
                 >
-                  <Mic className="w-5 h-5" />
-                  {isConnecting ? 'Connecting...' : 'Start Talking'}
+                  Done
                 </Button>
-              ) : (
-                <>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="rounded-full h-12 w-12"
-                    onClick={toggleMute}
-                  >
-                    {isMuted ? (
-                      <MicOff className="w-5 h-5 text-destructive" />
-                    ) : (
-                      <Mic className="w-5 h-5" />
-                    )}
-                  </Button>
-                  
-                  <Button
-                    size="icon"
-                    className="rounded-full h-14 w-14 bg-destructive hover:bg-destructive/90"
-                    onClick={handleClose}
-                  >
-                    <Phone className="w-5 h-5 rotate-[135deg]" />
-                  </Button>
-                  
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="rounded-full h-12 w-12"
-                  >
-                    <Volume2 className="w-5 h-5" />
-                  </Button>
-                </>
-              )}
-            </motion.div>
-          </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </DialogContent>
     </Dialog>

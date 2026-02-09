@@ -1107,81 +1107,51 @@ export const CalmChatScreen: React.FC<CalmChatScreenProps> = ({ onMenuClick, onN
         )}
       </AnimatePresence>
 
-      {/* Floating Voice Button */}
+      {/* Floating Voice Button - subtle, presence-like */}
       <AnimatePresence>
         {showFloatingVoice && (
           <motion.div
-            initial={{ opacity: 0, scale: 0.8, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.8, y: 20 }}
-            className="fixed bottom-28 right-6 z-40"
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            className="fixed bottom-28 right-5 z-40"
           >
-            <div className="relative">
-              {/* Pulse ring animation */}
-              {shouldPulse && (
-                <motion.div
-                  className="absolute inset-0 rounded-full bg-primary/30"
-                  initial={{ scale: 1, opacity: 0.6 }}
-                  animate={{ scale: 1.8, opacity: 0 }}
-                  transition={{ duration: 2, repeat: Infinity, ease: "easeOut" }}
-                />
-              )}
-              
-              {/* Tooltip */}
-              <AnimatePresence>
-                {showVoiceTooltip && (
-                  <motion.div
-                    initial={{ opacity: 0, x: 10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: 10 }}
-                    className="absolute right-full mr-3 top-1/2 -translate-y-1/2 whitespace-nowrap"
-                  >
-                    <div className="bg-card border border-border/50 shadow-lg rounded-xl px-4 py-2.5">
-                      <p className="text-sm font-medium text-foreground">Try voice mode 🎧</p>
-                      <p className="text-xs text-muted-foreground">Talk naturally with AURRA</p>
-                    </div>
-                    {/* Arrow */}
-                    <div className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-full">
-                      <div className="border-8 border-transparent border-l-card" />
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-              
-              <Button
-                size="icon"
-                className="h-14 w-14 rounded-full aura-gradient shadow-lg shadow-primary/30 hover:shadow-primary/40 transition-shadow relative"
-                onClick={() => {
-                  setShowVoiceMode(true);
-                  setShouldPulse(false);
-                  setShowVoiceTooltip(false);
-                  lastActivityRef.current = Date.now();
-                }}
-              >
-                <Headphones className="w-6 h-6 text-primary-foreground" />
-              </Button>
-            </div>
+            <Button
+              size="icon"
+              className="h-12 w-12 rounded-full bg-primary/90 hover:bg-primary shadow-lg"
+              onClick={() => {
+                setShowVoiceMode(true);
+                setShouldPulse(false);
+                setShowVoiceTooltip(false);
+                lastActivityRef.current = Date.now();
+              }}
+            >
+              <Headphones className="w-5 h-5 text-primary-foreground" />
+            </Button>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Fixed Input Area - Truly fixed at bottom */}
-      <div className="fixed bottom-0 left-0 right-0 z-40 p-4 pb-6 bg-gradient-to-t from-background via-background to-background/80 backdrop-blur-sm border-t border-border/30" style={{ paddingBottom: 'max(24px, env(safe-area-inset-bottom))' }}>
+      {/* Fixed Input Area - Calm, minimal design */}
+      <div 
+        className="fixed bottom-0 left-0 right-0 z-40 px-4 py-4 bg-background/95 backdrop-blur-sm" 
+        style={{ paddingBottom: 'max(16px, env(safe-area-inset-bottom))' }}
+      >
         <div className="max-w-2xl mx-auto">
           <div className="flex items-end gap-2">
-            {/* Plus Button for Media & Tools */}
+            {/* Plus Button - subtle */}
             <Button
               variant="ghost"
               size="icon"
-              className="h-12 w-12 rounded-full shrink-0 text-muted-foreground hover:text-foreground hover:bg-accent/50"
+              className="h-11 w-11 rounded-full shrink-0 text-muted-foreground hover:text-foreground"
               onClick={() => setShowMediaSheet(true)}
             >
-              <Plus className="w-6 h-6" />
+              <Plus className="w-5 h-5" />
             </Button>
 
-            {/* Input Container */}
+            {/* Input Container - simple, breathing */}
             <div className="flex-1 relative">
-              <div className="flex items-end bg-card border border-border/50 rounded-3xl focus-within:border-primary/40 focus-within:ring-2 focus-within:ring-primary/10 transition-all shadow-sm">
+              <div className="flex items-end bg-muted/30 rounded-2xl focus-within:bg-muted/40 transition-colors">
                 <textarea
                   ref={inputRef}
                   value={inputValue}
@@ -1197,45 +1167,57 @@ export const CalmChatScreen: React.FC<CalmChatScreenProps> = ({ onMenuClick, onN
                     }
                   }}
                   placeholder={placeholder}
-                  className="flex-1 bg-transparent border-0 resize-none py-3.5 px-5 text-[15px] focus:outline-none min-h-[48px] max-h-[120px] placeholder:text-muted-foreground/50"
-                  style={{ height: '48px' }}
+                  className="flex-1 bg-transparent border-0 resize-none py-3 px-4 text-[16px] focus:outline-none min-h-[44px] max-h-[120px] placeholder:text-muted-foreground/50"
+                  style={{ height: '44px' }}
                   disabled={isThinking || isGenerating}
                   rows={1}
-                />
-                
-                {/* Voice Input Button */}
-                <VoiceInputButton
-                  onTranscript={handleVoiceTranscript}
-                  disabled={isThinking || isGenerating}
-                  className="mr-1 mb-1"
                 />
               </div>
             </div>
 
-            {/* Send Button */}
-            <Button
-              size="icon"
-              className={cn(
-                "h-12 w-12 rounded-full shadow-lg transition-all shrink-0",
-                inputValue.trim() 
-                  ? "bg-primary hover:bg-primary/90 shadow-primary/20" 
-                  : "bg-muted text-muted-foreground"
-              )}
-              onClick={() => handleSend()}
-              disabled={!inputValue.trim() || isThinking || isGenerating}
-            >
-              {isThinking || isGenerating ? (
-                <Loader2 className="w-5 h-5 animate-spin" />
+            {/* Action Button - Send or Voice */}
+            <AnimatePresence mode="wait">
+              {inputValue.trim() ? (
+                <motion.div
+                  key="send"
+                  initial={{ scale: 0.8, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 0.8, opacity: 0 }}
+                  transition={{ duration: 0.15 }}
+                >
+                  <Button
+                    size="icon"
+                    className="h-11 w-11 rounded-full shrink-0"
+                    onClick={() => handleSend()}
+                    disabled={isThinking || isGenerating}
+                  >
+                    {isThinking || isGenerating ? (
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                    ) : (
+                      <Send className="w-5 h-5" />
+                    )}
+                  </Button>
+                </motion.div>
               ) : (
-                <Send className="w-5 h-5" />
+                <motion.div
+                  key="voice"
+                  initial={{ scale: 0.8, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 0.8, opacity: 0 }}
+                  transition={{ duration: 0.15 }}
+                >
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-11 w-11 rounded-full shrink-0 text-muted-foreground hover:text-foreground"
+                    onClick={() => setShowVoiceMode(true)}
+                  >
+                    <Mic className="w-5 h-5" />
+                  </Button>
+                </motion.div>
               )}
-            </Button>
+            </AnimatePresence>
           </div>
-
-          {/* Subtle hint with gesture tips */}
-          <p className="text-center text-[11px] text-muted-foreground/40 mt-3">
-            Long press to speak • Swipe right for shortcuts
-          </p>
         </div>
       </div>
 
