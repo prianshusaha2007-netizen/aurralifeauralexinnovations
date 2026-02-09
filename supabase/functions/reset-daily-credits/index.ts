@@ -15,21 +15,24 @@ serve(async (req) => {
   console.log('🕐 Daily credit reset cron job started at:', new Date().toISOString());
 
   try {
-    // Verify cron secret for security
-    const authHeader = req.headers.get('Authorization');
+    // Verify cron secret for security - FAIL CLOSED
     const cronSecret = Deno.env.get('CRON_SECRET');
     
-    // Allow either cron secret or service role key
-    if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
-      // Check if it's a valid service role or anon key request
-      const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY');
-      if (authHeader !== `Bearer ${supabaseAnonKey}`) {
-        console.error('❌ Unauthorized cron request');
-        return new Response(
-          JSON.stringify({ error: 'Unauthorized' }),
-          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
+    if (!cronSecret) {
+      console.error('❌ CRON_SECRET not configured - rejecting request');
+      return new Response(
+        JSON.stringify({ error: 'Service misconfigured' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const authHeader = req.headers.get('Authorization');
+    if (authHeader !== `Bearer ${cronSecret}`) {
+      console.error('❌ Unauthorized cron request');
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
