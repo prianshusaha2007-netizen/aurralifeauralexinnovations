@@ -7,6 +7,8 @@ import { useStorytellingMode } from './useStorytellingMode';
 import { useMoodCheckIn } from './useMoodCheckIn';
 import { useLifeMemoryGraph } from './useLifeMemoryGraph';
 import { useMemoryPersistence } from './useMemoryPersistence';
+import { useConversationalMemory } from './useConversationalMemory';
+import { usePassiveRoutineLearning } from './usePassiveRoutineLearning';
 import { useVoicePlayback } from './useVoicePlayback';
 import { useRelationshipEvolution } from './useRelationshipEvolution';
 import { useSmartRoutine, SmartRoutineBlock } from './useSmartRoutine';
@@ -277,6 +279,8 @@ export const useAuraChat = () => {
     confirmPendingMemory,
     dismissPendingMemory,
   } = useMemoryPersistence();
+  const { handleMemoryEdit } = useConversationalMemory();
+  const { detectRoutineSignal, pendingSuggestion, confirmRoutineSuggestion, dismissSuggestion } = usePassiveRoutineLearning();
   const { playText } = useVoicePlayback();
   const { 
     engagement, 
@@ -382,6 +386,19 @@ export const useAuraChat = () => {
       addChatMessage({ content: planChange.responseMessage, sender: 'aura' });
       return;
     }
+
+    // Check for conversational memory editing (forget, correct, list memories)
+    const lastAuraMsg = chatMessages.filter(m => m.sender === 'aura').pop()?.content;
+    const memoryEditResult = await handleMemoryEdit(userMessage, lastAuraMsg);
+    if (memoryEditResult.handled) {
+      addChatMessage({ content: userMessage, sender: 'user' });
+      addChatMessage({ content: memoryEditResult.response, sender: 'aura' });
+      return;
+    }
+
+    // Passive routine learning — detect signals in background
+    const routineSuggestion = detectRoutineSignal(userMessage);
+    // Don't interrupt flow — suggestion will be appended after AI response if detected
 
     // Check if user wants to end the story
     const lowerMessage = userMessage.toLowerCase();
@@ -749,9 +766,15 @@ export const useAuraChat = () => {
         addChatMessage({ content: assistantContent, sender: 'aura' });
       }
 
+      // If a passive routine signal was detected, append suggestion after AI response
+      if (routineSuggestion && assistantContent) {
+        setTimeout(() => {
+          addChatMessage({ content: routineSuggestion, sender: 'aura' });
+        }, 1500);
+      }
+
       // Auto-play voice if enabled
       if (userProfile.autoPlayVoice && assistantContent) {
-        // Use a short delay to let the UI settle
         setTimeout(() => {
           playText(assistantContent, userProfile.aurraGender);
         }, 300);
@@ -898,5 +921,9 @@ export const useAuraChat = () => {
     currentEnergy,
     recoveryModeActive,
     recoveryLevel,
+    // Passive routine learning
+    pendingRoutineSuggestion: pendingSuggestion,
+    confirmRoutineSuggestion,
+    dismissRoutineSuggestion: dismissSuggestion,
   };
 };
