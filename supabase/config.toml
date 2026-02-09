@@ -104,3 +104,6 @@ verify_jwt = false
 
 [functions.send-pwa-push]
 verify_jwt = false
+
+[functions.analyze-image-general]
+verify_jwt = true

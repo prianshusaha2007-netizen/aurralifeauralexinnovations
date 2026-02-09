@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Camera, Upload, X, Sparkles, Star, Heart, Zap, Palette, Sun, User, Shirt, Wand2, ImageOff, Focus, Brush, Loader2, Save, Share2, Images } from 'lucide-react';
+import { Camera, Upload, X, Sparkles, Star, Heart, Zap, Palette, Sun, User, Shirt, Wand2, ImageOff, Focus, Brush, Loader2, Save, Share2, Images, Eye, ScanSearch, Tag, Type, CircleDot } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -7,6 +7,8 @@ import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
+
+type AnalysisMode = 'selfie' | 'general';
 
 interface AnalysisResult {
   confidence: number;
@@ -20,6 +22,24 @@ interface AnalysisResult {
   skinAnalysis: string;
   lightingQuality: string;
   overallFeedback: string;
+}
+
+interface GeneralAnalysisResult {
+  summary: string;
+  scene: string;
+  objects: { name: string; confidence: number }[];
+  people: { count: number; details?: string };
+  text_detected: string[];
+  colors: string[];
+  tags: string[];
+  mood_atmosphere: string;
+  quality: {
+    resolution: string;
+    lighting: string;
+    composition: string;
+    sharpness: string;
+  };
+  fun_caption: string;
 }
 
 interface TransformationOption {
@@ -39,8 +59,10 @@ const transformationOptions: TransformationOption[] = [
 export const ImageAnalysisScreen: React.FC = () => {
   const navigate = useNavigate();
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [analysisMode, setAnalysisMode] = useState<AnalysisMode>('general');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
+  const [generalResult, setGeneralResult] = useState<GeneralAnalysisResult | null>(null);
   const [transformedImage, setTransformedImage] = useState<string | null>(null);
   const [isTransforming, setIsTransforming] = useState(false);
   const [activeTransform, setActiveTransform] = useState<string | null>(null);
@@ -165,6 +187,7 @@ export const ImageAnalysisScreen: React.FC = () => {
       reader.onloadend = () => {
         setSelectedImage(reader.result as string);
         setAnalysisResult(null);
+        setGeneralResult(null);
       };
       reader.readAsDataURL(file);
     }
@@ -176,45 +199,25 @@ export const ImageAnalysisScreen: React.FC = () => {
     setIsAnalyzing(true);
     
     try {
-      const { data, error } = await supabase.functions.invoke('analyze-image', {
-        body: { image: selectedImage }
-      });
-
-      if (error) throw error;
-
-      setAnalysisResult(data);
+      if (analysisMode === 'general') {
+        const { data, error } = await supabase.functions.invoke('analyze-image-general', {
+          body: { image: selectedImage }
+        });
+        if (error) throw error;
+        setGeneralResult(data);
+        setAnalysisResult(null);
+      } else {
+        const { data, error } = await supabase.functions.invoke('analyze-image', {
+          body: { image: selectedImage }
+        });
+        if (error) throw error;
+        setAnalysisResult(data);
+        setGeneralResult(null);
+      }
       toast.success('Image analyzed! 📸');
     } catch (error) {
       console.error('Analysis error:', error);
-      // Fallback to simulated analysis
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      const mockResult: AnalysisResult = {
-        confidence: Math.floor(Math.random() * 20) + 75,
-        outfitScore: Math.floor(Math.random() * 15) + 80,
-        aesthetic: Math.floor(Math.random() * 10) + 85,
-        mood: ['Happy', 'Confident', 'Relaxed', 'Energetic', 'Thoughtful'][Math.floor(Math.random() * 5)],
-        expression: ['Genuine smile', 'Focused', 'Serene', 'Playful', 'Mysterious'][Math.floor(Math.random() * 5)],
-        vibe: ['Boss energy 😎', 'Main character vibes ✨', 'Soft aesthetic 🌸', 'Street style 🔥', 'Classic elegance'][Math.floor(Math.random() * 5)],
-        improvements: [
-          'Try brighter natural lighting for an even sharper look',
-          'A slight tilt could add more dynamism',
-          'Background is slightly busy - consider a simpler backdrop next time'
-        ].slice(0, Math.floor(Math.random() * 2) + 1),
-        compliment: [
-          "Bro you look clean today 😎🔥",
-          "Omg this picture is actually adorable!",
-          "Your vibe is strong here - love it!",
-          "Looking absolutely fire in this one! 🔥",
-          "Main character energy for real ✨"
-        ][Math.floor(Math.random() * 5)],
-        skinAnalysis: 'Healthy glow, even tone',
-        lightingQuality: ['Excellent', 'Good', 'Decent'][Math.floor(Math.random() * 3)],
-        overallFeedback: "This is a really solid photo! Your confidence shows through clearly."
-      };
-      
-      setAnalysisResult(mockResult);
-      toast.success('Image analyzed! 📸');
+      toast.error('Analysis failed. Please try again.');
     } finally {
       setIsAnalyzing(false);
     }
@@ -223,6 +226,7 @@ export const ImageAnalysisScreen: React.FC = () => {
   const clearImage = () => {
     setSelectedImage(null);
     setAnalysisResult(null);
+    setGeneralResult(null);
     setTransformedImage(null);
     setActiveTransform(null);
     if (fileInputRef.current) {
@@ -339,25 +343,205 @@ export const ImageAnalysisScreen: React.FC = () => {
           className="hidden"
         />
 
-        {/* Analyze Button */}
-        {selectedImage && !analysisResult && (
-          <Button 
-            className="w-full h-12 text-lg aura-gradient"
-            onClick={analyzeImage}
-            disabled={isAnalyzing}
-          >
-            {isAnalyzing ? (
-              <>
-                <Sparkles className="w-5 h-5 mr-2 animate-spin" />
-                Analyzing...
-              </>
-            ) : (
-              <>
-                <Sparkles className="w-5 h-5 mr-2" />
-                Analyze Image
-              </>
+        {/* Analysis Mode Toggle */}
+        {selectedImage && !analysisResult && !generalResult && (
+          <div className="space-y-3">
+            <div className="flex gap-2">
+              <Button
+                variant={analysisMode === 'general' ? 'default' : 'outline'}
+                className={`flex-1 ${analysisMode === 'general' ? 'aura-gradient' : ''}`}
+                onClick={() => setAnalysisMode('general')}
+              >
+                <ScanSearch className="w-4 h-4 mr-2" />
+                General Analysis
+              </Button>
+              <Button
+                variant={analysisMode === 'selfie' ? 'default' : 'outline'}
+                className={`flex-1 ${analysisMode === 'selfie' ? 'aura-gradient' : ''}`}
+                onClick={() => setAnalysisMode('selfie')}
+              >
+                <User className="w-4 h-4 mr-2" />
+                Selfie Analysis
+              </Button>
+            </div>
+            <Button 
+              className="w-full h-12 text-lg aura-gradient"
+              onClick={analyzeImage}
+              disabled={isAnalyzing}
+            >
+              {isAnalyzing ? (
+                <>
+                  <Sparkles className="w-5 h-5 mr-2 animate-spin" />
+                  Analyzing with Gemini...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-5 h-5 mr-2" />
+                  Analyze Image
+                </>
+              )}
+            </Button>
+          </div>
+        )}
+
+        {/* General Analysis Results */}
+        {generalResult && (
+          <div className="space-y-4 animate-slide-up">
+            {/* Summary & Caption */}
+            <Card className="p-4 aura-gradient text-primary-foreground">
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-full bg-primary-foreground/20 flex items-center justify-center shrink-0">
+                  <Eye className="w-5 h-5" />
+                </div>
+                <div>
+                  <p className="font-bold text-lg">{generalResult.fun_caption}</p>
+                  <p className="text-sm opacity-90 mt-1">{generalResult.summary}</p>
+                </div>
+              </div>
+            </Card>
+
+            {/* Scene & Mood */}
+            <Card className="p-4 space-y-3">
+              <h3 className="font-semibold flex items-center gap-2">
+                <Palette className="w-5 h-5 text-primary" />
+                Scene & Atmosphere
+              </h3>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="p-3 rounded-xl bg-muted">
+                  <p className="text-xs text-muted-foreground">Scene</p>
+                  <p className="font-medium">{generalResult.scene}</p>
+                </div>
+                <div className="p-3 rounded-xl bg-muted">
+                  <p className="text-xs text-muted-foreground">Mood</p>
+                  <p className="font-medium">{generalResult.mood_atmosphere}</p>
+                </div>
+                {generalResult.people.count > 0 && (
+                  <div className="p-3 rounded-xl bg-muted col-span-2">
+                    <p className="text-xs text-muted-foreground">People ({generalResult.people.count})</p>
+                    <p className="font-medium">{generalResult.people.details || `${generalResult.people.count} person(s) detected`}</p>
+                  </div>
+                )}
+              </div>
+            </Card>
+
+            {/* Detected Objects */}
+            {generalResult.objects.length > 0 && (
+              <Card className="p-4 space-y-3">
+                <h3 className="font-semibold flex items-center gap-2">
+                  <CircleDot className="w-5 h-5 text-primary" />
+                  Detected Objects
+                </h3>
+                <div className="space-y-2">
+                  {generalResult.objects.slice(0, 8).map((obj, i) => (
+                    <div key={i} className="flex items-center justify-between">
+                      <span className="text-sm font-medium">{obj.name}</span>
+                      <div className="flex items-center gap-2 w-1/2">
+                        <Progress value={obj.confidence} className="h-2 flex-1" />
+                        <span className="text-xs text-muted-foreground w-8">{obj.confidence}%</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </Card>
             )}
-          </Button>
+
+            {/* Colors */}
+            {generalResult.colors.length > 0 && (
+              <Card className="p-4 space-y-3">
+                <h3 className="font-semibold flex items-center gap-2">
+                  <Palette className="w-5 h-5 text-primary" />
+                  Dominant Colors
+                </h3>
+                <div className="flex flex-wrap gap-2">
+                  {generalResult.colors.map((color, i) => (
+                    <Badge key={i} variant="secondary" className="text-sm">
+                      🎨 {color}
+                    </Badge>
+                  ))}
+                </div>
+              </Card>
+            )}
+
+            {/* Text Detected */}
+            {generalResult.text_detected.length > 0 && (
+              <Card className="p-4 space-y-3">
+                <h3 className="font-semibold flex items-center gap-2">
+                  <Type className="w-5 h-5 text-primary" />
+                  Text Detected
+                </h3>
+                <div className="space-y-1">
+                  {generalResult.text_detected.map((text, i) => (
+                    <div key={i} className="p-2 rounded-lg bg-muted text-sm font-mono">
+                      "{text}"
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            )}
+
+            {/* Quality */}
+            <Card className="p-4 space-y-3">
+              <h3 className="font-semibold flex items-center gap-2">
+                <Star className="w-5 h-5 text-primary" />
+                Image Quality
+              </h3>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="p-3 rounded-xl bg-muted">
+                  <p className="text-xs text-muted-foreground">Resolution</p>
+                  <p className="font-medium">{generalResult.quality.resolution}</p>
+                </div>
+                <div className="p-3 rounded-xl bg-muted">
+                  <p className="text-xs text-muted-foreground">Sharpness</p>
+                  <p className="font-medium">{generalResult.quality.sharpness}</p>
+                </div>
+                <div className="p-3 rounded-xl bg-muted">
+                  <p className="text-xs text-muted-foreground">Lighting</p>
+                  <p className="font-medium">{generalResult.quality.lighting}</p>
+                </div>
+                <div className="p-3 rounded-xl bg-muted">
+                  <p className="text-xs text-muted-foreground">Composition</p>
+                  <p className="font-medium">{generalResult.quality.composition}</p>
+                </div>
+              </div>
+            </Card>
+
+            {/* Tags */}
+            {generalResult.tags.length > 0 && (
+              <Card className="p-4 space-y-3">
+                <h3 className="font-semibold flex items-center gap-2">
+                  <Tag className="w-5 h-5 text-primary" />
+                  Tags
+                </h3>
+                <div className="flex flex-wrap gap-2">
+                  {generalResult.tags.map((tag, i) => (
+                    <Badge key={i} variant="outline" className="text-xs">
+                      #{tag}
+                    </Badge>
+                  ))}
+                </div>
+              </Card>
+            )}
+
+            {/* Action Buttons for general mode */}
+            <div className="grid grid-cols-2 gap-3">
+              <Button variant="outline" onClick={clearImage}>
+                <Camera className="w-4 h-4 mr-2" />
+                New Photo
+              </Button>
+              <Button 
+                onClick={saveToGallery}
+                disabled={isSaving}
+                className="aura-gradient"
+              >
+                {isSaving ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <Save className="w-4 h-4 mr-2" />
+                )}
+                Save
+              </Button>
+            </div>
+          </div>
         )}
 
         {/* Analysis Results */}
