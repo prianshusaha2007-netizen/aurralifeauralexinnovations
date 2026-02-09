@@ -309,12 +309,7 @@ export const FocusModeOverlay: React.FC<FocusModeOverlayProps> = ({
                 )}
               </AnimatePresence>
 
-              {/* Stats */}
-              <div className="text-center">
-                <p className="text-sm text-muted-foreground">
-                  Today's focus time: <span className="font-semibold">{getTotalFocusTime()} min</span>
-                </p>
-              </div>
+              {/* Removed visible productivity tracking */}
 
               {/* Breathing Guide */}
               <motion.div
@@ -327,14 +322,14 @@ export const FocusModeOverlay: React.FC<FocusModeOverlayProps> = ({
             </motion.div>
           )}
 
-          {/* Motivational Quote */}
+          {/* Gentle presence indicator */}
           <motion.p
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 1 }}
             className="absolute bottom-8 text-center text-sm text-muted-foreground/70 max-w-md"
           >
-            "Deep work is the ability to focus without distraction on a cognitively demanding task."
+            I'm here with you.
           </motion.p>
         </div>
       </motion.div>

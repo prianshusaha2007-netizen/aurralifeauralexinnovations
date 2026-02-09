@@ -287,11 +287,7 @@ export const FocusTimerOverlay: React.FC = () => {
                 </Button>
               </div>
 
-              {breaksDismissed > 0 && (
-                <p className="text-xs text-muted-foreground text-center mt-3">
-                  {breaksDismissed} break{breaksDismissed > 1 ? 's' : ''} skipped today
-                </p>
-              )}
+              {/* No break counting - presence, not tracking */}
             </div>
           </motion.div>
         )}

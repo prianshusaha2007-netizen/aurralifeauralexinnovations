@@ -43,6 +43,10 @@ export const useFocusModeIntegration = () => {
       /^focus\s+for\s+\d+/i,
       /^gym\s+time/i,
       /^start\s+workout/i,
+      /i\s+(?:can'?t|cannot)\s+focus/i,
+      /help\s+me\s+(?:focus|concentrate)/i,
+      /let'?s?\s+work\s+(?:for|on)/i,
+      /i\s+need\s+to\s+(?:study|concentrate)/i,
     ];
     
     const endPatterns = [
@@ -83,7 +87,7 @@ export const useFocusModeIntegration = () => {
       focusModeAI.initiateFocusMode();
       return {
         handled: true,
-        response: "Alright.\nWhat are we focusing on right now?",
+        response: "Okay. Let's focus together.\nWhat are we working on?",
         showComponent: 'type_selection',
       };
     }
@@ -93,7 +97,7 @@ export const useFocusModeIntegration = () => {
       focusModeAI.endFocusSession(true);
       return {
         handled: true,
-        response: "That was solid focus.\nWant to wrap up or continue a bit more?",
+        response: "Okay, let's pause.\nHow did that feel?",
         showComponent: 'reflection',
       };
     }
@@ -103,7 +107,7 @@ export const useFocusModeIntegration = () => {
       const minutes = Math.ceil(focusModeAI.remainingTime / 60);
       return {
         handled: true,
-        response: `You've got ${minutes} minutes left.\nStay with it — you're doing great.`,
+        response: `About ${minutes} minutes left.\nStill okay to continue?`,
       };
     }
     
@@ -156,15 +160,18 @@ export const useFocusModeIntegration = () => {
 - Persona: ${context.persona}`;
     
     if (context.struggledRecently) {
-      promptContext += `\n- User showed signs of struggle recently. Be extra supportive.`;
+      promptContext += `\n- User showed signs of struggle recently. Be extra gentle.`;
     }
     
     promptContext += `\n\nBEHAVIOR GUIDELINES:
-- Keep responses SHORT and PRECISE
-- No routine nudges or upsells
-- ${context.persona === 'mentor' ? 'Guide step-by-step, don\'t dump information' : ''}
+- Keep responses SHORT and CALM
+- No routine nudges, upsells, or productivity pressure
+- Do NOT track or mention productivity metrics, streaks, or performance
+- Focus is about shared presence, not enforced discipline
+- ${context.persona === 'mentor' ? 'Guide gently, don\'t lecture' : ''}
 - ${context.persona === 'silent' ? 'Only respond when directly asked' : ''}
-- ${context.persona === 'guide' ? 'Help with clarity, don\'t over-explain' : ''}`;
+- ${context.persona === 'guide' ? 'Help with clarity, don\'t over-explain' : ''}
+- ${context.persona === 'companion' ? 'Just be present. Minimal words.' : ''}`;
     
     return promptContext;
   };
@@ -204,9 +211,9 @@ export const FocusModeUIElements: React.FC<{
     
     // Show appropriate response
     const responses = {
-      yes: "Nice work. That counts.",
-      almost: "Still progress. We can finish later.",
-      not_today: "That's okay. Showing up matters.",
+      yes: "That's good to hear.",
+      almost: "That's okay. You showed up.",
+      not_today: "No stress. Tomorrow's a new day.",
     };
     
     // This will be shown as AURRA's response
