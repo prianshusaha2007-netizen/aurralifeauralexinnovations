@@ -104,11 +104,23 @@ export default defineConfig(({ mode }) => ({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
+      // Force single React instance
+      "react": path.resolve(__dirname, "./node_modules/react"),
+      "react-dom": path.resolve(__dirname, "./node_modules/react-dom"),
+      "react-router-dom": path.resolve(__dirname, "./node_modules/react-router-dom"),
     },
     dedupe: ["react", "react-dom", "react-router-dom"],
   },
   optimizeDeps: {
-    include: ["react", "react-dom", "react/jsx-runtime", "react/jsx-dev-runtime", "@tanstack/react-query", "react-router-dom"],
+    include: [
+      "react", 
+      "react-dom", 
+      "react/jsx-runtime", 
+      "react/jsx-dev-runtime", 
+      "@tanstack/react-query", 
+      "react-router-dom",
+      "framer-motion",
+    ],
     force: true,
     esbuildOptions: {
       define: {
@@ -116,6 +128,6 @@ export default defineConfig(({ mode }) => ({
       },
     },
   },
-  // Force cache rebuild
-  cacheDir: "node_modules/.vite_cache_v2",
+  // Force complete cache rebuild with new directory
+  cacheDir: "node_modules/.vite_rebuild",
 }));
