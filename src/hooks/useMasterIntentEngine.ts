@@ -15,7 +15,10 @@ export type IntentType =
   | 'navigation'     // Find places, explore
   | 'reflection'     // Progress, weekly review
   | 'focus'          // Focus mode, music
-  | 'persona';       // Relationship/persona changes
+  | 'persona'        // Relationship/persona changes
+  | 'health'         // Health guidance, symptoms, wellness
+  | 'diet'           // Diet, nutrition, meal suggestions
+  | 'education';     // Learning, study, exam help
 
 export type ConfidenceLevel = 'clear' | 'vague' | 'emotional';
 export type UrgencyLevel = 'now' | 'soon' | 'later';
@@ -161,6 +164,36 @@ const INTENT_PATTERNS: Record<IntentType, { patterns: RegExp[]; weight: number }
     ],
     weight: 70,
   },
+  health: {
+    patterns: [
+      /(?:i\s+)?(?:feel|feeling|have|having)\s+(?:a\s+)?(?:headache|fever|cold|cough|pain|nausea|dizzy|sick)/i,
+      /(?:what|why)\s+(?:is|does|causes?)\s+(?:this\s+)?(?:symptom|pain|ache|swelling|rash)/i,
+      /(?:health|medical|doctor|hospital|medicine|tablet|pill)/i,
+      /(?:first\s+aid|home\s+remedy|treatment|precaution)/i,
+      /(?:tabiyat|तबीयत|दवाई|बुखार|सर्दी|dard|दर्द)/i,
+    ],
+    weight: 85,
+  },
+  diet: {
+    patterns: [
+      /(?:what|how)\s+(?:should|can)\s+(?:i|we)\s+eat/i,
+      /(?:diet|meal|food|nutrition|calorie|protein|vitamin)/i,
+      /(?:suggest|recommend)\s+(?:a\s+)?(?:meal|food|diet|breakfast|lunch|dinner|snack)/i,
+      /(?:healthy|light|balanced)\s+(?:food|meal|eating|diet)/i,
+      /(?:khana|खाना|nashta|नाश्ता|diet\s+plan)/i,
+    ],
+    weight: 80,
+  },
+  education: {
+    patterns: [
+      /(?:explain|teach|help\s+me\s+understand)\s+(?:this|the|a|an)/i,
+      /(?:study|exam|test|revision|preparation|homework|assignment)/i,
+      /(?:concept|theory|formula|equation|chapter|topic|subject)/i,
+      /(?:tutor|tutoring|learn|learning)\s+(?:about|this|the)/i,
+      /(?:padhai|पढ़ाई|exam\s+prep|notes)/i,
+    ],
+    weight: 80,
+  },
   chat: {
     patterns: [],
     weight: 50, // Default fallback
@@ -291,6 +324,9 @@ export const useMasterIntentEngine = () => {
       reflection: { persona: 'coach', length: 'medium', feature: 'reflection' },
       focus: { persona: 'coach', length: 'short', feature: 'focus' },
       persona: { persona: 'companion', length: 'short', feature: 'settings' },
+      health: { persona: 'companion', length: 'medium', feature: 'health' },
+      diet: { persona: 'coach', length: 'medium', feature: 'diet' },
+      education: { persona: 'mentor', length: 'medium', feature: 'education' },
     };
     
     const strategy = strategies[intent.type];

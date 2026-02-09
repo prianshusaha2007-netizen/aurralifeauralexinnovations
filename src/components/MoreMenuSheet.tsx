@@ -20,7 +20,10 @@ import {
   Users,
   Heart,
   GraduationCap,
-  Gift
+  Gift,
+  Stethoscope,
+  Apple,
+  BookOpen
 } from 'lucide-react';
 import {
   Drawer,
@@ -124,6 +127,27 @@ const MENU_ITEMS = [
     label: 'Mentorship Settings', 
     action: 'mentorship',
     color: 'from-amber-500 to-orange-500'
+  },
+  { 
+    id: 'health-guide', 
+    icon: Stethoscope, 
+    label: 'Health Guide', 
+    message: 'I need health guidance or have a health concern',
+    color: 'from-red-500 to-rose-500'
+  },
+  { 
+    id: 'diet-nutrition', 
+    icon: Apple, 
+    label: 'Diet & Nutrition', 
+    message: 'Help me with diet and nutrition suggestions',
+    color: 'from-green-500 to-lime-500'
+  },
+  { 
+    id: 'education-mentor', 
+    icon: BookOpen, 
+    label: 'Education Mentor', 
+    message: 'I need help with studying or learning something',
+    color: 'from-blue-500 to-indigo-500'
   },
   { 
     id: 'hydration-health', 
