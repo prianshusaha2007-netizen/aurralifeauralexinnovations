@@ -129,5 +129,5 @@ export default defineConfig(({ mode }) => ({
     },
   },
   // Force complete cache rebuild with new directory
-  cacheDir: "node_modules/.vite_rebuild",
+  cacheDir: "node_modules/.vite_fresh",
 }));
