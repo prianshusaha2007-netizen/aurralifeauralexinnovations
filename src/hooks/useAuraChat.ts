@@ -21,7 +21,6 @@ import { useOptimizedMemory } from './useOptimizedMemory';
 import { useEmotionalDetection } from './useEmotionalDetection';
 import { useSilentPersonaSwitching } from './useSilentPersonaSwitching';
 import { useRecoveryMode } from './useRecoveryMode';
-import { useCulturalContext } from './useCulturalContext';
 import { hasGreetedToday } from '@/utils/dailyGreeting';
 import { isRoutineEditRequest } from '@/utils/routineBehaviorRules';
 import { supabase } from '@/integrations/supabase/client';
@@ -337,9 +336,6 @@ export const useAuraChat = () => {
     getActivationMessage,
   } = useRecoveryMode();
   
-  // Cultural context - soft adaptation
-  const { analyzeCulturalSignals, getCulturalContextForAI } = useCulturalContext();
-
   // Optimized memory system for faster responses
   const { 
     memoryContext: optimizedMemory, 
@@ -462,9 +458,6 @@ export const useAuraChat = () => {
         return;
       }
     }
-
-    // Analyze cultural signals from message (soft, passive)
-    analyzeCulturalSignals(userMessage);
 
     // Check if user is expressing mood
     const detectedMood = detectMoodFromMessage(userMessage);
@@ -713,8 +706,6 @@ export const useAuraChat = () => {
               level: recoveryLevel,
               adaptations: getRecoveryContextForAI(),
             } : null,
-            // Cultural Context - soft adaptation
-            culturalContext: getCulturalContextForAI || null,
           },
         }),
       });
