@@ -8,7 +8,6 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { FocusType, GymSubType, GymBodyArea } from '@/hooks/useFocusModeAI';
 import { FocusAmbientPicker, FocusMusicButton } from './FocusAmbientPicker';
-import { CompactFocusStats } from './FocusAnalyticsDashboard';
 import { useFocusAmbientMusic } from '@/hooks/useFocusAmbientMusic';
 
 interface FocusTypeOption {
@@ -217,7 +216,7 @@ export const FocusGoalInput: React.FC<FocusGoalInputProps> = ({ focusType, onSub
       />
       
       <div>
-        <p className="text-xs text-muted-foreground mb-2">Duration</p>
+        <p className="text-xs text-muted-foreground mb-2">How long feels doable?</p>
         <div className="flex gap-2">
           {durationOptions.map((d) => (
             <button
@@ -244,7 +243,7 @@ export const FocusGoalInput: React.FC<FocusGoalInputProps> = ({ focusType, onSub
           onClick={() => onSubmit(goal || 'Focus session', duration)} 
           className="flex-1 rounded-xl"
         >
-          Start Focus
+          Let's begin
         </Button>
       </div>
     </motion.div>
@@ -355,7 +354,7 @@ export const FocusActiveBanner: React.FC<FocusActiveBannerProps> = ({
         {/* Gym-specific helper text */}
         {isGym && (
           <p className="text-xs text-muted-foreground mt-2 opacity-70">
-            I'm here if you need help. Safety first. 💪
+            I'm here if you need anything. 💪
           </p>
         )}
       </div>
@@ -365,9 +364,6 @@ export const FocusActiveBanner: React.FC<FocusActiveBannerProps> = ({
         isOpen={showMusicPicker} 
         onClose={() => setShowMusicPicker(false)} 
       />
-      
-      {/* Compact stats */}
-      <CompactFocusStats />
     </motion.div>
   );
 };
@@ -392,22 +388,8 @@ export const FocusReflection: React.FC<FocusReflectionProps> = ({ goal, focusTyp
       )}
     >
       <p className="text-sm text-foreground">
-        {isGym ? (
-          <>
-            Nice work. 💪<br />
-            Even showing up counts today.
-          </>
-        ) : (
-          <>
-            Quick check —<br />
-            did you finish what you planned?
-          </>
-        )}
+        How did that feel?
       </p>
-      
-      {goal && !isGym && (
-        <p className="text-xs text-muted-foreground italic">"{goal}"</p>
-      )}
       
       <div className="flex gap-2">
         <Button
@@ -416,7 +398,7 @@ export const FocusReflection: React.FC<FocusReflectionProps> = ({ goal, focusTyp
           className="flex-1 rounded-xl gap-2"
         >
           <Check className="w-4 h-4 text-green-500" />
-          {isGym ? 'Great' : 'Yes'}
+          Good
         </Button>
         <Button
           variant="outline"
@@ -424,7 +406,7 @@ export const FocusReflection: React.FC<FocusReflectionProps> = ({ goal, focusTyp
           className="flex-1 rounded-xl gap-2"
         >
           <Minus className="w-4 h-4 text-amber-500" />
-          Almost
+          Okay
         </Button>
         <Button
           variant="outline"
@@ -432,15 +414,9 @@ export const FocusReflection: React.FC<FocusReflectionProps> = ({ goal, focusTyp
           className="flex-1 rounded-xl gap-2"
         >
           <X className="w-4 h-4 text-muted-foreground" />
-          {isGym ? 'Cut short' : 'Not today'}
+          Rough
         </Button>
       </div>
-      
-      {isGym && (
-        <p className="text-xs text-muted-foreground text-center opacity-70">
-          Remember to hydrate and stretch 🧘
-        </p>
-      )}
     </motion.div>
   );
 };

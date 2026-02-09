@@ -226,7 +226,6 @@ export const FocusReflectionFlow: React.FC<FocusReflectionFlowProps> = ({
       <div className="text-center space-y-1">
         <Sparkles className="w-6 h-6 mx-auto text-primary mb-2" />
         <p className="text-foreground font-medium">{affirmation}</p>
-        <p className="text-xs text-muted-foreground">{sessionDuration} minutes focused</p>
       </div>
 
       <AnimatePresence mode="wait">
@@ -322,6 +321,7 @@ interface FocusSummaryCardProps {
   onDismiss: () => void;
 }
 
+// Gentle summary card — no metrics, no streak pressure
 export const FocusSummaryCard: React.FC<FocusSummaryCardProps> = ({
   mode,
   duration,
@@ -330,44 +330,43 @@ export const FocusSummaryCard: React.FC<FocusSummaryCardProps> = ({
   streak,
   onDismiss,
 }) => {
+  const getEmoji = () => {
+    switch (emotion) {
+      case 'calm': return '😌';
+      case 'accomplished': return '✨';
+      case 'motivated': return '🔥';
+      case 'tired': return '😴';
+      case 'stressed': return '😓';
+      default: return '😐';
+    }
+  };
+
+  const getMessage = () => {
+    switch (emotion) {
+      case 'calm': return "That sounds like a good session.";
+      case 'accomplished': return "Glad that felt productive.";
+      case 'motivated': return "Nice. Ride that energy.";
+      case 'tired': return "Rest well. You earned it.";
+      case 'stressed': return "Take it easy. Tomorrow's fresh.";
+      default: return "Thanks for sharing.";
+    }
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.95 }}
-      className="bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border border-primary/20 rounded-2xl p-5"
+      className="bg-card/90 backdrop-blur-sm border border-border/50 rounded-2xl p-5"
     >
       <div className="flex items-center justify-between mb-4">
-        <h4 className="font-medium text-foreground">Session Complete</h4>
+        <span className="text-2xl">{getEmoji()}</span>
         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onDismiss}>
           <X className="w-4 h-4" />
         </Button>
       </div>
       
-      <div className="grid grid-cols-3 gap-3 text-center">
-        <div className="bg-background/50 rounded-lg p-3">
-          <p className="text-lg font-semibold text-foreground">{duration}m</p>
-          <p className="text-xs text-muted-foreground">Focused</p>
-        </div>
-        <div className="bg-background/50 rounded-lg p-3">
-          <p className="text-lg">{completed === 'yes' ? '✅' : completed === 'almost' ? '🤏' : '🔄'}</p>
-          <p className="text-xs text-muted-foreground capitalize">{completed.replace('_', ' ')}</p>
-        </div>
-        <div className="bg-background/50 rounded-lg p-3">
-          <p className="text-lg">
-            {emotion === 'calm' ? '😌' : emotion === 'accomplished' ? '✨' : emotion === 'motivated' ? '🔥' : emotion === 'tired' ? '😴' : emotion === 'stressed' ? '😓' : '😐'}
-          </p>
-          <p className="text-xs text-muted-foreground capitalize">{emotion}</p>
-        </div>
-      </div>
-      
-      {streak && streak > 1 && (
-        <div className="mt-4 text-center">
-          <p className="text-sm text-muted-foreground">
-            🔥 <span className="text-foreground font-medium">{streak} day streak</span>
-          </p>
-        </div>
-      )}
+      <p className="text-sm text-foreground">{getMessage()}</p>
     </motion.div>
   );
 };
