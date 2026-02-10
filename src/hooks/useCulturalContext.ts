@@ -81,11 +81,28 @@ export const useCulturalContext = () => {
       }
     }
 
-    // Language signals (Hindi/Hinglish)
-    if (/(?:bhai|yaar|accha|kya|hai|nahi|haan|theek|चलो|अच्छा|क्या)/i.test(lower)) {
-      signals.language = 'hindi-english';
-      signals.greetingStyle = 'warm';
-      detected = true;
+    // Language signals - Indian regional languages
+    const languagePatterns: { pattern: RegExp; lang: string; region: string }[] = [
+      { pattern: /(?:bhai|yaar|accha|kya|hai|nahi|haan|theek|चलो|अच्छा|क्या|बहुत|कैसे)/i, lang: 'hindi-english', region: 'North Indian' },
+      { pattern: /[\u0980-\u09FF]|(?:ki korcho|kemon acho|bhalo|ache|আমি|তুমি|কেমন)/i, lang: 'bengali', region: 'Bengali' },
+      { pattern: /[\u0B80-\u0BFF]|(?:vanakkam|nandri|eppadi|irukinga|நன்றி|வணக்கம்)/i, lang: 'tamil', region: 'Tamil' },
+      { pattern: /[\u0C00-\u0C7F]|(?:namaskaram|ela unnaru|baagunnara|మీరు|నేను|ధన్యవాదాలు)/i, lang: 'telugu', region: 'Telugu' },
+      { pattern: /[\u0C80-\u0CFF]|(?:namaskara|hegiddira|dhanyavada|ನಮಸ್ಕಾರ|ಹೇಗಿದ್ದೀರ)/i, lang: 'kannada', region: 'Kannada' },
+      { pattern: /[\u0D00-\u0D7F]|(?:namaskaram|sugham|nanni|നമസ്കാരം|സുഖം|നന്ദി)/i, lang: 'malayalam', region: 'Malayalam' },
+      { pattern: /[\u0A80-\u0AFF]|(?:kem cho|majama|aabhar|આભાર|કેમ છો|મજામાં)/i, lang: 'gujarati', region: 'Gujarati' },
+      { pattern: /[\u0900-\u097F].*(?:कसं|काय|आहे|नमस्कार|धन्यवाद)|(?:kasa|kay ahe|majhya)/i, lang: 'marathi', region: 'Marathi' },
+      { pattern: /[\u0A00-\u0A7F]|(?:sat sri akal|ki haal|vadiya|ਸਤ ਸ੍ਰੀ|ਕੀ ਹਾਲ|ਵਧੀਆ)/i, lang: 'punjabi', region: 'Punjabi' },
+      { pattern: /[\u0B00-\u0B7F]|(?:namaskar|kemiti achhi|dhanyabad|ନମସ୍କାର|କେମିତି)/i, lang: 'odia', region: 'Odia' },
+    ];
+
+    for (const { pattern, lang, region } of languagePatterns) {
+      if (pattern.test(lower) || pattern.test(message)) {
+        signals.language = lang;
+        signals.region = region;
+        signals.greetingStyle = 'warm';
+        detected = true;
+        break;
+      }
     }
 
     return detected ? signals : null;

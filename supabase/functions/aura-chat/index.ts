@@ -402,13 +402,13 @@ function detectMemoryManagementIntent(message: string): MemoryIntent {
 function detectEmotionalState(message: string): string {
   const lowerMessage = message.toLowerCase();
   
-  if (/(?:tired|exhausted|drained|burnout|no energy|thaka|थका)/i.test(lowerMessage)) return 'tired';
-  if (/(?:overwhelmed|too much|can't handle|stressed|tension|परेशान)/i.test(lowerMessage)) return 'overwhelmed';
-  if (/(?:anxious|worried|nervous|scared|darr|डर)/i.test(lowerMessage)) return 'anxious';
-  if (/(?:sad|down|depressed|crying|दुखी|upset)/i.test(lowerMessage)) return 'sad';
-  if (/(?:confused|lost|don't know|stuck|समझ नहीं)/i.test(lowerMessage)) return 'confused';
-  if (/(?:excited|happy|great|amazing|awesome|खुश|मज़ा)/i.test(lowerMessage)) return 'excited';
-  if (/(?:motivated|pumped|ready|let's go|चलो)/i.test(lowerMessage)) return 'motivated';
+  if (/(?:tired|exhausted|drained|burnout|no energy|thaka|थका|களைப்பு|అలసట|ਥੱਕ|થાક|दमलो|ক্লান্ত)/i.test(message)) return 'tired';
+  if (/(?:overwhelmed|too much|can't handle|stressed|tension|परेशान|டென்ஷன்|టెన్షన్|텐ション|ટેન્શન|ਟੈਂਸ਼ਨ)/i.test(message)) return 'overwhelmed';
+  if (/(?:anxious|worried|nervous|scared|darr|डर|பயம்|భయం|ಭಯ|ভয়|ਡਰ|ભય)/i.test(message)) return 'anxious';
+  if (/(?:sad|down|depressed|crying|दुखी|upset|சோகம்|బాధ|ದುಃಖ|দুঃখ|ਦੁੱਖ|દુઃખ|ଦୁଃଖ)/i.test(message)) return 'sad';
+  if (/(?:confused|lost|don't know|stuck|समझ नहीं|புரியல|అర్థం కాలేదు|ಅರ್ಥ ಆಗಲ್ಲ|বুঝতে পারছি না)/i.test(message)) return 'confused';
+  if (/(?:excited|happy|great|amazing|awesome|खुश|मज़ा|சந்தோஷம்|ఆనందం|ಖುಷಿ|আনন্দ|ਖੁਸ਼|ખુશ)/i.test(message)) return 'excited';
+  if (/(?:motivated|pumped|ready|let's go|चलो|போலாம்|చలో|ಹೋಗೋಣ|চলো|ਚੱਲੋ|ચાલો)/i.test(message)) return 'motivated';
   if (/(?:curious|wondering|what if|interested)/i.test(lowerMessage)) return 'curious';
   
   return 'neutral';
@@ -3084,14 +3084,27 @@ NATURAL EXAMPLES:
 - "Evening's settling in. Gym's coming up—want to keep it as planned or shift today?"
 
 ====================================
-🌍 MULTI-LANGUAGE INTELLIGENCE
+🌍 MULTI-LANGUAGE INTELLIGENCE (ALL INDIAN LANGUAGES)
 ====================================
-- Detect user's language automatically
-- Reply in the SAME language
-- Match formal/informal tone
-- If user mixes languages (Hinglish), respond naturally in the same mix
-- Natural fillers: "hmm", "okay", "accha", "haan", "arre"
-- Never ask "Which language?" — Just adapt.
+- Detect user's language automatically from script + words
+- Reply in the SAME language the user writes in
+- Match formal/informal tone of the user
+- If user mixes languages (Hinglish, Tanglish, etc.), respond naturally in the same mix
+- Never ask "Which language?" — Just adapt instantly
+- SUPPORTED LANGUAGES (auto-detect):
+  • Hindi / Hinglish — fillers: "accha", "haan", "arre", "yaar"
+  • Bengali (বাংলা) — fillers: "আচ্ছা", "হ্যাঁ", "কি বলো"
+  • Tamil (தமிழ்) — fillers: "சரி", "ஆமா", "romba", "paravala"
+  • Telugu (తెలుగు) — fillers: "అవును", "సరే", "chala baagundi"
+  • Marathi (मराठी) — fillers: "बरं", "हो ना", "अरे"
+  • Gujarati (ગુજરાતી) — fillers: "હા", "સારું", "kem"
+  • Kannada (ಕನ್ನಡ) — fillers: "ಹೌದು", "ಸರಿ", "houdu"
+  • Malayalam (മലയാളം) — fillers: "അതെ", "ശരി", "athe"
+  • Punjabi (ਪੰਜਾਬੀ) — fillers: "ਹਾਂਜੀ", "ਚੰਗਾ", "hanji"
+  • Odia (ଓଡ଼ିଆ) — fillers: "ହଁ", "ଠିକ୍", "haan"
+- When responding in regional languages, sound LOCAL not translated
+- Use colloquial/spoken forms, not textbook grammar
+- Mix English naturally as Indians actually speak (e.g., "இன்று office late போறேன்")
 
 ====================================
 🎤 VOICE MODE INTELLIGENCE
