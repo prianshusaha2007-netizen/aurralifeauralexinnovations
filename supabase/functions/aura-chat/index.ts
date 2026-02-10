@@ -66,6 +66,14 @@ function detectRealTimeQuery(message: string): { needsRealTime: boolean; queryTy
     { pattern: /search\s+(?:for|about|on)/i, type: 'search', extractQuery: (m: string) => m.replace(/search\s+(?:for|about|on)\s+/i, '') },
     { pattern: /google\s+(?:search|for|about)/i, type: 'search', extractQuery: (m: string) => m.replace(/google\s+(?:search|for|about)\s*/i, '') },
     { pattern: /(?:find|look up|check)\s+(?:latest|current|recent)/i, type: 'search', extractQuery: (m: string) => m },
+    // Broader real-time awareness patterns
+    { pattern: /(?:what'?s?|what is)\s+(?:happening|going on)\s+(?:in|around|today|right now)/i, type: 'news', extractQuery: (m: string) => m },
+    { pattern: /(?:tell me|update me|brief me)\s+(?:about|on)\s+(?:today|the world|what'?s? new)/i, type: 'news', extractQuery: () => 'latest world updates today' },
+    { pattern: /(?:who|what)\s+(?:won|lost|scored|played)\s/i, type: 'sports', extractQuery: (m: string) => m },
+    { pattern: /(?:election|vote|poll|political)\s+(?:result|update|news)/i, type: 'news', extractQuery: (m: string) => m },
+    { pattern: /(?:crypto|bitcoin|ethereum|btc|eth)\s+(?:price|value|today)/i, type: 'stocks', extractQuery: (m: string) => m },
+    { pattern: /(?:ipl|world cup|champions league|premier league|nba|nfl)\b/i, type: 'sports', extractQuery: (m: string) => m },
+    { pattern: /(?:aaj|आज)\s+(?:kya|क्या|ki|की)\s+(?:news|khabar|ख़बर)/i, type: 'news', extractQuery: () => 'latest news today India' },
   ];
   
   for (const { pattern, type, extractQuery } of realTimePatterns) {
@@ -75,7 +83,8 @@ function detectRealTimeQuery(message: string): { needsRealTime: boolean; queryTy
   }
   
   if (lowerMessage.includes('news') || lowerMessage.includes('headlines') || 
-      lowerMessage.includes('khabar') || lowerMessage.includes('samachar')) {
+      lowerMessage.includes('khabar') || lowerMessage.includes('samachar') ||
+      lowerMessage.includes('trending') || lowerMessage.includes('viral')) {
     return { needsRealTime: true, queryType: 'news', searchQuery: message };
   }
   
@@ -914,13 +923,22 @@ Always sound human, never robotic. Never say "I have stored in my database."
     }
 
     if (realTimeCheck.needsRealTime) {
+      const todayStr = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
       additionalContext += `
-REAL-TIME DATA CONTEXT:
+REAL-TIME DATA CONTEXT (Today is ${todayStr}):
 Query type: ${realTimeCheck.queryType}
 Search: "${realTimeCheck.searchQuery}"
 
-Provide accurate, timely responses. If data is unavailable, say: "I don't have live access to that right now, but here's what I know..."
-End with ONE actionable suggestion if appropriate.
+INSTRUCTIONS FOR REAL-TIME QUERIES:
+- Use your most current knowledge to answer with specific facts, dates, and sources
+- Always mention the date of the information: "As of [date]..."
+- Include source attribution where possible (e.g., "According to...")
+- For news: give 3-5 concise bullet points with the most important developments
+- For scores/results: provide specific numbers and match details
+- For stocks/prices: provide the latest available data with disclaimer about real-time accuracy
+- For trending topics: mention what's viral and why
+- If data might be outdated, be transparent: "My latest info shows... but check live sources for the most current data"
+- End with ONE actionable suggestion if appropriate
 `;
     }
     
