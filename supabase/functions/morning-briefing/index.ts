@@ -84,8 +84,9 @@ serve(async (req) => {
       }
     }
 
-    // Fetch latest news
+    // Fetch latest news & real-time updates using Lovable AI
     let newsInfo = '';
+    const today = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
     try {
       const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
         method: 'POST',
@@ -98,11 +99,11 @@ serve(async (req) => {
           messages: [
             {
               role: 'system',
-              content: 'You are a news assistant. Provide 3 brief, verified news updates. Each update should be 1 line max. No sensationalism. Focus on meaningful updates. Format: • [Update 1]\\n• [Update 2]\\n• [Update 3]',
+              content: `You are a real-time briefing assistant. Today is ${today}. Provide 3-4 brief, verified updates covering: world/national news, tech/business, and one trending/cultural topic. Each update: 1 line max with source attribution. No sensationalism. Format:\n• [Update 1] — Source\n• [Update 2] — Source\n• [Update 3] — Source`,
             },
             {
               role: 'user',
-              content: 'Give me 3 important news updates for today. Keep it brief and meaningful.',
+              content: `Give me the most important updates for today (${today}). Include major headlines, any breaking developments, and one trending topic. Be specific with facts and dates.`,
             },
           ],
         }),
@@ -112,7 +113,7 @@ serve(async (req) => {
         const aiData = await aiResponse.json();
         const newsContent = aiData.choices?.[0]?.message?.content || '';
         if (newsContent) {
-          newsInfo = `📰 Today's Quick Updates:\n${newsContent}\n\n`;
+          newsInfo = `📰 Today's Updates (${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}):\n${newsContent}\n\n`;
         }
       }
     } catch (e) {
