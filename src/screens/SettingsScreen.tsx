@@ -50,6 +50,8 @@ import { useMorningBriefing } from '@/hooks/useMorningBriefing';
 import { getGreetingFrequency, setGreetingFrequency, GreetingFrequency } from '@/components/MorningGreeting';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
+import { LanguagePreferencesDialog } from '@/components/LanguagePreferencesDialog';
+import { useCulturalContext } from '@/hooks/useCulturalContext';
 
 export const SettingsScreen: React.FC = () => {
   const navigate = useNavigate();
@@ -106,6 +108,17 @@ export const SettingsScreen: React.FC = () => {
   const [birthday, setBirthday] = useState(userProfile.birthday || '');
   const [birthdayDialogOpen, setBirthdayDialogOpen] = useState(false);
   const [tempBirthday, setTempBirthday] = useState(birthday);
+  
+  // Language preferences state
+  const [langDialogOpen, setLangDialogOpen] = useState(false);
+  const { culturalProfile } = useCulturalContext();
+  
+  const getLanguageDisplayLabel = () => {
+    const pinned = localStorage.getItem('aurra-pinned-language');
+    if (pinned) return `Pinned: ${pinned}`;
+    if (culturalProfile.language) return `Detected: ${culturalProfile.language}`;
+    return 'Auto-detect';
+  };
   
   const handleGreetingFrequencyChange = (value: GreetingFrequency) => {
     setGreetingFreq(value);
@@ -419,8 +432,9 @@ export const SettingsScreen: React.FC = () => {
         },
         {
           icon: Globe,
-          label: 'Language Settings',
-          description: userProfile.languages.join(', ') || 'Not set',
+          label: 'Language Preferences',
+          description: getLanguageDisplayLabel(),
+          isLanguageSettings: true,
           action: <ChevronRight className="w-5 h-5 text-muted-foreground" />,
         },
         {
@@ -686,6 +700,9 @@ export const SettingsScreen: React.FC = () => {
         </DialogContent>
       </Dialog>
 
+      {/* Language Preferences Dialog */}
+      <LanguagePreferencesDialog open={langDialogOpen} onOpenChange={setLangDialogOpen} />
+
       {/* Header */}
       <div className="mb-6">
         <h1 className="text-2xl font-bold aura-gradient-text">Settings</h1>
@@ -838,6 +855,30 @@ export const SettingsScreen: React.FC = () => {
                           setTempBirthday(birthday);
                           setBirthdayDialogOpen(true);
                         }}
+                        className={cn(
+                          'flex items-center gap-4 w-full p-4 text-left -mx-4',
+                          'hover:bg-muted/50 transition-colors',
+                          index !== (section.items?.length ?? 0) - 1 && 'border-b border-border/50'
+                        )}
+                      >
+                        <div className="p-2 rounded-lg bg-muted text-foreground">
+                          <Icon className="w-4 h-4" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium">{item.label}</p>
+                          <p className="text-xs text-muted-foreground truncate">{item.description}</p>
+                        </div>
+                        {item.action}
+                      </button>
+                    );
+                  }
+                  
+                  // Language preferences
+                  if (item.isLanguageSettings) {
+                    return (
+                      <button
+                        key={item.label}
+                        onClick={() => setLangDialogOpen(true)}
                         className={cn(
                           'flex items-center gap-4 w-full p-4 text-left -mx-4',
                           'hover:bg-muted/50 transition-colors',
