@@ -93,6 +93,18 @@ export const useCulturalContext = () => {
       { pattern: /[\u0900-\u097F].*(?:कसं|काय|आहे|नमस्कार|धन्यवाद)|(?:kasa|kay ahe|majhya)/i, lang: 'marathi', region: 'Marathi' },
       { pattern: /[\u0A00-\u0A7F]|(?:sat sri akal|ki haal|vadiya|ਸਤ ਸ੍ਰੀ|ਕੀ ਹਾਲ|ਵਧੀਆ)/i, lang: 'punjabi', region: 'Punjabi' },
       { pattern: /[\u0B00-\u0B7F]|(?:namaskar|kemiti achhi|dhanyabad|ନମସ୍କାର|କେମିତି)/i, lang: 'odia', region: 'Odia' },
+      // Global languages
+      { pattern: /[\u0600-\u06FF\u0750-\u077F]|(?:مرحبا|شكرا|كيف حالك)/i, lang: 'arabic', region: 'Arabic' },
+      { pattern: /[\u4E00-\u9FFF\u3400-\u4DBF]/i, lang: 'chinese', region: 'Chinese' },
+      { pattern: /[\u3040-\u309F\u30A0-\u30FF]/i, lang: 'japanese', region: 'Japanese' },
+      { pattern: /[\uAC00-\uD7AF\u1100-\u11FF]/i, lang: 'korean', region: 'Korean' },
+      { pattern: /[\u0400-\u04FF]|(?:привет|спасибо|как дела)/i, lang: 'russian', region: 'Russian' },
+      { pattern: /(?:bonjour|merci|comment|salut|bonsoir|s'il vous plaît)/i, lang: 'french', region: 'French' },
+      { pattern: /(?:hola|gracias|buenos días|buenas noches|cómo estás|por favor)/i, lang: 'spanish', region: 'Spanish' },
+      { pattern: /(?:olá|obrigado|obrigada|bom dia|boa noite|como está)/i, lang: 'portuguese', region: 'Portuguese' },
+      { pattern: /(?:hallo|danke|wie geht|guten tag|guten morgen|bitte)/i, lang: 'german', region: 'German' },
+      { pattern: /(?:ciao|grazie|come stai|buongiorno|buonasera|per favore)/i, lang: 'italian', region: 'Italian' },
+      { pattern: /(?:merhaba|teşekkür|nasılsın|günaydın|iyi geceler|tamam)/i, lang: 'turkish', region: 'Turkish' },
     ];
 
     for (const { pattern, lang, region } of languagePatterns) {
