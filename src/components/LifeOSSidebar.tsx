@@ -30,7 +30,8 @@ import {
   Gamepad2,
   Image,
   Search,
-  Trophy
+  Trophy,
+  Smartphone
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -99,6 +100,7 @@ const settingsItems = [
 
 // Hidden features (accessible via "More")
 const moreItems = [
+  { id: 'mobile-control', icon: Smartphone, label: 'Mobile Control', path: '/mobile-control' },
   { id: 'habits', icon: Target, label: 'Habit Tracker', message: 'Show my habits' },
   { id: 'hydration', icon: Droplets, label: 'Hydration', message: 'Show my hydration tracker' },
   { id: 'games', icon: Gamepad2, label: 'Play & Learn', message: 'Show me some games' },
