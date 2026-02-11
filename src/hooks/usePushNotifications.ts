@@ -61,11 +61,11 @@ export const usePushNotifications = () => {
       await navigator.serviceWorker.ready;
 
       // Check if already subscribed
-      let subscription = await registration.pushManager.getSubscription();
+      let subscription = await (registration as any).pushManager.getSubscription();
 
       if (!subscription) {
         // Subscribe to push
-        subscription = await registration.pushManager.subscribe({
+        subscription = await (registration as any).pushManager.subscribe({
           userVisibleOnly: true,
           applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
         });
@@ -99,7 +99,7 @@ export const usePushNotifications = () => {
 
     try {
       const registration = await navigator.serviceWorker.ready;
-      const subscription = await registration.pushManager.getSubscription();
+      const subscription = await (registration as any).pushManager.getSubscription();
 
       if (subscription) {
         await subscription.unsubscribe();
@@ -123,7 +123,7 @@ export const usePushNotifications = () => {
       if (!('serviceWorker' in navigator)) return false;
       
       const registration = await navigator.serviceWorker.ready;
-      const subscription = await registration.pushManager.getSubscription();
+      const subscription = await (registration as any).pushManager.getSubscription();
       return !!subscription;
     } catch {
       return false;

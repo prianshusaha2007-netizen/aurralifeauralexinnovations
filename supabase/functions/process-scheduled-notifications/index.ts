@@ -6,8 +6,6 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-cron-secret',
 };
 
-// This edge function processes scheduled notifications
-// It should be called by a cron job every minute
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -41,10 +39,7 @@ serve(async (req) => {
       .order('scheduled_for', { ascending: true })
       .limit(100);
 
-    if (fetchError) {
-      console.error('Error fetching pending notifications:', fetchError);
-      throw fetchError;
-    }
+    if (fetchError) throw fetchError;
 
     if (!pendingNotifications || pendingNotifications.length === 0) {
       return new Response(JSON.stringify({
@@ -59,16 +54,41 @@ serve(async (req) => {
 
     const processed: string[] = [];
     const failed: string[] = [];
+    const pushSent: string[] = [];
 
     for (const notification of pendingNotifications) {
       try {
-        // Get user's push subscriptions
-        const { data: subscriptions } = await supabase
-          .from('push_subscriptions')
-          .select('*')
-          .eq('user_id', notification.user_id);
+        // Actually send push notification via send-web-push
+        try {
+          const pushResponse = await fetch(`${supabaseUrl}/functions/v1/send-web-push`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${supabaseServiceKey}`,
+            },
+            body: JSON.stringify({
+              userId: notification.user_id,
+              title: notification.title,
+              body: notification.body,
+              tag: `scheduled-${notification.id}`,
+              data: { notificationId: notification.id, type: notification.notification_type },
+            }),
+          });
 
-        // Mark as sent (even if no subscriptions, we don't want to keep retrying)
+          if (pushResponse.ok) {
+            const pushResult = await pushResponse.json();
+            if (pushResult.success) {
+              pushSent.push(notification.id);
+            }
+            console.log(`Push result for ${notification.id}:`, pushResult);
+          } else {
+            console.warn(`Push failed for ${notification.id}: ${pushResponse.status}`);
+          }
+        } catch (pushErr) {
+          console.warn(`Push delivery error for ${notification.id}:`, pushErr);
+        }
+
+        // Mark as sent
         const { error: updateError } = await supabase
           .from('scheduled_notifications')
           .update({ sent: true })
@@ -80,20 +100,7 @@ serve(async (req) => {
           continue;
         }
 
-        // Log the notification for debugging
-        console.log(`Processed notification ${notification.id} for user ${notification.user_id}:`, {
-          title: notification.title,
-          type: notification.notification_type,
-          subscriptions: subscriptions?.length || 0,
-        });
-
         processed.push(notification.id);
-
-        // In a full implementation, you would:
-        // 1. Use web-push library to send to each subscription
-        // 2. Handle failed/expired subscriptions
-        // 3. Send FCM for native apps
-
       } catch (error) {
         console.error(`Error processing notification ${notification.id}:`, error);
         failed.push(notification.id);
@@ -103,13 +110,11 @@ serve(async (req) => {
     return new Response(JSON.stringify({
       message: 'Notifications processed',
       processed: processed.length,
+      pushSent: pushSent.length,
       failed: failed.length,
-      processedIds: processed,
-      failedIds: failed,
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
-
   } catch (error) {
     console.error('Process scheduled notifications error:', error);
     return new Response(JSON.stringify({
