@@ -1,4 +1,4 @@
-// Agent Orchestrator - Coordinates all agents and manages message routing
+// AURRA CORE Orchestrator - Single intelligence that coordinates 9 invisible sub-agents
 
 import { 
   AgentContext, 
@@ -6,9 +6,8 @@ import {
   AutonomyMode, 
   AgentDomain,
   AgentAction,
-  ActionType 
 } from './types';
-import { AGENT_REGISTRY, getAgentById } from './registry';
+import { AGENT_REGISTRY, getAgentById, resolveAgentId } from './registry';
 
 interface OrchestratorState {
   activeAgents: string[];
@@ -18,6 +17,7 @@ interface OrchestratorState {
   recentResponses: AgentResponse[];
 }
 
+// AURRA CORE — the single orchestrator the user experiences
 export class AgentOrchestrator {
   private state: OrchestratorState;
   
@@ -52,7 +52,7 @@ export class AgentOrchestrator {
     this.state.context = { ...this.state.context, ...updates };
   }
 
-  // Determine which autonomy mode to use based on context
+  // Adaptive autonomy mode based on context
   determineMode(domain: AgentDomain, urgency: number = 5): AutonomyMode {
     if (this.state.globalMode !== 'adaptive') {
       return this.state.globalMode;
@@ -75,8 +75,8 @@ export class AgentOrchestrator {
       return 'predict_confirm';
     }
     
-    // Sensitive domains → more user control
-    if (['finance', 'social'].includes(domain)) {
+    // Sensitive domains → more user control (Strategy, Automation)
+    if (['work', 'social'].includes(domain)) {
       return 'suggest_approve';
     }
     
@@ -88,7 +88,7 @@ export class AgentOrchestrator {
     return 'predict_confirm';
   }
 
-  // Route a user message to appropriate agents
+  // Route user message to appropriate sub-agents (invisible to user)
   async routeMessage(userMessage: string): Promise<AgentResponse[]> {
     const relevantAgents = this.identifyRelevantAgents(userMessage);
     const responses: AgentResponse[] = [];
@@ -102,32 +102,43 @@ export class AgentOrchestrator {
       responses.push(response);
     }
     
-    this.state.recentResponses = [...responses, ...this.state.recentResponses].slice(0, 20);
-    return responses;
+    // Resolve conflicts: emotional safety > user intent > practicality
+    const resolved = this.resolveConflicts(responses);
+    
+    this.state.recentResponses = [...resolved, ...this.state.recentResponses].slice(0, 20);
+    return resolved;
   }
 
-  // Identify which agents should respond to a message
+  // Conflict resolution: prioritize emotional safety, then intent, then practicality
+  private resolveConflicts(responses: AgentResponse[]): AgentResponse[] {
+    if (responses.length <= 1) return responses;
+    
+    // Priority order: health/recovery > memory > focus > education > fitness > automation > culture > vision > strategy
+    const priorityOrder = ['health', 'memory', 'focus', 'education', 'fitness', 'automation', 'culture', 'vision', 'strategy'];
+    
+    return responses.sort((a, b) => {
+      const aIdx = priorityOrder.indexOf(a.agentId);
+      const bIdx = priorityOrder.indexOf(b.agentId);
+      return (aIdx === -1 ? 99 : aIdx) - (bIdx === -1 ? 99 : bIdx);
+    });
+  }
+
+  // Identify which sub-agents should be consulted (internally)
   private identifyRelevantAgents(message: string): string[] {
     const lowerMessage = message.toLowerCase();
     const relevant: string[] = [];
     
-    // Keyword-based routing
+    // Keyword-based routing to 9 canonical agents
     const keywordMap: Record<string, string[]> = {
-      planner: ['plan', 'goal', 'achieve', 'want to', 'need to'],
-      scheduler: ['schedule', 'when', 'calendar', 'time', 'slot'],
-      routine: ['habit', 'routine', 'daily', 'morning', 'evening', 'streak'],
-      task: ['task', 'todo', 'deadline', 'finish', 'complete', 'do'],
-      study: ['study', 'learn', 'exam', 'read', 'course', 'book', 'notes'],
-      fitness: ['gym', 'workout', 'exercise', 'run', 'fitness', 'health', 'weight'],
-      finance: ['money', 'spend', 'expense', 'budget', 'save', 'invest', 'cost', '₹', '$'],
-      social: ['message', 'follow up', 'network', 'reach out', 'contact', 'call', 'meet'],
-      memory: ['remember', 'recall', 'forget', 'last time', 'previously'],
-      insight: ['insight', 'pattern', 'trend', 'analysis', 'review'],
-      identity: ['who am i', 'growth', 'values', 'becoming', 'identity'],
-      reflection: ['journal', 'reflect', 'grateful', 'feel', 'think about'],
-      mood: ['mood', 'feeling', 'happy', 'sad', 'anxious', 'stressed'],
-      energy: ['tired', 'energy', 'exhausted', 'awake', 'sleepy'],
-      recovery: ['rest', 'break', 'burnout', 'overwhelmed', 'relax'],
+      education: ['study', 'learn', 'exam', 'teach', 'explain', 'concept', 'course', 'book', 'notes', 'code', 'debug', 'programming', 'tutor'],
+      health: ['health', 'sick', 'pain', 'headache', 'fever', 'tired', 'exhausted', 'stressed', 'anxious', 'sad', 'depressed', 'burnout', 'sleep', 'doctor', 'medicine'],
+      fitness: ['gym', 'workout', 'exercise', 'run', 'fitness', 'weight', 'diet', 'meal', 'nutrition', 'protein', 'calories', 'hydration', 'water'],
+      focus: ['focus', 'task', 'todo', 'deadline', 'routine', 'habit', 'plan', 'goal', 'schedule', 'streak', 'morning', 'evening', 'daily'],
+      memory: ['remember', 'recall', 'forget', 'memory', 'last time', 'previously', 'journal', 'reflect', 'gratitude', 'pattern', 'insight'],
+      automation: ['remind', 'alarm', 'timer', 'open', 'send', 'message', 'call', 'email', 'app', 'calendar', 'notification'],
+      culture: ['language', 'translate', 'festival', 'cultural', 'region'],
+      vision: ['image', 'photo', 'picture', 'document', 'scan', 'screenshot'],
+      strategy: ['decide', 'strategy', 'business', 'invest', 'startup', 'idea', 'trade-off', 'long-term', 'budget', 'money', 'expense', 'spend', '₹', '$'],
     };
     
     for (const [agentId, keywords] of Object.entries(keywordMap)) {
@@ -136,112 +147,84 @@ export class AgentOrchestrator {
       }
     }
     
-    // Default to planner if no specific match
+    // Default to focus agent for general queries
     if (relevant.length === 0) {
-      relevant.push('planner');
+      relevant.push('focus');
     }
     
     // Limit to top 3 most relevant
     return relevant.slice(0, 3);
   }
 
-  // Generate a response from an agent
+  // Generate response (internal, never exposed to user)
   private generateAgentResponse(
     agentId: string,
     agentName: string,
     domain: AgentDomain,
     mode: AutonomyMode,
-    userMessage: string
+    _userMessage: string
   ): AgentResponse {
-    // This will be enhanced with actual AI calls
-    const agent = getAgentById(agentId);
-    
     return {
       agentId,
       agentName,
       domain,
-      message: this.getPlaceholderResponse(agentId, mode),
+      message: this.getInternalResponse(agentId, mode),
       actions: this.getAgentActions(agentId, mode),
       stats: this.getAgentStats(agentId),
       timestamp: new Date().toISOString(),
     };
   }
 
-  private getPlaceholderResponse(agentId: string, mode: AutonomyMode): string {
-    const modePrefix = mode === 'full_auto' ? '✅ Auto-executing: ' :
-                       mode === 'predict_confirm' ? '🔮 Predicting: ' :
-                       mode === 'suggest_approve' ? '💡 Suggesting: ' :
-                       '📋 Ready to execute: ';
+  private getInternalResponse(agentId: string, mode: AutonomyMode): string {
+    const modePrefix = mode === 'full_auto' ? '✅ ' :
+                       mode === 'predict_confirm' ? '🔮 ' :
+                       mode === 'suggest_approve' ? '💡 ' : '📋 ';
     
     const responses: Record<string, string> = {
-      planner: 'I can help break this down into actionable steps.',
-      scheduler: 'Let me find the optimal time for this.',
-      routine: 'Tracking your consistency on this habit.',
-      task: 'I\'ve added this to your task list.',
-      study: 'Ready to start a focused study session.',
-      fitness: 'Let\'s plan your workout based on your energy.',
-      finance: 'I\'ll log this and track your spending.',
-      social: 'I can help draft a follow-up message.',
-      memory: 'I\'ve noted this for future reference.',
-      insight: 'Analyzing patterns from your recent activity.',
-      identity: 'Reflecting on your growth journey.',
-      reflection: 'Let\'s take a moment to process this.',
-      mood: 'Thank you for sharing how you\'re feeling.',
-      energy: 'Adjusting recommendations for your energy level.',
-      recovery: 'Remember to take care of yourself.',
+      education: 'Ready to explain and guide.',
+      health: 'Checking wellness context.',
+      fitness: 'Adjusting for energy and goals.',
+      focus: 'Managing tasks and focus.',
+      memory: 'Accessing context and patterns.',
+      automation: 'Preparing action for confirmation.',
+      culture: 'Adapting for cultural context.',
+      vision: 'Processing visual content.',
+      strategy: 'Analyzing options and trade-offs.',
     };
     
-    return modePrefix + (responses[agentId] || 'Processing your request.');
+    return modePrefix + (responses[agentId] || 'Processing.');
   }
 
   private getAgentActions(agentId: string, mode: AutonomyMode): AgentResponse['actions'] {
     if (mode === 'full_auto') return undefined;
     
     const actionMap: Record<string, AgentResponse['actions']> = {
-      planner: [
-        { label: 'Create Goal', action: 'create_plan', data: { title: 'New Goal' } },
-        { label: 'View Goals', action: 'view_goals' },
+      education: [
+        { label: 'Start Study', action: 'start_session', data: { type: 'study', duration: 25 } },
+        { label: 'Explain Topic', action: 'explain_topic' },
       ],
-      scheduler: [
-        { label: 'Add Task', action: 'add_focus_block', data: { title: 'Scheduled Task', duration: 30 } },
-      ],
-      routine: [
-        { label: 'Add Habit', action: 'create_habit', data: { name: 'New Habit' } },
+      health: [
         { label: 'Log Mood', action: 'log_mood', data: { mood: 'neutral', energy: 'medium', stress: 'low' } },
-      ],
-      task: [
-        { label: 'Add Focus Block', action: 'add_focus_block', data: { title: 'Focus Time', duration: 25 } },
-      ],
-      study: [
-        { label: 'Start 25min', action: 'start_session', data: { type: 'study', duration: 25 } },
-        { label: 'Start 50min', action: 'start_session', data: { type: 'study', duration: 50 } },
+        { label: 'Take Break', action: 'start_break' },
       ],
       fitness: [
-        { label: 'Log 30min', action: 'log_workout', data: { type: 'general', duration: 30 } },
-        { label: 'Log 60min', action: 'log_workout', data: { type: 'general', duration: 60 } },
-        { label: 'View Progress', action: 'view_fitness' },
+        { label: 'Log Workout', action: 'log_workout', data: { type: 'general', duration: 30 } },
+        { label: 'Log Water', action: 'log_water', data: { amount: 250 } },
       ],
-      finance: [
-        { label: 'Log ₹100', action: 'log_expense', data: { amount: 100, category: 'other' } },
-        { label: 'Log ₹500', action: 'log_expense', data: { amount: 500, category: 'other' } },
-        { label: 'View Budget', action: 'view_budget' },
-      ],
-      social: [
-        { label: 'Draft Message', action: 'draft_message' },
-        { label: 'Schedule Follow-up', action: 'schedule_followup', data: { contactName: 'Contact', platform: 'email' } },
+      focus: [
+        { label: 'Start Focus', action: 'add_focus_block', data: { title: 'Focus Time', duration: 25 } },
+        { label: 'View Goals', action: 'view_goals' },
       ],
       memory: [
         { label: 'Save Memory', action: 'save_memory', data: { content: 'Important note', category: 'general' } },
       ],
-      mood: [
-        { label: 'Log High', action: 'log_mood', data: { mood: 'high', energy: 'high', stress: 'low' } },
-        { label: 'Log Low', action: 'log_mood', data: { mood: 'low', energy: 'low', stress: 'high' } },
+      automation: [
+        { label: 'Set Reminder', action: 'set_reminder' },
+        { label: 'Draft Message', action: 'draft_message' },
       ],
-      energy: [
-        { label: 'Log Water', action: 'log_water', data: { amount: 250 } },
-      ],
-      recovery: [
-        { label: 'Log Rest', action: 'log_mood', data: { mood: 'neutral', energy: 'low', stress: 'low', notes: 'Taking a break' } },
+      strategy: [
+        { label: 'Create Plan', action: 'create_plan', data: { title: 'New Plan' } },
+        { label: 'Log Expense', action: 'log_expense', data: { amount: 100, category: 'other' } },
       ],
     };
     
@@ -250,19 +233,19 @@ export class AgentOrchestrator {
 
   private getAgentStats(agentId: string): AgentResponse['stats'] {
     const statsMap: Record<string, AgentResponse['stats']> = {
-      routine: [
+      focus: [
         { label: 'Streak', value: '7 days' },
         { label: 'Completion', value: '85%' },
       ],
-      study: [
+      education: [
         { label: 'Session', value: '25 min' },
-        { label: 'Cards Due', value: 12 },
+        { label: 'Topics', value: 12 },
       ],
       fitness: [
         { label: 'This Week', value: '4/5' },
         { label: 'Streak', value: '14 days' },
       ],
-      finance: [
+      strategy: [
         { label: 'Today', value: '₹450' },
         { label: 'Budget Left', value: '₹2,550' },
       ],
@@ -278,19 +261,14 @@ export class AgentOrchestrator {
       return { success: false, message: 'Action not found' };
     }
     
-    // Remove from pending
     this.state.pendingApprovals = this.state.pendingApprovals.filter(a => a.id !== actionId);
-    
-    // Execute based on action type
     return { success: true, message: `Executed: ${action.content}` };
   }
 
-  // Get current state
   getState(): OrchestratorState {
     return { ...this.state };
   }
 
-  // Set global autonomy mode
   setGlobalMode(mode: AutonomyMode): void {
     this.state.globalMode = mode;
   }

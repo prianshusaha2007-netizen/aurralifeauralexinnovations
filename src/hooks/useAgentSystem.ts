@@ -373,8 +373,8 @@ export const useAgentSystem = (): UseAgentSystemReturn => {
         id: `action-${Date.now()}`,
         type: 'agent',
         content: result.message,
-        agentId: 'execution',
-        agentName: 'Execution Agent',
+        agentId: 'automation',
+        agentName: 'Automation & Tools Agent',
         domain: 'routine',
         timestamp: new Date(),
       }]);
