@@ -1,6 +1,6 @@
 import React from 'react';
 import { 
-  Calendar, Clock, Bell, Brain, TrendingUp, Target, X
+  Calendar, Clock, Bell, Brain, TrendingUp, Target, X, Smartphone
 } from 'lucide-react';
 import {
   Drawer,
@@ -61,6 +61,13 @@ const CONTEXT_SHORTCUTS = [
     label: 'Progress', 
     message: "How am I doing this week? Show my progress",
     color: 'from-indigo-500 to-blue-500'
+  },
+  { 
+    id: 'mobile-control', 
+    icon: Smartphone, 
+    label: 'Phone', 
+    message: "Open mobile control panel - I want to control my phone",
+    color: 'from-slate-500 to-zinc-500'
   },
 ];
 
