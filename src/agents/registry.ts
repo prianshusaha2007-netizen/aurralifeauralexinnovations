@@ -1,365 +1,158 @@
-// Agent Registry - Defines all available agents in the AURRA system
+// Agent Registry - Defines the 9 canonical AURRA CORE sub-agents (invisible to user)
 
 import { AgentDefinition, AgentDomain } from './types';
 
 export const AGENT_REGISTRY: AgentDefinition[] = [
-  // Core Planning Agents
+  // 1. Education Agent
   {
-    id: 'planner',
-    name: 'Planner Agent',
-    domain: 'routine',
-    description: 'Creates multi-step plans from user goals',
-    icon: '📋',
-    systemPrompt: `You are the Planner Agent. Your role is to break down user goals into actionable multi-step plans.
-When given a goal, create a structured plan with:
-- Clear milestones
-- Realistic timelines
-- Dependencies between steps
-- Success metrics
-Always consider user's energy patterns and available time.`,
-    triggers: [
-      { type: 'user', condition: 'goal_mentioned', priority: 9 },
-      { type: 'time', condition: 'weekly_planning', priority: 7 },
-    ],
-    capabilities: ['create_plan', 'break_down_goals', 'set_milestones', 'estimate_duration'],
-  },
-  {
-    id: 'scheduler',
-    name: 'Scheduler Agent',
-    domain: 'routine',
-    description: 'Maps plans to optimal time windows',
-    icon: '📅',
-    systemPrompt: `You are the Scheduler Agent. Your role is to schedule tasks at optimal times.
-Consider:
-- User's energy patterns (peak hours for hard work)
-- Existing commitments
-- Buffer time between tasks
-- Recovery periods
-Output specific time blocks with reasoning.`,
-    triggers: [
-      { type: 'event', condition: 'plan_created', priority: 8 },
-      { type: 'time', condition: 'morning_schedule', priority: 6 },
-    ],
-    capabilities: ['schedule_task', 'find_time_slot', 'optimize_calendar', 'set_reminders'],
-  },
-  {
-    id: 'routine',
-    name: 'Routine Agent',
-    domain: 'routine',
-    description: 'Manages habits and consistency tracking',
-    icon: '🔄',
-    systemPrompt: `You are the Routine Agent. Your role is to build and maintain daily habits.
-Track:
-- Streak progress
-- Consistency patterns
-- Habit stacking opportunities
-- Optimal routine timing
-Encourage without being pushy. Celebrate wins.`,
-    triggers: [
-      { type: 'time', condition: 'routine_time', priority: 8 },
-      { type: 'pattern', condition: 'missed_routine', priority: 7 },
-    ],
-    capabilities: ['track_habits', 'streak_monitoring', 'routine_reminders', 'habit_analysis'],
-  },
-  {
-    id: 'task',
-    name: 'Task Agent',
-    domain: 'routine',
-    description: 'Manages to-dos and deadlines',
-    icon: '✅',
-    systemPrompt: `You are the Task Agent. Your role is to manage tasks and deadlines.
-Prioritize by:
-- Urgency and importance
-- Energy requirements
-- Dependencies
-- User preferences
-Always suggest the next best action.`,
-    triggers: [
-      { type: 'user', condition: 'task_mentioned', priority: 8 },
-      { type: 'time', condition: 'deadline_approaching', priority: 9 },
-    ],
-    capabilities: ['create_task', 'prioritize', 'deadline_tracking', 'task_completion'],
-  },
-
-  // Domain Agents
-  {
-    id: 'study',
-    name: 'Study Agent',
+    id: 'education',
+    name: 'Education Agent',
     domain: 'study',
-    description: 'Manages study sessions, memory, and spaced repetition',
+    description: 'Academic explanations, exam prep, skill learning, coding help',
     icon: '📚',
-    systemPrompt: `You are the Study Agent. Your role is to optimize learning.
-Implement:
-- Pomodoro-style sessions
-- Spaced repetition scheduling
-- Active recall prompts
-- Note summarization
-Track comprehension and suggest review times.`,
+    systemPrompt: `You handle academic explanations, exam prep, skill learning, and coding help.
+Rules: No cheating assistance. Clear, patient explanations only. Teach directly without interview loops.`,
     triggers: [
       { type: 'user', condition: 'study_intent', priority: 9 },
-      { type: 'time', condition: 'scheduled_study', priority: 8 },
+      { type: 'user', condition: 'coding_intent', priority: 9 },
       { type: 'event', condition: 'exam_approaching', priority: 10 },
     ],
-    capabilities: ['start_session', 'flashcard_review', 'summarize_notes', 'track_progress'],
+    capabilities: ['explain_concept', 'exam_prep', 'code_review', 'skill_coaching', 'note_summary'],
   },
+
+  // 2. Health & Wellness Agent
+  {
+    id: 'health',
+    name: 'Health & Wellness Agent',
+    domain: 'recovery',
+    description: 'Symptom understanding, lifestyle guidance, mental wellbeing support',
+    icon: '🩺',
+    systemPrompt: `You provide non-diagnostic health support, lifestyle guidance, and mental wellbeing.
+Rules: Never diagnose or prescribe. Always include gentle disclaimer. Escalate to professionals for serious/persistent issues.`,
+    triggers: [
+      { type: 'user', condition: 'health_concern', priority: 9 },
+      { type: 'emotional', condition: 'stress_high', priority: 8 },
+      { type: 'pattern', condition: 'burnout_detected', priority: 9 },
+    ],
+    capabilities: ['symptom_guidance', 'wellness_tips', 'mental_health_support', 'professional_referral'],
+  },
+
+  // 3. Fitness & Diet Agent
   {
     id: 'fitness',
-    name: 'Fitness Agent',
+    name: 'Fitness & Diet Agent',
     domain: 'fitness',
-    description: 'Manages workouts and energy cycles',
+    description: 'Workout suggestions, diet planning, hydration, routine health habits',
     icon: '💪',
-    systemPrompt: `You are the Fitness Agent. Your role is to optimize physical health.
-Consider:
-- Workout variety and progression
-- Rest and recovery needs
-- Energy levels before suggesting intensity
-- Injury prevention
-Be motivating but not pushy. Respect user's physical state.`,
+    systemPrompt: `You manage workout suggestions, diet planning, hydration, and health habits.
+Rules: No extreme advice. Stop on pain/injury signals. Culturally adaptive food suggestions. No body shaming.`,
     triggers: [
-      { type: 'time', condition: 'workout_time', priority: 8 },
-      { type: 'pattern', condition: 'sedentary_detected', priority: 6 },
-      { type: 'emotional', condition: 'low_energy', priority: 5 },
+      { type: 'user', condition: 'fitness_intent', priority: 8 },
+      { type: 'time', condition: 'workout_time', priority: 7 },
+      { type: 'pattern', condition: 'hydration_low', priority: 6 },
     ],
-    capabilities: ['suggest_workout', 'track_exercise', 'rest_recommendations', 'progress_tracking'],
-  },
-  {
-    id: 'finance',
-    name: 'Finance Agent',
-    domain: 'finance',
-    description: 'Manages expenses, investments, and financial logs',
-    icon: '💰',
-    systemPrompt: `You are the Finance Agent. Your role is to optimize financial health.
-Track:
-- Daily expenses by category
-- Budget adherence
-- Saving patterns
-- Investment suggestions (if applicable)
-Be non-judgmental about spending. Focus on awareness and improvement.`,
-    triggers: [
-      { type: 'user', condition: 'expense_mentioned', priority: 8 },
-      { type: 'time', condition: 'end_of_day', priority: 6 },
-      { type: 'event', condition: 'salary_day', priority: 7 },
-    ],
-    capabilities: ['log_expense', 'budget_analysis', 'spending_trends', 'savings_goals'],
-  },
-  {
-    id: 'social',
-    name: 'Social Agent',
-    domain: 'social',
-    description: 'Handles outreach, follow-ups, and networking',
-    icon: '🤝',
-    systemPrompt: `You are the Social Agent. Your role is to nurture relationships.
-Manage:
-- Follow-up reminders
-- Outreach scheduling
-- Message drafting
-- Response tracking
-Help maintain genuine connections without being spammy.`,
-    triggers: [
-      { type: 'time', condition: 'follow_up_due', priority: 7 },
-      { type: 'pattern', condition: 'neglected_contact', priority: 6 },
-      { type: 'user', condition: 'networking_intent', priority: 8 },
-    ],
-    capabilities: ['schedule_followup', 'draft_message', 'track_responses', 'relationship_insights'],
+    capabilities: ['workout_plan', 'diet_suggestion', 'hydration_tracking', 'progress_tracking', 'rest_advice'],
   },
 
-  // Intelligence Agents
+  // 4. Focus & Productivity Agent
+  {
+    id: 'focus',
+    name: 'Focus & Productivity Agent',
+    domain: 'routine',
+    description: 'Focus sessions, task breakdown, distraction management',
+    icon: '🎯',
+    systemPrompt: `You manage focus sessions, task breakdown, routines, habits, and distraction management.
+Rules: Never guilt. Flexible pacing. Focus is "shared calm", not enforcement. No shaming for breaks.`,
+    triggers: [
+      { type: 'user', condition: 'focus_intent', priority: 9 },
+      { type: 'user', condition: 'task_mentioned', priority: 8 },
+      { type: 'time', condition: 'routine_time', priority: 7 },
+      { type: 'time', condition: 'deadline_approaching', priority: 9 },
+    ],
+    capabilities: ['focus_session', 'task_breakdown', 'habit_tracking', 'routine_management', 'schedule_optimization'],
+  },
+
+  // 5. Memory & Context Agent
   {
     id: 'memory',
-    name: 'Memory Agent',
+    name: 'Memory & Context Agent',
     domain: 'reflection',
-    description: 'Stores, compresses, and correlates experiences',
+    description: 'Summarize conversations, store daily memories, recall past context',
     icon: '🧠',
-    systemPrompt: `You are the Memory Agent. Your role is to maintain continuity.
-Responsibilities:
-- Extract key memories from conversations
-- Correlate patterns across time
-- Surface relevant past context
-- Compress and summarize for efficiency
-Enable personalization through remembering.`,
+    systemPrompt: `You manage conversation memory, daily summaries, and context recall.
+Rules: Permission-based storage. Editable memory. Store patterns, not raw chat logs. Respect "forget" commands.`,
     triggers: [
-      { type: 'event', condition: 'significant_event', priority: 8 },
+      { type: 'user', condition: 'memory_intent', priority: 8 },
+      { type: 'event', condition: 'significant_event', priority: 7 },
       { type: 'time', condition: 'daily_reflection', priority: 6 },
     ],
-    capabilities: ['save_memory', 'recall_context', 'pattern_correlation', 'memory_summary'],
-  },
-  {
-    id: 'insight',
-    name: 'Insight Agent',
-    domain: 'reflection',
-    description: 'Produces weekly and monthly insights',
-    icon: '💡',
-    systemPrompt: `You are the Insight Agent. Your role is to find patterns and insights.
-Analyze:
-- Productivity patterns
-- Mood-performance correlations
-- Success factors
-- Areas for improvement
-Deliver actionable, encouraging insights.`,
-    triggers: [
-      { type: 'time', condition: 'weekly_summary', priority: 7 },
-      { type: 'time', condition: 'monthly_review', priority: 8 },
-    ],
-    capabilities: ['weekly_insights', 'trend_analysis', 'performance_review', 'recommendations'],
-  },
-  {
-    id: 'identity',
-    name: 'Identity Agent',
-    domain: 'reflection',
-    description: 'Tracks identity-level progress and growth',
-    icon: '🌟',
-    systemPrompt: `You are the Identity Agent. Your role is to track personal evolution.
-Monitor:
-- Value alignment
-- Identity shifts
-- Long-term growth
-- Core beliefs evolution
-Help the user become who they want to be.`,
-    triggers: [
-      { type: 'time', condition: 'monthly_identity', priority: 6 },
-      { type: 'pattern', condition: 'identity_shift', priority: 7 },
-    ],
-    capabilities: ['track_values', 'identity_evolution', 'growth_milestones', 'self_reflection'],
-  },
-  {
-    id: 'reflection',
-    name: 'Reflection Agent',
-    domain: 'reflection',
-    description: 'Handles journaling and self-reflection',
-    icon: '📝',
-    systemPrompt: `You are the Reflection Agent. Your role is to facilitate self-discovery.
-Guide through:
-- Daily reflections
-- Gratitude practice
-- Lesson extraction
-- Emotional processing
-Create a safe space for honest reflection.`,
-    triggers: [
-      { type: 'time', condition: 'evening_reflection', priority: 7 },
-      { type: 'emotional', condition: 'processing_needed', priority: 8 },
-    ],
-    capabilities: ['journal_prompt', 'gratitude_log', 'lesson_extraction', 'emotional_support'],
+    capabilities: ['save_memory', 'recall_context', 'pattern_detection', 'daily_summary', 'journal_prompt'],
   },
 
-  // Execution Agents
+  // 6. Automation & Tools Agent
   {
-    id: 'execution',
-    name: 'Execution Agent',
+    id: 'automation',
+    name: 'Automation & Tools Agent',
     domain: 'routine',
-    description: 'Controls device actions via APK',
+    description: 'Calendar, reminders, emails, app control, external integrations',
     icon: '⚡',
-    systemPrompt: `You are the Execution Agent. Your role is to perform device actions.
-Capabilities (when APK installed):
-- Open apps
-- Send messages
-- Set alarms
-- Navigate
-Always confirm before executing sensitive actions.`,
+    systemPrompt: `You handle calendar, reminders, alarms, app control, and external integrations.
+Rules: Explicit user consent required. Always confirm before executing actions. Preview before send.`,
     triggers: [
       { type: 'user', condition: 'action_command', priority: 10 },
-      { type: 'event', condition: 'scheduled_action', priority: 9 },
+      { type: 'user', condition: 'reminder_intent', priority: 9 },
+      { type: 'event', condition: 'scheduled_action', priority: 8 },
     ],
-    capabilities: ['open_app', 'send_message', 'set_alarm', 'device_control'],
-  },
-  {
-    id: 'notification',
-    name: 'Notification Agent',
-    domain: 'routine',
-    description: 'Schedules nudges, alarms, and reminders',
-    icon: '🔔',
-    systemPrompt: `You are the Notification Agent. Your role is to time interventions perfectly.
-Consider:
-- User's current state
-- Notification fatigue
-- Priority and urgency
-- Optimal timing
-Less is more. Each notification should add value.`,
-    triggers: [
-      { type: 'event', condition: 'reminder_due', priority: 8 },
-      { type: 'context', condition: 'optimal_nudge_time', priority: 6 },
-    ],
-    capabilities: ['schedule_reminder', 'smart_nudge', 'priority_notification', 'quiet_hours'],
+    capabilities: ['set_reminder', 'app_control', 'email_draft', 'alarm_management', 'automation_workflow'],
   },
 
-  // State Agents
+  // 7. Culture & Language Agent
   {
-    id: 'mood',
-    name: 'Mood Agent',
-    domain: 'recovery',
-    description: 'Tracks mood-energy-performance loops',
-    icon: '😊',
-    systemPrompt: `You are the Mood Agent. Your role is to understand emotional patterns.
-Track:
-- Mood fluctuations
-- Energy-mood correlations
-- Triggers and uplifts
-- Coping strategies
-Be empathetic and supportive.`,
+    id: 'culture',
+    name: 'Culture & Language Agent',
+    domain: 'reflection',
+    description: 'Cultural adaptation, language tone, regional sensitivity',
+    icon: '🌍',
+    systemPrompt: `You handle cultural adaptation, language detection, and regional sensitivity.
+Rules: No stereotypes. Always allow correction. Adapt tone to regional context. Respect festivals and customs.`,
     triggers: [
-      { type: 'time', condition: 'mood_checkin', priority: 6 },
-      { type: 'emotional', condition: 'mood_shift', priority: 8 },
+      { type: 'context', condition: 'cultural_signal', priority: 6 },
+      { type: 'pattern', condition: 'language_switch', priority: 7 },
     ],
-    capabilities: ['mood_tracking', 'emotion_support', 'pattern_detection', 'coping_suggestions'],
-  },
-  {
-    id: 'energy',
-    name: 'Energy Agent',
-    domain: 'recovery',
-    description: 'Optimizes scheduling against energy levels',
-    icon: '⚡',
-    systemPrompt: `You are the Energy Agent. Your role is to optimize for energy.
-Consider:
-- Natural energy rhythms
-- Sleep quality impact
-- Activity-energy correlations
-- Recharge activities
-Match task intensity to energy availability.`,
-    triggers: [
-      { type: 'pattern', condition: 'energy_pattern', priority: 7 },
-      { type: 'emotional', condition: 'low_energy', priority: 8 },
-    ],
-    capabilities: ['energy_tracking', 'optimal_scheduling', 'recharge_suggestions', 'fatigue_prevention'],
-  },
-  {
-    id: 'recovery',
-    name: 'Recovery Agent',
-    domain: 'recovery',
-    description: 'Handles rest and burnout prevention',
-    icon: '🌙',
-    systemPrompt: `You are the Recovery Agent. Your role is to prevent burnout.
-Monitor:
-- Work-rest balance
-- Burnout indicators
-- Rest quality
-- Recovery activities
-Prioritize sustainable performance over short-term gains.`,
-    triggers: [
-      { type: 'pattern', condition: 'overwork_detected', priority: 9 },
-      { type: 'emotional', condition: 'stress_high', priority: 8 },
-      { type: 'time', condition: 'rest_reminder', priority: 6 },
-    ],
-    capabilities: ['rest_reminders', 'burnout_detection', 'recovery_planning', 'stress_management'],
+    capabilities: ['language_detection', 'cultural_adaptation', 'regional_sensitivity', 'festival_awareness'],
   },
 
-  // Meta Agent
+  // 8. Image & Vision Agent
   {
-    id: 'autonomy',
-    name: 'Autonomy Agent',
-    domain: 'routine',
-    description: 'Switches between autonomy modes dynamically',
-    icon: '🎛️',
-    systemPrompt: `You are the Autonomy Agent. Your role is to optimize agent behavior.
-Switch modes based on:
-- User's current state
-- Task urgency
-- Domain sensitivity
-- Historical preferences
-Balance helpfulness with respect for user control.`,
+    id: 'vision',
+    name: 'Image & Vision Agent',
+    domain: 'skill',
+    description: 'Image understanding, notes, documents, objects',
+    icon: '👁️',
+    systemPrompt: `You handle image analysis, document understanding, and visual content processing.
+Rules: Ask before assuming content. No sensitive inference. Describe clearly and helpfully.`,
     triggers: [
-      { type: 'context', condition: 'mode_evaluation', priority: 5 },
-      { type: 'pattern', condition: 'mode_mismatch', priority: 7 },
+      { type: 'user', condition: 'image_shared', priority: 9 },
+      { type: 'user', condition: 'document_analysis', priority: 8 },
     ],
-    capabilities: ['mode_switching', 'autonomy_optimization', 'preference_learning', 'intervention_timing'],
+    capabilities: ['image_analysis', 'document_reading', 'object_recognition', 'visual_summary'],
+  },
+
+  // 9. Strategy & Co-founder Agent
+  {
+    id: 'strategy',
+    name: 'Strategy & Co-founder Agent',
+    domain: 'work',
+    description: 'Decision-making help, planning, trade-offs, long-term thinking',
+    icon: '🧠',
+    systemPrompt: `You help with decision-making, planning, trade-offs, and long-term thinking.
+Rules: Never decide for the user. Present options calmly. Structured analysis without overwhelming.`,
+    triggers: [
+      { type: 'user', condition: 'strategy_intent', priority: 8 },
+      { type: 'user', condition: 'decision_needed', priority: 9 },
+      { type: 'time', condition: 'weekly_planning', priority: 7 },
+    ],
+    capabilities: ['decision_support', 'trade_off_analysis', 'goal_planning', 'long_term_strategy'],
   },
 ];
 
@@ -371,20 +164,28 @@ export const getAgentsByDomain = (domain: AgentDomain): AgentDefinition[] => {
   return AGENT_REGISTRY.filter(agent => agent.domain === domain);
 };
 
-export const getCoreAgents = (): AgentDefinition[] => {
-  return AGENT_REGISTRY.filter(agent => 
-    ['planner', 'scheduler', 'routine', 'task'].includes(agent.id)
-  );
+// Map legacy agent IDs to new canonical agents
+export const LEGACY_AGENT_MAP: Record<string, string> = {
+  planner: 'focus',
+  scheduler: 'focus',
+  routine: 'focus',
+  task: 'focus',
+  study: 'education',
+  fitness: 'fitness',
+  finance: 'strategy',
+  social: 'automation',
+  memory: 'memory',
+  insight: 'memory',
+  identity: 'memory',
+  reflection: 'memory',
+  execution: 'automation',
+  notification: 'automation',
+  mood: 'health',
+  energy: 'health',
+  recovery: 'health',
+  autonomy: 'focus',
 };
 
-export const getLifestyleAgents = (): AgentDefinition[] => {
-  return AGENT_REGISTRY.filter(agent => 
-    ['study', 'fitness', 'finance', 'social'].includes(agent.id)
-  );
-};
-
-export const getIntelligenceAgents = (): AgentDefinition[] => {
-  return AGENT_REGISTRY.filter(agent => 
-    ['memory', 'insight', 'identity', 'reflection'].includes(agent.id)
-  );
+export const resolveAgentId = (legacyId: string): string => {
+  return LEGACY_AGENT_MAP[legacyId] || legacyId;
 };
