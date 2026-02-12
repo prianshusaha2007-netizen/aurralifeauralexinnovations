@@ -270,15 +270,22 @@ export const useSmartNotifications = () => {
   }, []);
 
   const getGentleReminder = useCallback((title: string, body: string): string => {
-    // Transform notification text to be gentler
+    // Transform notification text to sound like a caring human, not a system
     const gentlePrefixes = [
-      'When you have a moment: ',
-      'Gentle reminder: ',
-      'No rush, but: ',
-      'Whenever you\'re ready: ',
+      'When you get a chance — ',
+      'Just a thought — ',
+      'No rush, but — ',
+      'Whenever you\'re ready — ',
+      'Hey, quick one — ',
     ];
     const prefix = gentlePrefixes[Math.floor(Math.random() * gentlePrefixes.length)];
-    return prefix + body.charAt(0).toLowerCase() + body.slice(1);
+    // Strip robotic prefixes from the body before adding human ones
+    const cleanBody = body
+      .replace(/^Reminder:\s*/i, '')
+      .replace(/^Alert:\s*/i, '')
+      .replace(/^Don't forget to\s*/i, '')
+      .replace(/^You must\s*/i, 'you might want to ');
+    return prefix + cleanBody.charAt(0).toLowerCase() + cleanBody.slice(1);
   }, []);
 
   // Periodic check for scheduled notifications

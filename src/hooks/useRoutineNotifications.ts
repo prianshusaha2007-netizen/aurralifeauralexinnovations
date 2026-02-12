@@ -20,21 +20,41 @@ export const useRoutineNotifications = (blocks: RoutineBlock[]) => {
     }
   }, []);
 
+  const humanizeNotification = useCallback((title: string, body: string): { title: string; body: string } => {
+    // Replace robotic language with human-friendly alternatives
+    let humanTitle = title
+      .replace(/^Reminder:\s*/i, '')
+      .replace(/^Alert:\s*/i, '')
+      .replace(/^Notification:\s*/i, '');
+    
+    let humanBody = body
+      .replace(/^You have a scheduled/i, 'Just a heads-up —')
+      .replace(/^It's time to/i, 'This might be a good time to')
+      .replace(/^Don't forget to/i, 'Whenever you\'re ready —')
+      .replace(/^You must/i, 'You might want to')
+      .replace(/^Complete your/i, 'Your');
+    
+    return { title: humanTitle, body: humanBody };
+  }, []);
+
   const sendNotification = useCallback((title: string, body: string, iconEmoji: string) => {
-    // Always show toast
-    toast(`${iconEmoji} ${title}`, {
-      description: body,
+    // Humanize the notification text
+    const humanized = humanizeNotification(title, body);
+    
+    // Always show toast with human-friendly language
+    toast(`${iconEmoji} ${humanized.title}`, {
+      description: humanized.body,
       duration: 10000,
     });
     // Try browser notification
     if ('Notification' in window && notificationPermissionRef.current === 'granted') {
       try {
-        new Notification(title, { body, icon: '/favicon.jpeg' });
+        new Notification(humanized.title, { body: humanized.body, icon: '/favicon.jpeg' });
       } catch (e) {
         console.log('Browser notification failed:', e);
       }
     }
-  }, []);
+  }, [humanizeNotification]);
 
   const getUpcomingBlocks = useCallback((): UpcomingBlock[] => {
     const now = new Date();
@@ -75,32 +95,32 @@ export const useRoutineNotifications = (blocks: RoutineBlock[]) => {
 
         const notificationKey = `${block.id}-${dateKey}`;
 
-        // 15 minute warning
+        // 15 minute warning — gentle heads-up
         if (startsIn === 15 && !notifiedBlocksRef.current.has(`${notificationKey}-15`)) {
           notifiedBlocksRef.current.add(`${notificationKey}-15`);
           sendNotification(
-            `${block.icon} ${block.title} in 15 min`,
-            `Get ready! Your ${block.title.toLowerCase()} starts soon.`,
+            `${block.icon} ${block.title} soon`,
+            `Just a heads-up — ${block.title.toLowerCase()} starts in about 15 minutes.`,
             block.icon
           );
         }
 
-        // 5 minute warning
+        // 5 minute warning — soft nudge
         if (startsIn === 5 && !notifiedBlocksRef.current.has(`${notificationKey}-5`)) {
           notifiedBlocksRef.current.add(`${notificationKey}-5`);
           sendNotification(
-            `${block.icon} ${block.title} in 5 min`,
-            `Almost time! ${block.focusModeEnabled ? 'Focus mode will activate.' : 'Prepare to start.'}`,
+            `${block.icon} ${block.title} in 5`,
+            `${block.title} is coming up.${block.focusModeEnabled ? ' I\'ll set up focus mode for you.' : ''}`,
             block.icon
           );
         }
 
-        // Starting now
+        // Starting now — calm presence
         if (startsIn === 0 && !notifiedBlocksRef.current.has(`${notificationKey}-0`)) {
           notifiedBlocksRef.current.add(`${notificationKey}-0`);
           sendNotification(
-            `${block.icon} ${block.title} Starting!`,
-            `Time to begin your ${block.title.toLowerCase()}.${block.focusModeEnabled ? ' Focus mode is now active.' : ''}`,
+            `${block.icon} ${block.title}`,
+            `Your ${block.title.toLowerCase()} is starting now.${block.focusModeEnabled ? ' Focus mode is on.' : ' Whenever you\'re ready.'}`,
             block.icon
           );
         }
