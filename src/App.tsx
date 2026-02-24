@@ -28,6 +28,7 @@ import TimelineScreen from "./screens/TimelineScreen";
 import AutonomySettingsScreen from "./screens/AutonomySettingsScreen";
 import AlarmsScreen from "./screens/AlarmsScreen";
 import { MobileControlScreen } from "./screens/MobileControlScreen";
+import ExportData from "./pages/ExportData";
 const queryClient = new QueryClient();
 
 // Wrapper for routes that need AuraProvider
@@ -76,6 +77,7 @@ const App = () => (
               <Route path="/privacy" element={<PrivacyPolicy />} />
               <Route path="/terms" element={<TermsOfService />} />
               <Route path="/install" element={<Install />} />
+              <Route path="/export-data" element={<ExportData />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
